@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  compactForServer, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  buySkin, compactForServer, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -67,7 +67,7 @@ interface Store {
   tourOpen: boolean;
   setTourOpen: (open: boolean) => void;
   /** `practice` plays the daily challenge without registering it for the board. */
-  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'> & { practice?: boolean }) => Promise<void>;
+  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'> & { practice?: boolean; challengeCode?: string }) => Promise<void>;
   /** Send new decisions to the server for verification (online runs). */
   syncNow: () => Promise<void>;
   /** Carry an online company that was started on an older version over to the server (once). */
@@ -94,6 +94,10 @@ interface Store {
   buyPerk: (perkId: string) => Promise<void>;
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
+  /** Cosmetics and founder titles (never affect a score). */
+  buySkin: (id: string) => void;
+  equipSkin: (id: string) => void;
+  setTitle: (id: string | null) => void;
   /** Open a panel; `scrollTo` is the id of a card inside it to bring into view. */
   openSheet: (s: Sheet | null, tab?: BooksTab, scrollTo?: string) => void;
   /** The upgrade picked by tapping its building or plot on the island. */
@@ -244,14 +248,15 @@ export const useGame = create<Store>((set, get) => {
     async start(opts) {
       const { profile } = get();
       let game: GameState;
-      const daily = opts.scenarioId === 'daily';
-      const ranked = ONLINE && ((opts.scenarioId ?? 'standard') === 'standard' || (daily && !opts.practice));
+      const fixed = isFixedScenario(opts.scenarioId);
+      const ranked = ONLINE && ((opts.scenarioId ?? 'standard') === 'standard' || (fixed && !opts.practice));
       if (ranked) {
         // Register the company first: the server fixes its perks and prestige level.
         try {
           const r = await api.createRun({
             seed: opts.seed, industryId: opts.industryId, difficulty: opts.difficulty ?? 'medium', equipmentFinance: opts.equipmentFinance ?? 'buy',
-            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION, ...(daily ? { daily: true } : {}),
+            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION,
+            ...(opts.scenarioId === 'daily' ? { daily: true } : opts.scenarioId === 'weekly' ? { weekly: true } : opts.scenarioId === 'challenge' ? { challenge: opts.challengeCode } : {}),
           });
           game = newGame({ ...opts, companyName: r.companyName, perks: r.perks, boosts: r.boosts, prestigeLevel: r.prestigeLevel });
           game.server = { runId: r.runId, synced: 0, syncedMonth: 0 };
@@ -262,7 +267,7 @@ export const useGame = create<Store>((set, get) => {
       } else {
         game = newGame({ ...opts, perks: profile.perks, boosts: profile.boosts, prestigeLevel: profile.prestigeCount });
       }
-      if (game.marketingBudget === 0 && ((opts.scenarioId ?? 'standard') === 'standard' || daily)) {
+      if (game.marketingBudget === 0 && ((opts.scenarioId ?? 'standard') === 'standard' || fixed)) {
         game = applyAction(game, { type: 'setMarketing', amount: startingMarketing(INDUSTRIES[game.industryId]) });
       }
       saveGame('autosave', game);
@@ -546,6 +551,34 @@ export const useGame = create<Store>((set, get) => {
         // Recompute from the latest profile (act may have awarded progress) minus the gems.
         set({ profile: persistProfile({ ...get().profile, gems: get().profile.gems - (profile.gems - spent.gems) }), undoStack: [] });
       }
+    },
+
+    buySkin(id) {
+      try {
+        set({ profile: persistProfile(buySkin(get().profile, id)) });
+        get().toast('good', 'Skin bought and equipped.');
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    equipSkin(id) {
+      try {
+        set({ profile: persistProfile(equipSkin(get().profile, id)) });
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    setTitle(id) {
+      const { profile } = get();
+      if (id !== null && (!isTitleId(id) || !profile.achievements[id])) {
+        get().toast('error', 'Earn that achievement to wear its title.');
+        return;
+      }
+      set({ profile: persistProfile({ ...profile, title: id }) });
+      if (ONLINE) void api.updateMe({ title: id }).catch(() => { /* offline: it syncs with the next save */ });
     },
 
     claimDaily() {

@@ -2,9 +2,12 @@ import {
   DIFFICULTIES, DIFFICULTY_IDS, formatGBP, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
   rebirthsRemaining, SCENARIOS, startingCash, type DifficultyId, type EquipmentFinance, type IndustryId,
 } from '@cfx/engine';
+import { challengeField, isValidChallengeCode } from '@cfx/engine';
 import { useState } from 'react';
 import { CURRENCY_ICONS, ICON_LABELS, ICON_ORDER, iconUrl } from '../lib/icons';
-import { deleteSlot, slotMeta, SLOTS } from '../lib/save';
+import { useAccount } from '../lib/account';
+import { ONLINE } from '../lib/api';
+import { deleteSlot, readPref, slotMeta, SLOTS, writePref } from '../lib/save';
 import { useGame } from '../store';
 import { PerkTree } from './Legacy';
 import { HowItWorks, SeasonPreview } from './MenuExtras';
@@ -47,6 +50,8 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const [finance, setFinance] = useState<EquipmentFinance>('lease');
   const [seed, setSeed] = useState(randomSeedLabel);
   const [, refresh] = useState(0);
+  const signedIn = !!useAccount((s) => s.me);
+  const [pending, setPending] = useState(() => { const c = readPref('challenge')?.toUpperCase() ?? ''; return isValidChallengeCode(c) ? c : ''; });
   const caseStudy = SCENARIOS[scenarioId].kind === 'case-study';
   const ind = INDUSTRIES[caseStudy ? SCENARIOS[scenarioId].industryId! : industry];
   const capex = caseStudy ? null : ind.startingCapex;
@@ -78,6 +83,22 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
           </div>
           <h1 className="cfx-stroked text-5xl leading-[0.95]">Build it. Grow it. Don't run out of cash.</h1>
           <p className="text-sm font-bold text-on-sky">A business tycoon game with real accounts underneath. Every sale, hire and loan posts double-entry journals, and your statements always balance.</p>
+
+          {pending && ONLINE && signedIn && (
+            <section className="cfx-panel !pt-7" aria-label="A friend's challenge">
+              <div className="cfx-panel__ribbon">A friend challenged you</div>
+              <p className="text-sm font-bold">Same company, same luck, 24 months: whoever ends with the biggest stake wins. Code {pending}.</p>
+              <div className="mt-3 flex gap-2">
+                <button type="button" className="cfx-btn is-go flex-1" disabled={busy} onClick={async () => {
+                  const f = challengeField(pending);
+                  setBusy(true);
+                  await start({ companyName: f.companyName, industryId: f.industryId, seed: f.seed, scenarioId: 'challenge', difficulty: 'medium', equipmentFinance: 'buy', icon: 'rocket', challengeCode: pending });
+                  setBusy(false);
+                }}>Play the challenge</button>
+                <button type="button" className="cfx-btn is-soft" onClick={() => { writePref('challenge', ''); setPending(''); }}>Not now</button>
+              </div>
+            </section>
+          )}
 
           <div className="flex flex-col gap-3">
             {saves.find((m) => m!.slot === 'autosave') && (

@@ -1,5 +1,5 @@
 import {
-  dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
@@ -205,8 +205,19 @@ function XpBar() {
   );
 }
 
+const isNight = (): boolean => typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
+  || (!document.documentElement.dataset.theme && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+
+/** The equipped skin's sky behind the 3D scene (nothing for the default skin). */
+function SkyBackdrop() {
+  const skin = useGame((s) => skinOf(cosmeticsOf(s.profile).skin));
+  const sky = isNight() ? skin.palette.skyNight : skin.palette.sky;
+  return sky ? <div className="absolute inset-0" style={{ background: sky }} aria-hidden /> : null;
+}
+
 function SceneArea({ game }: { game: GameState }) {
   const { speed, setSpeed, monthProgress, pops, profile, sheet, pauseOnPanels, scene3d, tourOpen } = useGame();
+  const skin = skinOf(cosmeticsOf(profile).skin);
   const level = levelForXp(profile.xp);
   const paused = speed === 0 || !!game.pendingEvent || tourOpen || (pauseOnPanels && !!sheet);
   const speeds: { s: Speed; label: string; locked: boolean }[] = [
@@ -219,12 +230,13 @@ function SceneArea({ game }: { game: GameState }) {
   const circ = 2 * Math.PI * r;
   return (
     <section className="relative left-1/2 aspect-[8/5] max-h-[600px] min-h-[300px] w-[min(calc(100vw-32px),880px)] -translate-x-1/2 overflow-hidden lg:left-0 lg:w-full lg:translate-x-0 rounded-[32px] border-[3px] border-outline shadow-[var(--lift)]" aria-label="Your business" data-tour="scene">
+      <SkyBackdrop />
       {scene3d ? (
         <Suspense fallback={<div className="grid h-full place-items-center font-display text-lg text-on-sky">Building your plot…</div>}>
           <Scene3D game={game} />
         </Suspense>
       ) : (
-        <div className="grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]">
+        <div className="relative grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]" style={skin.id === 'default' ? undefined : { background: isNight() ? skin.palette.grassNight : skin.palette.grass }}>
           <img src={iconUrl(game.icon)} alt="" className="h-28 w-28 drop-shadow-[0_6px_0_rgba(0,0,0,0.25)]" />
         </div>
       )}
