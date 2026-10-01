@@ -1074,3 +1074,40 @@ test('V2 Batch C: pet, employee of the month, diary, newspaper, building names a
   await first.fill('The Big Shed');
   expect(await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('cfx:profile')!).names))).toContain('The Big Shed');
 });
+
+test('V2 Batch D: chaos dial, ironman, speedrun, turnaround, boss badge area, puzzle league and seed sharing', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/?seed=SHARED-1&sector=restaurant');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.goto('/?seed=SHARED-1&sector=restaurant');
+  await signIn(page, 'Modes');
+  for (const name of [/Speedrun: a £1m company, fast/, /Case study: The turnaround/]) await expect(page.getByRole('button', { name })).toBeVisible();
+  await page.getByRole('button', { name: 'New company' }).click();
+  await expect(page.getByRole('radio', { name: /Restaurant/i }).first()).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await expect(page.getByLabel('Seed', { exact: true })).toHaveValue('SHARED-1');
+  await page.getByRole('checkbox', { name: /Ironman/ }).click();
+  await page.getByRole('checkbox', { name: /Calm seas/ }).click();
+  await page.getByRole('checkbox', { name: /Mayhem/ }).click();
+  await expect(page.getByRole('checkbox', { name: /Calm seas/ })).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['chaos-mayhem', 'ironman']);
+  await expect(page.locator('.cfx-hud__date')).toContainText('Ironman');
+  expect((await savedGame(page)).seedLabel).toBe('SHARED-1');
+
+  // Missions: answer the daily puzzle (also scores in the league), and the seed card shows the seed.
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  await m.locator('#card-spot').getByRole('group', { name: 'Which account is wrong?' }).getByRole('button').first().click();
+  await expect(m.locator('#card-spot').getByRole('status')).toBeVisible();
+  await expect(m.locator('#card-seed').getByLabel('Seed')).toHaveText('SHARED-1');
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  // Undo is not allowed in Ironman.
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Undo last decision' })).toBeVisible();
+});

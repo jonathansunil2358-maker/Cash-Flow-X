@@ -88,6 +88,8 @@ export interface Profile {
   eom?: { month: number; id: string; name: string; note: string }[];
   names?: Record<string, string>;
   diary?: { year: number; company: string; note: string; facts: string }[];
+  /** Fastest speedrun (months to a £1m company) on this device. */
+  speedBest?: number;
   wardrobe?: { owned: string[]; equipped: string | null };
   pass?: PassState;
 }

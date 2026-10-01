@@ -1,5 +1,5 @@
 import {
-  financialHealth, formatGBP, formatInt, formatPct, monthLabel, overdraftLimit, plSummary, prestigeCheck, scenarioOf, DIFFICULTIES,
+  BOSSES, financialHealth, formatGBP, formatInt, formatPct, monthLabel, overdraftLimit, plSummary, prestigeCheck, scenarioOf, DIFFICULTIES,
   type GameState,
 } from '@cfx/engine';
 import { useMemo } from 'react';
@@ -95,8 +95,14 @@ export function Dashboard({ game }: { game: GameState }) {
         <Meter value={progress} label="Progress to prestige" />
       </Card>
 
+      {game.boss && (
+        <Card id="card-boss" title={`Boss round: ${BOSSES.find((b) => b.id === game.boss!.id)!.name}`} subtitle={`${BOSSES.find((b) => b.id === game.boss!.id)!.story} It ends in month ${game.boss.endMonth + 1}.`}>
+          <p className="text-sm">Come through with money in the bank to earn reputation and a boss badge. Boss rounds beaten so far: {game.bossesBeaten ?? 0}.</p>
+        </Card>
+      )}
+
       {objectives && (
-        <Card title="Case study objectives">
+        <Card title={scenario.kind === 'case-study' ? 'Case study objectives' : `${scenario.name}: objectives`}>
           <ul className="space-y-2">
             {objectives.map((o) => (
               <li key={o.id} className="flex items-center justify-between gap-3 text-sm">

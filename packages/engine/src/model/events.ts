@@ -8,7 +8,7 @@ import { boostActive, perkEffects } from './perks';
 import { claimPayout, outageDemand } from './insurance';
 import { PERSONALITIES, rosterOf } from './roster';
 import { mentorOf } from './story';
-import { cultureOf } from './modifiers-opt';
+import { cultureOf, eventChanceMult } from './modifiers-opt';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
 import { scheduleIntoQueue } from './workingCapital';
@@ -207,6 +207,13 @@ interface ChoiceEventDef {
   setup: (s: GameState, rng: Rng) => { story: string; params: Record<string, number>; choices: ChoiceDef[] };
 }
 
+/**
+ * "Once a year" memory for choice events. It lives in the state (not the news log, which the server's
+ * compact checkpoints leave empty), so the client and the server always agree on what has happened.
+ */
+const doneOnce = (s: GameState, key: string): boolean => (s.done ?? []).includes(key);
+const markOnce = (s: GameState, key: string): void => { s.done = [...(s.done ?? []), key].slice(-40); };
+
 /** A rounded-to-pound cost shown in a label (keeps labels tidy). */
 const p0 = (v: Pence): Pence => v;
 const p0txt = (sue: boolean): string => (sue ? 'A good chance of winning, but court is never certain.' : 'Most likely thrown out, but you could lose.');
@@ -217,7 +224,7 @@ const CUSTOMERS = ['Mrs Okonkwo', 'Dr Fielding', 'The Harbour Cafe', 'Mr Lindqvi
 export const CHOICE_EVENTS: ChoiceEventDef[] = [
   {
     id: 'mentor', title: 'Your mentor is in town', polarity: 'good', weight: 1.5, icon: 'key',
-    when: (s) => s.month >= 8 && s.month % 12 >= 4 && s.month % 12 <= 7 && !s.log.some((l) => l.title === `Mentor visit ${Math.floor(s.month / 12)}`),
+    when: (s) => s.month >= 8 && s.month % 12 >= 4 && s.month % 12 <= 7 && !doneOnce(s, `mentor${Math.floor(s.month / 12)}`),
     setup: (s) => {
       const m = mentorOf(Math.floor(s.month / 12));
       const fee = sized(s, 0.02, 300_00);
@@ -226,11 +233,11 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { fee },
         choices: [
           { id: 'costs', label: `Cost clinic (${formatGBP(fee)})`, hint: 'Supplies cost 3% less for six months.', impact: [{ label: 'Costs', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); addTemporary(st, 'mentor-costs', 'Mentor: cost clinic', 6, { unitCostMult: 0.97 }, true); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'You found savings in places you had stopped looking.'; } },
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); addTemporary(st, 'mentor-costs', 'Mentor: cost clinic', 6, { unitCostMult: 0.97 }, true); markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'You found savings in places you had stopped looking.'; } },
           { id: 'brand', label: `Story workshop (${formatGBP(fee)})`, hint: 'A lasting lift to your brand.', impact: [{ label: 'Brand', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.brand *= 1.12; logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'Your story sharpened and word spread.'; } },
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.brand *= 1.12; markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'Your story sharpened and word spread.'; } },
           { id: 'team', label: 'Team lunch (free)', hint: 'Morale up.', impact: [{ label: 'Morale', up: true }],
-            apply: (st) => { st.morale = Math.min(100, st.morale + 6); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'The team left buzzing.'; } },
+            apply: (st) => { st.morale = Math.min(100, st.morale + 6); markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'The team left buzzing.'; } },
         ],
       };
     },
@@ -575,7 +582,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
   // ---- Batch: story and tension (takeover, culture events, trade fair, lawsuits, spies, pranks) ----
   {
     id: 'takeover', title: 'A takeover approach', polarity: 'bad', weight: 1, icon: 'shield',
-    when: (s) => s.month >= 24 && lastRevenue(s) > 0 && !s.log.some((l) => l.title === `Takeover approach ${Math.floor(s.month / 24)}`),
+    when: (s) => s.month >= 24 && lastRevenue(s) > 0 && !doneOnce(s, `takeover${Math.floor(s.month / 24)}`),
     setup: (s) => {
       const fee = sized(s, 0.04, 1_500_00);
       const small = Math.round(fee / 2 / 10000) * 10000;
@@ -586,18 +593,18 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
           { id: 'fight', label: `Fight it (${formatGBP(fee)})`, hint: 'Lawyers and a poison pill. Probably works, but it is a gamble.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
             apply: (st, rng, P, p) => {
               P('Takeover defence: advisers and legal fees', [dr('otherCosts', p.fee), cr('cash', p.fee)]);
-              logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
+              markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
               if (chance(rng, 0.6)) { st.brand *= 1.05; st.morale = Math.min(100, st.morale + 4); return 'Harrow & Finch backed off. The team is proud you stood up to them.'; }
               st.morale = Math.max(0, st.morale - 6); return 'The defence was costly and the fight dragged on. The distraction hurt morale.';
             } },
           { id: 'standstill', label: `Agree a standstill (${formatGBP(p0(fee))})`, hint: 'A quiet deal: they leave you alone for a while.', impact: [{ label: 'Cash', up: false }],
             apply: (st, _rng, P, p) => {
               P('Standstill agreement with an investor', [dr('otherCosts', p.small), cr('cash', p.small)]);
-              logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
+              markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
               return 'They signed the standstill and went quiet. A cheap way to get on with your business.';
             } },
           { id: 'ignore', label: 'Ignore them', hint: 'Free, but the rumour mill will not.', impact: [{ label: 'Morale', up: false }],
-            apply: (st) => { logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.'); st.morale = Math.max(0, st.morale - 8); st.brand *= 0.97; return 'Rumours of a sale unsettled the team and a few customers.'; } },
+            apply: (st) => { markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.'); st.morale = Math.max(0, st.morale - 8); st.brand *= 0.97; return 'Rumours of a sale unsettled the team and a few customers.'; } },
         ],
       };
     },
@@ -605,7 +612,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
   {
     id: 'cultureParty', title: 'Time for an office party?', polarity: 'good', weight: 0.8, icon: 'heart',
     weightOf: (s) => (cultureOf(s.modifiers) === 'culture-people' ? 2 : cultureOf(s.modifiers) === 'culture-frugal' ? 0.3 : 0.8),
-    when: (s) => s.month >= 6 && headcount(s) >= 3 && !s.log.some((l) => l.title === `Office party ${Math.floor(s.month / 12)}`),
+    when: (s) => s.month >= 6 && headcount(s) >= 3 && !doneOnce(s, `party${Math.floor(s.month / 12)}`),
     setup: (s) => {
       const big = sized(s, 0.015, 400_00);
       const small = Math.round(big / 3 / 10000) * 10000 || 10000;
@@ -614,10 +621,10 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { big, small },
         choices: [
           { id: 'big', label: `A proper party (${formatGBP(big)})`, hint: 'Morale up a lot.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Team party', [dr('otherCosts', p.big), cr('cash', p.big)]); st.morale = Math.min(100, st.morale + 10); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'A good night was had by all.'); return 'Everyone talked about it for weeks.'; } },
+            apply: (st, _rng, P, p) => { P('Team party', [dr('otherCosts', p.big), cr('cash', p.big)]); st.morale = Math.min(100, st.morale + 10); markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'A good night was had by all.'); return 'Everyone talked about it for weeks.'; } },
           { id: 'small', label: `Pizza and drinks (${formatGBP(p0(small))})`, hint: 'A smaller boost.', impact: [{ label: 'Morale', up: true }],
-            apply: (st, _rng, P, p) => { P('Team pizza night', [dr('otherCosts', p.small), cr('cash', p.small)]); st.morale = Math.min(100, st.morale + 4); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Pizza was had.'); return 'A cheerful, cheap evening.'; } },
-          { id: 'skip', label: 'Not this year', hint: 'Save the money.', impact: [], apply: (st) => { logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'The team shrugged and carried on.'; } },
+            apply: (st, _rng, P, p) => { P('Team pizza night', [dr('otherCosts', p.small), cr('cash', p.small)]); st.morale = Math.min(100, st.morale + 4); markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Pizza was had.'); return 'A cheerful, cheap evening.'; } },
+          { id: 'skip', label: 'Not this year', hint: 'Save the money.', impact: [], apply: (st) => { markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'The team shrugged and carried on.'; } },
         ],
       };
     },
@@ -668,7 +675,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
   },
   {
     id: 'tradeFair', title: 'The big trade fair', polarity: 'good', weight: 1, icon: 'rocket',
-    when: (s) => s.month >= 5 && s.month % 12 >= 1 && s.month % 12 <= 6 && lastRevenue(s) > 0 && !s.log.some((l) => l.title === `Trade fair ${Math.floor(s.month / 12)}`),
+    when: (s) => s.month >= 5 && s.month % 12 >= 1 && s.month % 12 <= 6 && lastRevenue(s) > 0 && !doneOnce(s, `fair${Math.floor(s.month / 12)}`),
     setup: (s) => {
       const big = sized(s, 0.06, 1_500_00);
       const small = Math.round(big / 3 / 10000) * 10000 || 10000;
@@ -677,10 +684,10 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { big, small },
         choices: [
           { id: 'big', label: `A big stand (${formatGBP(big)})`, hint: 'More demand for three months and a brand lift.', impact: [{ label: 'Demand', up: true }, { label: 'Brand', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Trade fair: large stand', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'fair-demand', 'Trade fair leads', 3, { demandMult: 1.07 }, true); st.brand *= 1.06; logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'Your stand was packed. Leads are pouring in.'; } },
+            apply: (st, _rng, P, p) => { P('Trade fair: large stand', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'fair-demand', 'Trade fair leads', 3, { demandMult: 1.07 }, true); st.brand *= 1.06; markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'Your stand was packed. Leads are pouring in.'; } },
           { id: 'small', label: `A small stand (${formatGBP(p0(small))})`, hint: 'A smaller lift.', impact: [{ label: 'Brand', up: true }],
-            apply: (st, _rng, P, p) => { P('Trade fair: small stand', [dr('marketing', p.small), cr('cash', p.small)]); st.brand *= 1.03; logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'A few good contacts, no big splash.'; } },
-          { id: 'skip', label: 'Skip it', hint: 'Save the fee.', impact: [], apply: (st) => { logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'You stayed home and kept the cash.'; } },
+            apply: (st, _rng, P, p) => { P('Trade fair: small stand', [dr('marketing', p.small), cr('cash', p.small)]); st.brand *= 1.03; markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'A few good contacts, no big splash.'; } },
+          { id: 'skip', label: 'Skip it', hint: 'Save the fee.', impact: [], apply: (st) => { markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'You stayed home and kept the cash.'; } },
         ],
       };
     },
@@ -887,7 +894,7 @@ export function runEvents(s: GameState, rng: Rng, enabled: boolean): void {
 
   // Every company meets a friendly decision early, so players learn choice cards before the bad news.
   const first = s.month === FIRST_EVENT_MONTH;
-  if (enabled && !s.pendingEvent && (first || chance(rng, EVENT_CHANCE))) {
+  if (enabled && !s.pendingEvent && (first || chance(rng, EVENT_CHANCE * eventChanceMult(s.modifiers)))) {
     const polarity: Polarity = first || chance(rng, positiveShare(s)) ? 'good' : 'bad';
     const shielded = polarity === 'bad' && ((boostActive(s.boosts, 'shield') && DIFFICULTIES[s.difficulty].perksApply) || s.away);
     if (!shielded) {

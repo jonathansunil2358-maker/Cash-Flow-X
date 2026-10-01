@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, IRONMAN_ID, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -206,6 +206,12 @@ function progressAfter(
   const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
   if (newAwards > 0) p = addBoxes(p, newAwards);
   if (closed > 0) p = addPassPoints(p, closed);
+  // Speedrun: remember the best time on this device.
+  if (after.speedrunMonth !== undefined && before.speedrunMonth === undefined) {
+    const better = !p.speedBest || after.speedrunMonth < p.speedBest;
+    if (better) p = { ...p, speedBest: after.speedrunMonth };
+    celebrations.push({ id: nextId++, kind: 'milestone', title: `A £1m company in ${after.speedrunMonth} months!`, text: better ? 'A new personal best.' : `Your best is ${p.speedBest} months.`, gems: 0 });
+  }
   if (closed > 0 || extraXp > 0) {
     for (const a of newAchievements(after, p.achievements)) {
       p = { ...p, achievements: { ...p.achievements, [a.id]: today() }, gems: p.gems + a.gems };
@@ -372,6 +378,7 @@ export const useGame = create<Store>((set, get) => {
     },
 
     undo() {
+      if ((get().game?.modifiers ?? []).includes(IRONMAN_ID)) { get().toast('error', 'Ironman: there is no undo.'); return; }
       const stack = get().undoStack;
       const prev = stack[stack.length - 1];
       if (!prev) return;

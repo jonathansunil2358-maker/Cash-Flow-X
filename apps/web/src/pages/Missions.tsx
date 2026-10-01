@@ -7,7 +7,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
-import { DiaryCard, EomCard, NewspaperCard, PetCard } from './Personality';
+import { DiaryCard, EomCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
 import { AuditCard, DetectiveCard, GlossaryCard, SpotCard } from './Learn';
 import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
@@ -105,6 +105,7 @@ export function Missions({ game }: { game: GameState }) {
       <PetCard game={game} />
       <EomCard game={game} />
       <DiaryCard game={game} />
+      <ShareSeedCard game={game} />
       <MasteryCard />
       <TitlesCard />
 

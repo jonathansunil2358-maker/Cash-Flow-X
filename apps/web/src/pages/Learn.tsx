@@ -4,6 +4,8 @@ import {
 import { useMemo, useState } from 'react';
 import { Button, Card } from '../components/ui';
 import { useGame } from '../store';
+import { api, ONLINE } from '../lib/api';
+import { useAccount } from '../lib/account';
 import { Fold } from './Strategy';
 
 function Choice({ label, state, onPick, disabled }: { label: string; state: 'idle' | 'right' | 'wrong'; onPick: () => void; disabled: boolean }) {
@@ -18,12 +20,13 @@ function Choice({ label, state, onPick, disabled }: { label: string; state: 'idl
 /** A trial balance with one mistake in it. Which account is wrong? */
 export function SpotCard() {
   const { profile, answerPuzzle } = useGame();
+  const signedIn = !!useAccount((s) => s.me);
   const day = utcDay();
   const puzzle = useMemo(() => spotTheMistake(day), [day]);
   const prior = answeredToday(profile, 'spot', day);
   const [picked, setPicked] = useState<string | null>(null);
   const done = prior.done || picked !== null;
-  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('spot', day, id === puzzle.answer); };
+  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('spot', day, id === puzzle.answer); if (ONLINE && signedIn) void api.answerLeague('spot', day, id).catch(() => undefined); };
   return (
     <Card id="card-spot" title="Spot the mistake" subtitle={puzzle.intro}>
       <table className="w-full text-sm" aria-label="Trial balance">
@@ -58,12 +61,13 @@ export function SpotCard() {
 /** A few ratios and a story. What is really wrong with the business? */
 export function DetectiveCard() {
   const { profile, answerPuzzle } = useGame();
+  const signedIn = !!useAccount((s) => s.me);
   const day = utcDay();
   const puzzle = useMemo(() => detectiveOf(day), [day]);
   const prior = answeredToday(profile, 'detective', day);
   const [picked, setPicked] = useState<string | null>(null);
   const done = prior.done || picked !== null;
-  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('detective', day, id === puzzle.case.answer); };
+  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('detective', day, id === puzzle.case.answer); if (ONLINE && signedIn) void api.answerLeague('detective', day, id).catch(() => undefined); };
   return (
     <Card id="card-detective" title="Ratio detective" subtitle={puzzle.case.story}>
       <table className="w-full text-sm" aria-label="Ratios">

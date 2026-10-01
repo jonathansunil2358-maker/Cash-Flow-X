@@ -144,3 +144,22 @@ export function WardrobeCard() {
     </Card>
   );
 }
+
+/** Share this company's seed so a friend can play the very same company and compare. */
+export function ShareSeedCard({ game }: { game: GameState }) {
+  const toast = useGame((s) => s.toast);
+  const link = `${window.location.origin}/?seed=${encodeURIComponent(game.seedLabel)}&sector=${game.industryId}`;
+  const text = `Play the same company as me in Cash Flow X: seed ${game.seedLabel}. Same luck, same rivals. Can you beat my ${formatGBP(game.history.at(-1)?.valuation?.equityValue ?? 0, { compact: true })}?`;
+  const share = async () => {
+    try { if (navigator.share) { await navigator.share({ title: 'Cash Flow X', text, url: link }); return; } } catch { /* cancelled: copy instead */ }
+    try { await navigator.clipboard.writeText(`${text}\n${link}`); toast('success', 'Link copied. Send it to a friend.'); } catch { toast('error', `Copy this link: ${link}`); }
+  };
+  return (
+    <Card id="card-seed" title="Share this company" subtitle="A friend who opens your link starts a new company with the same seed: same economy, same rivals, same luck. Then compare how you each did.">
+      <div className="flex flex-wrap items-center gap-3">
+        <code className="rounded border border-line px-2 py-1 text-sm" aria-label="Seed">{game.seedLabel}</code>
+        <Button variant="primary" onClick={share}>Share the seed</Button>
+      </div>
+    </Card>
+  );
+}

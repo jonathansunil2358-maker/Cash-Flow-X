@@ -30,6 +30,7 @@ import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
 import { advanceFranchises } from './model/franchise';
 import { advanceSuppliers, supplierMult } from './model/suppliers';
+import { advanceBoss } from './model/boss';
 import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
 import { advanceAwards } from './model/awards';
@@ -114,6 +115,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceBoard(s, !!opts.simulation);
   advanceAwards(s, !!opts.simulation);
   advanceAudit(s, !!opts.simulation);
+  advanceBoss(s, !!opts.simulation);
 
   // 2. Economy
   runEvents(s, rng, !opts.simulation);
@@ -524,6 +526,11 @@ function closeMonth(s: GameState, ind: IndustryConfig, d: DemandInfo, capacity: 
   if (s.wonAtMonth === null && record.valuation && record.valuation.equityValue >= WIN_EQUITY_VALUE && s.status === 'playing') {
     s.wonAtMonth = m;
     if (!opts.simulation) logItem(s, 'milestone', 'Target reached: £10m company!', 'Your company is now valued at over £10 million. Keep going to grow your score, or retire and post it to the leaderboard.');
+  }
+
+  if (s.scenarioId === 'speedrun' && s.speedrunMonth === undefined && record.valuation && record.valuation.equityValue >= 1_000_000_00 && s.status === 'playing') {
+    s.speedrunMonth = m + 1;
+    if (!opts.simulation) logItem(s, 'milestone', `A £1m company in ${m + 1} months!`, 'Speedrun goal reached. Keep going to improve your score, or stop here.');
   }
 
   s.month += 1;
