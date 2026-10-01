@@ -1,8 +1,9 @@
-import { chance, pick, type Rng } from '../rng';
+import { chance, type Rng } from '../rng';
 import type { IndustryConfig } from './industries';
 import { modifiersOf } from './modifiers';
 import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
-import { logItem, type Competitor, type GameState } from './state';
+import { DIFFICULTIES } from './difficulty';
+import { logItem, yearOf, type GameState } from './state';
 
 /**
  * Demand model (every term is shown to the player in the UI):
@@ -89,20 +90,55 @@ export function averageCompetitorQuality(s: GameState): number {
   return s.competitors.reduce((a, c) => a + c.quality, 0) / Math.max(1, s.competitors.length);
 }
 
+/** Rivals strike back when your share has jumped this much (points of market share) in three months. */
+export const RIVAL_TRIGGER_RISE = 0.05;
+/** A price cut never takes a rival below this fraction of its normal price. */
+export const RIVAL_PRICE_FLOOR = 0.85;
+const clampPrice = (ind: IndustryConfig, p: number): number => Math.round(Math.min(ind.basePrice * 2.5, Math.max(ind.basePrice * 0.4, p)));
+
 /**
- * Competitors keep improving, faster when you out-innovate them; if you dominate the market
- * someone may start a price war.
+ * Competitors keep improving, faster when you out-innovate them, and they react to you:
+ *  - if your share jumps (or you dominate), the strongest rival cuts prices for 3 to 6 months,
+ *    then drifts back to its normal price;
+ *  - now and then a rival launches a better product (at most once a year each).
+ * How readily they do this scales with the difficulty.
  */
 export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, lastShare: number): void {
+  const aggression = DIFFICULTIES[s.difficulty].rivalAggression;
   for (const c of s.competitors) {
     const catchUp = 0.02 * Math.max(0, s.quality - c.quality);
     c.quality = Math.min(100, Math.max(10, c.quality + 0.1 + catchUp + (rng.next() - 0.5) * 0.4));
     const drift = 1 + (rng.next() - 0.5) * 0.02;
-    c.price = Math.round(Math.min(ind.basePrice * 2.5, Math.max(ind.basePrice * 0.4, c.price * drift)));
+    c.normalPrice = clampPrice(ind, c.normalPrice * drift);
+    if (c.cutMonths > 0) {
+      c.cutMonths -= 1;
+      c.price = clampPrice(ind, c.price * drift);
+    } else {
+      // Recover most of the way back to the normal price over a few months.
+      const gap = c.normalPrice - c.price;
+      c.price = Math.abs(gap) < ind.basePrice * 0.005 ? c.normalPrice : clampPrice(ind, c.price + gap * 0.3);
+    }
   }
-  if (lastShare > 0.3 && chance(rng, 0.15)) {
-    const c: Competitor = pick(rng, s.competitors);
-    c.price = Math.round(c.price * 0.93);
-    logItem(s, 'event', `${c.name} starts a price war`, `${c.name} cut prices by 7% to win back share from you.`);
+
+  const earlier = s.history.at(-3)?.kpis.marketShare ?? lastShare;
+  const rising = lastShare - earlier > RIVAL_TRIGGER_RISE;
+  const dominating = lastShare > 0.3 && chance(rng, 0.15);
+  if ((rising || dominating) && !s.competitors.some((c) => c.cutMonths > 0) && chance(rng, Math.min(1, 0.5 * aggression))) {
+    const rival = s.competitors.reduce((best, c) => (c.strength * c.quality > best.strength * best.quality ? c : best));
+    const cut = 0.04 + rng.next() * 0.04;
+    rival.cutMonths = 3 + Math.min(3, Math.floor(rng.next() * 4));
+    rival.price = Math.max(Math.round(rival.price * (1 - cut)), Math.round(rival.normalPrice * RIVAL_PRICE_FLOOR));
+    logItem(s, 'event', `${rival.name} cuts prices`,
+      `${rival.name} dropped prices by about ${Math.round(cut * 100)}% for the next ${rival.cutMonths} months to win back customers from you.`);
+  }
+
+  const year = yearOf(s.month);
+  for (const c of s.competitors) {
+    if (c.lastLaunchYear !== year && chance(rng, 0.03 * aggression)) {
+      const step = 3 + Math.min(3, Math.floor(rng.next() * 4));
+      c.quality = Math.min(100, c.quality + step);
+      c.lastLaunchYear = year;
+      logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. Time to look at your own product.`);
+    }
   }
 }

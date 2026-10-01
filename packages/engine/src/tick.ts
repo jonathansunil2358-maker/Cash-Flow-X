@@ -82,7 +82,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   // 1. Year start
   if (m > 0 && m % 12 === 0) {
     s.salaryIndex *= 1.03;
-    for (const c of s.competitors) c.price = Math.round(c.price * 1.02);
+    for (const c of s.competitors) { c.price = Math.round(c.price * 1.02); c.normalPrice = Math.round(c.normalPrice * 1.02); }
     if (!opts.simulation) {
       s.targets = generateTargets(s, rng);
       logItem(s, 'notice', 'New financial year', 'Salaries rose 3% with inflation. New acquisition targets are available in the M&A tab.');
