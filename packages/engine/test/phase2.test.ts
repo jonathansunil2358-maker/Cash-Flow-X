@@ -5,7 +5,7 @@ import {
   prestigeCheck, prestigeThreshold, rebirthCheck, replay, runEvents, startingCash, tickInPlace, toSubmission, upgradeOptions,
   type GameState,
 } from '../src/index';
-import { playPolicy } from './helpers';
+import { playPolicy, playUntil } from './helpers';
 
 describe('difficulty', () => {
   it('sets starting cash: £100k / £50k / £25k', () => {
@@ -157,7 +157,8 @@ describe('prestige and rebirth', () => {
   });
 
   it('a successful software run can prestige, and the profile banks points, gems and perks', () => {
-    const s = playPolicy('software', 'PRESTIGE', 72);
+    // Prestige takes years now that the early sprint is valued realistically; play until the stake qualifies.
+    const s = playUntil('software', 'PRESTIGE', 240, (g) => prestigeCheck(g).eligible);
     const check = prestigeCheck(s);
     expect(check.eligible).toBe(true);
     const cash = s.ledger.balances.cash;

@@ -5,6 +5,10 @@ import { loanPrincipal, type GameState, type Valuation } from './state';
 
 export const TERMINAL_GROWTH = 0.02;
 export const DCF_YEARS = 5;
+/** Buyers will not pay for more than this much growth carrying on: early sprints are not forever. */
+export const MAX_DCF_GROWTH = 0.35;
+/** Most a buyer will pay for margins above the sector norm (as a multiple of the norm). */
+export const MAX_MARGIN_PREMIUM = 1.5;
 
 export const waccFor = (baseRate: number): number => Math.min(0.2, Math.max(0.08, baseRate + 0.075));
 
@@ -36,7 +40,7 @@ export interface DcfResult {
  */
 export function dcf(ttmRevenue: Pence, ttmEbitda: Pence, growth: number, baseRate: number, ind: IndustryConfig): DcfResult {
   const wacc = waccFor(baseRate);
-  const g0 = Math.min(0.6, Math.max(-0.2, growth));
+  const g0 = Math.min(MAX_DCF_GROWTH, Math.max(-0.2, growth));
   const m0 = ttmRevenue > 0 ? Math.min(0.6, Math.max(-1, ttmEbitda / ttmRevenue)) : ind.targetEbitdaMargin;
   const years: DcfYear[] = [];
   let revenue = ttmRevenue;
@@ -73,10 +77,12 @@ export function valuationOf(s: GameState): Valuation {
   const ttmEbitda = annualise(t.summary.ebitda, t.months);
   const ttmProfit = annualise(t.summary.profit, t.months);
   const growth = revenueGrowth(s);
-  const growthAdj = 1 + Math.min(1, Math.max(-0.3, growth)) * 0.3;
+  const growthAdj = 1 + Math.min(0.5, Math.max(-0.3, growth)) * 0.3;
   const margin = ttmRevenue > 0 ? ttmEbitda / ttmRevenue : 0;
 
-  const evEbitda = ttmEbitda > 0 ? Math.round(ttmEbitda * ind.multiples.evEbitda * growthAdj) : 0;
+  // Buyers expect unusually high margins to be competed away, so they pay for at most 1.5x the sector norm.
+  const sustainableEbitda = Math.min(ttmEbitda, ttmRevenue * ind.targetEbitdaMargin * MAX_MARGIN_PREMIUM);
+  const evEbitda = ttmEbitda > 0 ? Math.round(sustainableEbitda * ind.multiples.evEbitda * growthAdj) : 0;
   const evRevenue = Math.round(ttmRevenue * ind.multiples.evRevenue * growthAdj * (margin < 0 ? Math.max(0.2, 1 + margin) : 1));
   const d = ttmRevenue > 0 ? dcf(ttmRevenue, ttmEbitda, growth, s.economy.baseRate, ind) : null;
   const dcfEv = d?.enterpriseValue ?? 0;

@@ -4,7 +4,7 @@
  * and borrow when cash gets tight.
  */
 import {
-  ActionError, applyActionInPlace, industryOf, loanOffer, plSummary, type Action, type GameState,
+  ActionError, applyActionInPlace, industryOf, loanOffer, plSummary, upgradeOptions, type Action, type GameState,
 } from '../src/index';
 
 export function policyActions(s: GameState): Action[] {
@@ -50,5 +50,22 @@ export function applyPolicy(s: GameState): void {
     } catch (e) {
       if (!(e instanceof ActionError)) throw e;
     }
+  }
+}
+
+/**
+ * The heuristic player plus sensible upgrade buying (the cheapest available upgrade when profitable
+ * with three times its cost in cash). Closer to how people play; used for difficulty reports.
+ */
+export function applyGrowthPolicy(s: GameState): void {
+  applyPolicy(s);
+  const last = s.history.at(-1);
+  if (s.status !== 'playing' || s.pendingEvent || !last || plSummary(last.period.pl).profit <= 0) return;
+  const pick = upgradeOptions(s).filter((o) => !o.maxed && !o.locked && o.cost * 3 <= s.ledger.balances.cash).sort((a, b) => a.cost - b.cost)[0];
+  if (!pick) return;
+  try {
+    applyActionInPlace(s, { type: 'buyUpgrade', upgradeId: pick.def.id });
+  } catch (e) {
+    if (!(e instanceof ActionError)) throw e;
   }
 }

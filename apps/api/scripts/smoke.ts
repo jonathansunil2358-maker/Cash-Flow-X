@@ -10,9 +10,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, bracketFor, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
+  applyActionInPlace, bracketFor, distributableReserves, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
-import { applyPolicy } from '../../../packages/engine/scripts/policy';
+import { fileURLToPath } from 'node:url';
+import { applyGrowthPolicy, applyPolicy } from '../../../packages/engine/scripts/policy';
+
+/** Wrangler's own entry script, run through Node so it works on Windows too (no npx shim). */
+const WRANGLER = fileURLToPath(new URL('../../../node_modules/wrangler/bin/wrangler.js', import.meta.url).href);
 
 const base = (process.argv[2] ?? 'http://localhost:8787').replace(/\/$/, '');
 const origin = 'http://localhost:5173';
@@ -71,7 +75,7 @@ async function sync(p: Player, overrideChecksum?: string) {
 async function play(p: Player, months: number) {
   for (let i = 0; i < months && p.game.status === 'playing'; i++) {
     answer(p.game);
-    applyPolicy(p.game);
+    applyGrowthPolicy(p.game);
     answer(p.game);
     tickInPlace(p.game);
     if (p.game.month % 12 === 0) {
@@ -96,8 +100,9 @@ check('dev sign-in issues sessions', !!alice.token && !!bob.token && !!carol.tok
 const stale = await call('/runs', { token: alice.token, body: { seed: 'X', industryId: 'software', difficulty: 'easy', equipmentFinance: 'buy', rulesVersion: 1 } });
 check('outdated clients are told to update', stale.status === 409, stale);
 
-// Alice grows a software company for six years, syncing yearly, then prestiges.
-const a = await startRun('Alice', alice.token, 'software');
+// Alice grows a clothing company for six years, syncing yearly, then prestiges.
+// (Sectors here are ones the simple policy never loses on Easy, so random seeds can't make this flaky.)
+const a = await startRun('Alice', alice.token, 'clothing');
 const ra = await play(a, 72);
 check('six years sync in yearly chunks', ra.status === 200 && a.synced === a.game.actionLog.length, ra);
 const meA = await call<{ user: { legacyPoints: number; personalCash: number }; activeRun: { month: number } }>('/me', { token: alice.token });
@@ -113,9 +118,11 @@ check('create holding company', g.status === 201, g);
 check('join holding company', (await call(`/guilds/${g.json.id}/join`, { token: bob.token, body: {} })).status === 200);
 
 // Bob builds personal cash: play, pay a dividend, sync.
-const b = await startRun('Bob', bob.token, 'software');
+const b = await startRun('Bob', bob.token, 'ecommerce');
 await play(b, 60);
 const div = 20_000_00;
+// Keep trading until there are reserves to pay out.
+for (let y = 0; y < 15 && distributableReserves(b.game) < div; y++) await play(b, 12);
 applyActionInPlace(b.game, { type: 'payDividend', amount: div });
 const rb = await sync(b);
 const meB = await call<{ user: { personalCash: number } }>('/me', { token: bob.token });
@@ -140,7 +147,7 @@ const detail = await call<{ level: number; members: unknown[] }>(`/guilds/${g.js
 check('holding company lists both members', detail.json.members.length === 2, detail);
 
 // Alice prestiges: her company carries on, Bob keeps his shares, Alice earns Legacy points on the server.
-for (let i = 0; i < 24 && !prestigeCheck(a.game).eligible; i++) { answer(a.game); applyPolicy(a.game); answer(a.game); tickInPlace(a.game); }
+for (let y = 0; y < 15 && !prestigeCheck(a.game).eligible; y++) await play(a, 12);
 answer(a.game);
 if (prestigeCheck(a.game).eligible) {
   const pts = prestigeCheck(a.game).points;
@@ -342,14 +349,14 @@ function storeOldCheckpoint(runId: string, g: GameState, shape: (g: GameState) =
   const hex = Array.from(gzipSync(Buffer.from(JSON.stringify(shape(g))))).map((b) => b.toString(16).padStart(2, '0')).join('');
   const file = join(tmpdir(), `cfx-legacy-${runId}.sql`);
   writeFileSync(file, `UPDATE game_runs SET checkpoint = x'${hex}' WHERE id = '${runId}';`);
-  execFileSync('npx', ['wrangler', 'd1', 'execute', 'cash-flow-x', '--local', '--file', file], { stdio: 'ignore' });
+  execFileSync(process.execPath, [WRANGLER, 'd1', 'execute', 'cash-flow-x', '--local', '--file', file], { stdio: 'ignore' });
 }
 const carry = (p: Player, state: unknown = compactForServer(p.game), actions = p.game.actionLog.length) =>
   call<{ actionsVerified?: number; month?: number; error?: string; code?: string }>(`/runs/${p.runId}/carryover`, { token: p.token, body: { state, actions } });
 const tamper = (g: GameState, edit: (o: any) => void) => { const o = JSON.parse(JSON.stringify(compactForServer(g))); edit(o); return o; };
 
 const fay = await signUp('Fay');
-const legacy = await startRun('Fay', fay.token, 'software');
+const legacy = await startRun('Fay', fay.token, 'ecommerce');
 await play(legacy, 8);
 const newRun = await carry(legacy);
 check('carry-over: a run on the current version cannot use it', newRun.status === 409, newRun);
@@ -376,11 +383,11 @@ check('carry-over: the server tracks the new position', meF.json.activeRun?.mont
 
 // A company sold under the old prestige rules is reopened and carries on, a rank higher.
 const hope = await signUp('Hope');
-const sold = await startRun('Hope', hope.token, 'software');
+const sold = await startRun('Hope', hope.token, 'clothing');
 await play(sold, 14);
 const asSold = (g: GameState) => { const o = asV4Checkpoint(g); o.status = 'prestiged'; o.prestigeAward = 7; o.prestigeLevel = (o.prestigeLevel ?? 0); return o; };
 storeOldCheckpoint(sold.runId, sold.game, asSold);
-execFileSync('npx', ['wrangler', 'd1', 'execute', 'cash-flow-x', '--local', '--command', `UPDATE game_runs SET status = 'prestiged' WHERE id = '${sold.runId}'`], { stdio: 'ignore' });
+execFileSync(process.execPath, [WRANGLER, 'd1', 'execute', 'cash-flow-x', '--local', '--command', `UPDATE game_runs SET status = 'prestiged' WHERE id = '${sold.runId}'`], { stdio: 'ignore' });
 sold.game.prestigeAward = 7;
 sold.game.prestigeLevel += 1;
 const wrongRank = await carry(sold, tamper(sold.game, (o) => { o.prestigeLevel += 1; }));
