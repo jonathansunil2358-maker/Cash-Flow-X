@@ -83,10 +83,12 @@ describe('holding company investments', () => {
     expect(s.outsideHolders[0].dividends).toBe(Math.round((reserves * s.outsideHolders[0].shares) / s.shares.total));
   });
 
-  it('buys investors out at valuation on prestige, restoring full ownership', () => {
+  it('buys investors out at valuation on prestige, restoring the owner stake from before the investment', () => {
     const s = playPolicy('software', 'PRESTIGE', 72);
     answer(s);
     const pre = valuationOf(s).equityValue;
+    // Events can dilute the owner before this investment, so compare with the stake held just before it.
+    const ownershipBefore = ownership(s);
     applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: Math.round(pre * 0.05), preMoney: pre });
     for (let i = 0; i < 3; i++) { answer(s); tickInPlace(s); }
     answer(s);
@@ -97,7 +99,7 @@ describe('holding company investments', () => {
     expect(h.status).toBe('bought-out');
     expect(h.buyout).toBeGreaterThan(0);
     expect(cash - s.ledger.balances.cash).toBe(h.buyout);
-    expect(ownership(s)).toBe(1);
+    expect(ownership(s)).toBeCloseTo(ownershipBefore, 10);
   });
 });
 
