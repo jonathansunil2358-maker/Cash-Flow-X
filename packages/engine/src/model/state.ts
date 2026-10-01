@@ -320,7 +320,7 @@ export interface GameState {
   /** Legacy points earned when this run was prestiged. */
   prestigeAward: number;
   /** Link to the server's copy of this run (online play). Bookkeeping only; never read by the simulation. */
-  server?: { runId: string; synced: number; syncedMonth: number; flagged?: string };
+  server?: { runId: string; synced: number; syncedMonth: number; flagged?: string; carry?: 'pending' | 'done' | 'failed' };
   /** How the run began, for replay verification. */
   start: { equipmentFinance: 'buy' | 'lease'; boosts: ActiveBoost[] };
   boosts: ActiveBoost[];

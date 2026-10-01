@@ -39,3 +39,4 @@ export * from './model/rnd';
 export * from './model/rank';
 export * from './model/stats';
 export * from './daily';
+export * from './model/migrate';
