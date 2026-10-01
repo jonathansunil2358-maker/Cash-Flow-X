@@ -2,8 +2,8 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  awardPrestige, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
-  type Profile, type Rng,
+  addBoxes, awardPrestige, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -98,6 +98,8 @@ interface Store {
   claimDaily: () => void;
   /** Cosmetics and founder titles (never affect a score). */
   claimQuest: (id: string) => void;
+  openBox: () => BoxOpening<Profile> | null;
+  claimAlbumPage: (pageId: string) => void;
   buySkin: (id: string) => void;
   equipSkin: (id: string) => void;
   setTitle: (id: string | null) => void;
@@ -111,6 +113,11 @@ interface Store {
   dismissToast: (id: number) => void;
   dismissCelebration: () => void;
 }
+
+/** Achievements that also give a sticker for the album. */
+const ACHIEVEMENT_STICKER: Record<string, string> = {
+  first_profit: 'general-0', board_first: 'general-1', storm_survivor: 'general-2', award_first: 'general-3', big_bet_win: 'general-4', rumour_hound: 'general-5',
+};
 
 /** Which daily quest an action counts towards. */
 const QUEST_OF_ACTION: Partial<Record<Action['type'], QuestEvent>> = {
@@ -178,9 +185,14 @@ function progressAfter(
     xp += XP_REWARDS.monthClosed * closed;
     if (plSummary(after.history[after.history.length - 1].period.pl).profit > 0) xp += XP_REWARDS.profitableMonth;
   }
+  // Every award won is a mystery box.
+  const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
+  if (newAwards > 0) p = addBoxes(p, newAwards);
   if (closed > 0 || extraXp > 0) {
     for (const a of newAchievements(after, p.achievements)) {
       p = { ...p, achievements: { ...p.achievements, [a.id]: today() }, gems: p.gems + a.gems };
+      const sticker = ACHIEVEMENT_STICKER[a.id];
+      if (sticker) p = grantSticker(p, sticker);
       xp += 25;
       celebrations.push({ id: nextId++, kind: 'achievement', title: a.name, text: a.description, gems: a.gems });
     }
@@ -590,8 +602,30 @@ export const useGame = create<Store>((set, get) => {
     claimQuest(id) {
       try {
         const r = claimQuestReward(get().profile, utcDay(), id);
-        set({ profile: persistProfile(r.profile) });
+        set({ profile: persistProfile(r.bonus ? addBoxes(r.profile, 1) : r.profile) });
         get().toast('good', r.bonus ? `Quest done: +${r.gems} gems, and +${r.bonus} for finishing all three!` : `Quest done: +${r.gems} gems.`);
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    openBox() {
+      try {
+        const r = openBoxReward(get().profile);
+        set({ profile: persistProfile(r.profile) });
+        playSound('success');
+        return r;
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+        return null;
+      }
+    },
+
+    claimAlbumPage(pageId) {
+      try {
+        set({ profile: persistProfile(claimAlbumPage(get().profile, pageId)) });
+        get().toast('good', 'Album page complete: gems added.');
         playSound('success');
       } catch (e) {
         get().toast('error', (e as Error).message);

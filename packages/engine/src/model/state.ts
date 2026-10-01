@@ -1,6 +1,7 @@
 import type { Balances } from '../ledger/accounts';
 import type { AwardWon } from './awards';
 import type { BoardState } from './board';
+import type { Rumour } from './surprise';
 import type { Ledger, PeriodAccumulator } from '../ledger/journal';
 import type { Pence } from '../money';
 import type { DifficultyId } from './difficulty';
@@ -322,6 +323,8 @@ export interface GameState {
   modifiers?: string[];
   /** Quarterly board meetings (see board.ts) and annual awards won (see awards.ts). Missing on older saves. */
   board?: BoardState;
+  /** A rumour waiting to come true (or not): see surprise.ts. */
+  rumour?: Rumour;
   awards?: AwardWon[];
   pay: PayLevel;
   /** Monthly training budget. */

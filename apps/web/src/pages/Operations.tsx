@@ -8,6 +8,7 @@ import { suggestedMarketing } from '../lib/coach';
 import { useDerived } from '../lib/derived';
 import { useGame } from '../store';
 import { BoardCard, TeamCard } from './Fun';
+import { RumourCard } from './Surprise';
 import { ContractsCard, InsuranceCard, PressuresCard, SitesCard } from './Growth';
 import { MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
 
@@ -50,6 +51,7 @@ export function Operations({ game }: { game: GameState }) {
         <MoraleCard game={game} />
         <ProjectsCard game={game} />
         <BoardCard game={game} />
+        <RumourCard game={game} />
         <TeamCard game={game} />
         <PressuresCard game={game} />
         <RivalsCard game={game} />

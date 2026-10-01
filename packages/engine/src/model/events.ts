@@ -65,6 +65,18 @@ interface AutoEventDef {
 
 export const AUTO_EVENTS: AutoEventDef[] = [
   {
+    type: 'pandemic', title: 'A pandemic', polarity: 'bad', weight: 0.12, duration: [4, 8], effects: { demandMult: 0.75, unitCostMult: 1.1 }, when: (s) => s.month >= 12,
+    start: () => 'A sudden health scare keeps people at home. Demand falls 25% and supplies cost 10% more while it lasts.',
+  },
+  {
+    type: 'portStrike', title: 'Port strike', polarity: 'bad', weight: 0.12, duration: [3, 6], effects: { unitCostMult: 1.25 }, when: (s) => s.month >= 12,
+    start: () => 'Dock workers have walked out. Imports are stuck and supplies cost 25% more until it ends.',
+  },
+  {
+    type: 'techBreakthrough', title: 'Tech breakthrough', polarity: 'good', weight: 0.15, duration: [4, 8], effects: { demandMult: 1.15, unitCostMult: 0.95 }, when: (s) => s.month >= 12,
+    start: () => 'A new technology makes everything easier. Demand +15% and supplies 5% cheaper for a while.',
+  },
+  {
     type: 'boom', title: 'Economic boom', polarity: 'good', weight: 2, duration: [6, 12], effects: { demandMult: 1.12 }, excludes: ['recession'],
     start: () => 'Consumer and business spending is rising. Market demand +12% while the boom lasts.',
   },
@@ -196,6 +208,31 @@ interface ChoiceEventDef {
 const roleName = (s: GameState, r: RoleId) => industryOf(s).roles[r].title.toLowerCase();
 
 export const CHOICE_EVENTS: ChoiceEventDef[] = [
+  {
+    id: 'bigBet', title: 'A once-in-a-lifetime bet', polarity: 'good', weight: 0.4, icon: 'diamond',
+    when: (s) => s.month >= 12 && s.ledger.balances.cash >= 20_000_00,
+    setup: (s) => {
+      const stake = Math.round((s.ledger.balances.cash * 0.15) / 10_000) * 10_000;
+      return {
+        story: `A contact offers you a place in a risky one-off deal. Put in ${formatGBP(stake)} and there is a better-than-even chance of getting almost double back. Lose, and it is gone.`,
+        params: { stake },
+        choices: [
+          { id: 'bet', label: `Bet ${formatGBP(stake)}`, hint: 'About 55% to win 80% on top, 45% to lose it all.', impact: [{ label: 'Risk', up: false }, { label: 'Cash', up: true }],
+            apply: (st, rng, P, p) => {
+              if (chance(rng, 0.55)) {
+                const win = Math.round(p.stake * 0.8);
+                P('Big bet paid off', [dr('cash', win), cr('otherIncome', win)]);
+                return `It paid off! You made ${formatGBP(win)}.`;
+              }
+              P('Big bet lost', [dr('otherCosts', p.stake), cr('cash', p.stake)]);
+              return `It went wrong and the ${formatGBP(p.stake)} is gone.`;
+            } },
+          { id: 'pass', label: 'Politely pass', hint: 'Nothing gained, nothing lost.', impact: [],
+            apply: () => 'You kept your money and slept well.' },
+        ],
+      };
+    },
+  },
   {
     id: 'staffAsk', title: 'A team member has a request', polarity: 'good', weight: 1.2, icon: 'heart',
     when: (s) => s.month >= 6 && headcount(s) >= 3,
@@ -467,6 +504,7 @@ const REPUTATION: Record<string, number> = {
   'breakdown.emergency': 2, 'breakdown.cheap': -1, 'breakdown.wait': -3,
   'inspection.adviser': 1, 'inspection.diy': -1,
   'rentReview.accept': 0, 'rentReview.negotiate': 0, 'rentReview.move': -1,
+  'bigBet.bet': 0, 'bigBet.pass': 0,
   'staffAsk.raise': 1, 'staffAsk.bonus': 1, 'staffAsk.timeoff': 1, 'staffAsk.decline': -1,
   'investor.accept': 2, 'investor.negotiate': 1, 'investor.decline': 0,
   'bigDeal.accept': 3, 'bigDeal.decline': -1,

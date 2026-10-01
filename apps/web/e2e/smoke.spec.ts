@@ -690,3 +690,31 @@ test('a company worth millions gets a helipad and the 3D scene still renders', a
   await page.waitForTimeout(1500);
   expect(errors).toEqual([]);
 });
+
+test('Batch A: mystery boxes, sticker album, hidden achievements and the rumour mill', async ({ page }) => {
+  await freshCompany(page, 'Surp');
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.boxes = 3;
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await skipTourIfShown(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const mill = biz.locator('#card-rumours');
+  await mill.getByRole('button', { name: 'Open' }).click();
+  await expect(mill.getByText(/No rumours right now/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const boxes = missions.locator('#card-boxes');
+  await expect(boxes.getByRole('button', { name: 'Open a box (3)' })).toBeVisible();
+  await boxes.getByRole('button', { name: 'Open a box (3)' }).click();
+  await expect(boxes.getByRole('status')).toBeVisible();
+  await expect(boxes.getByRole('button', { name: 'Open a box (2)' })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).boxes)).toBe(2);
+  await expect(missions.locator('#card-album').getByText(/Sticker album \(\d+\/42\)/)).toBeVisible();
+  await expect(missions.getByText('???').first()).toBeVisible();
+});

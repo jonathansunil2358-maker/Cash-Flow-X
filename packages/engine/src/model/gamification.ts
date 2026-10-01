@@ -49,6 +49,8 @@ export interface AchievementDef {
   description: string;
   icon: string;
   gems: number;
+  /** Shown as "???" until earned. */
+  hidden?: boolean;
   /** A founder title this achievement lets you wear on the leaderboards. */
   title?: string;
   check: (s: GameState) => boolean;
@@ -118,6 +120,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'award_five', name: 'Trophy cabinet', description: 'Win five annual awards.', icon: 'diamond', gems: 40, check: (s) => (s.awards?.length ?? 0) >= 5 },
   { id: 'award_sweep', name: 'Clean sweep', description: 'Win three awards in one year.', icon: 'flame', gems: 50, title: 'Clean Sweeper',
     check: (s) => { const by: Record<number, number> = {}; for (const a of s.awards ?? []) by[a.year] = (by[a.year] ?? 0) + 1; return Object.values(by).some((n) => n >= 3); } },
+  { id: 'overdraft_survivor', name: 'Living dangerously', description: 'Stay overdrawn for three months in a row and come out the other side.', icon: 'flame', gems: 30, hidden: true,
+    check: (s) => s.status === 'playing' && s.ledger.balances.cash >= 0 && s.history.slice(-4, -1).length === 3 && s.history.slice(-4, -1).every((r) => r.closing.cash < 0) },
+  { id: 'big_bet_win', name: 'Fortune favours', description: 'Win a once-in-a-lifetime bet.', icon: 'diamond', gems: 25, hidden: true, title: 'High Roller', check: (s) => s.log.some((l) => /It paid off!/.test(l.text)) },
+  { id: 'rumour_hound', name: 'Rumour hound', description: 'See a rumour come true.', icon: 'chart', gems: 20, hidden: true, check: (s) => s.log.some((l) => l.title === 'The rumour was true') },
+  { id: 'storm_survivor', name: 'Storm rider', description: 'Survive a pandemic or a port strike.', icon: 'shield', gems: 30, hidden: true, title: 'Storm Rider',
+    check: (s) => s.status === 'playing' && s.log.some((l) => (l.title === 'A pandemic' || l.title === 'Port strike')) && !s.economy.active.some((a) => a.type === 'pandemic' || a.type === 'portStrike') },
+  { id: 'debt_free_tycoon', name: 'Debt-free tycoon', description: 'Be worth £5m with no loans and cash in the bank, after three years.', icon: 'crown', gems: 40, hidden: true, title: 'Debt-Free',
+    check: (s) => s.month >= 36 && lastValuation(s) >= 5_000_000_00 && loanPrincipal(s) === 0 && s.ledger.balances.cash > 0 },
+  { id: 'ten_years', name: 'Ten years on', description: 'Run the same company for ten years.', icon: 'mountain', gems: 50, hidden: true, check: (s) => s.status === 'playing' && s.month >= 120 },
   { id: 'hard_win', name: 'Against the odds', description: 'Reach the £10m target on Hard.', icon: 'mountain', gems: 60, title: 'Against All Odds', check: (s) => s.difficulty === 'hard' && s.wonAtMonth !== null },
 ];
 

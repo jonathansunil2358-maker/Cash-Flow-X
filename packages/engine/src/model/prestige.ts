@@ -62,6 +62,11 @@ export interface Profile {
   cosmetics?: Cosmetics;
   /** Today's quests and the streak (see quests.ts). Optional so older saves load unchanged. */
   quests?: QuestState;
+  /** Mystery boxes waiting, how many were opened, collected stickers and album pages already paid. */
+  boxes?: number;
+  boxesOpened?: number;
+  stickers?: string[];
+  albumClaimed?: string[];
 }
 
 export const STARTER_GEMS = 50;

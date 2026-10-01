@@ -7,6 +7,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
+import { AlbumCard, BoxesCard } from './Surprise';
 import { TitlesCard } from './Titles';
 import { WeeklyEventCard } from './Weekly';
 
@@ -39,6 +40,7 @@ export function Missions({ game }: { game: GameState }) {
       <PageTitle title="Missions" subtitle="Earn XP and gems by running your business well. Missions change as you complete them, and each one teaches a bit of finance." />
 
       <QuestsCard />
+      <BoxesCard />
       <DailyChallengeCard game={game} />
       <WeeklyEventCard game={game} />
       <ChallengeCard game={game} />
@@ -88,6 +90,8 @@ export function Missions({ game }: { game: GameState }) {
 
       <TrophyCard game={game} />
 
+      <AlbumCard />
+
       <TitlesCard />
 
       <Card title={`Achievements (${earned}/${ACHIEVEMENTS.length})`}>
@@ -98,8 +102,8 @@ export function Missions({ game }: { game: GameState }) {
               <div key={a.id} className={`flex items-center gap-3 rounded-2xl border-[3px] border-outline p-2.5 ${got ? 'bg-surface-2' : 'opacity-60'}`}>
                 <img src={a.icon === 'coin' ? CURRENCY_ICONS.coin : iconUrl(a.icon)} alt="" className={`h-10 w-10 ${got ? '' : 'grayscale'}`} />
                 <div className="min-w-0 text-sm">
-                  <div className="font-display text-base leading-tight">{a.name}</div>
-                  <div className="text-xs text-ink-2">{a.description}</div>
+                  <div className="font-display text-base leading-tight">{a.hidden && !got ? '???' : a.name}</div>
+                  <div className="text-xs text-ink-2">{a.hidden && !got ? 'A hidden achievement. Keep playing to find it.' : a.description}</div>
                 </div>
                 <div className="ml-auto shrink-0">{got ? <StatusPill kind="good" label="Done" /> : <span className="text-xs font-black">+{a.gems} gems</span>}</div>
               </div>

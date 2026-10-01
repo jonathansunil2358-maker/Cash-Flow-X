@@ -25,6 +25,7 @@ import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './m
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
+import { advanceSurprise } from './model/surprise';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
@@ -248,6 +249,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   if (s.listed) P('Listed company costs (compliance, auditors, investor relations)', [dr('dealCosts', LISTED_MONTHLY_COST), cr('cash', LISTED_MONTHLY_COST)]);
   advanceListing(s, rng, !!opts.simulation);
   if (!opts.simulation) maybeOffer(s, rng);
+  advanceSurprise(s, rng, !!opts.simulation);
 
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);

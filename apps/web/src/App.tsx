@@ -1,5 +1,5 @@
 import {
-  cosmeticsOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
@@ -182,6 +182,12 @@ function Hud({ game }: { game: GameState }) {
         <button type="button" className="cfx-pill" onClick={() => openSheet('missions')} aria-label={`${profile.gems} gems. Open Missions.`}>
           <img src={CURRENCY_ICONS.gem} alt="" />{profile.gems}<span className="cfx-pill__plus" aria-hidden>+</span>
         </button>
+        {luckOf(game) && (
+          <button type="button" className="cfx-pill" onClick={() => openSheet('team')}
+            aria-label={`${luckOf(game)!.title}: demand ${luckOf(game)!.effects.demandMult! > 1 ? 'up' : 'down'} 5% for a few months. Open Business.`}>
+            {luckOf(game)!.effects.demandMult! > 1 ? '🍀' : '❄️'}<span className="text-xs">{luckOf(game)!.title}</span>
+          </button>
+        )}
         {game.prestigeLevel > 0 && (
           <button type="button" className="cfx-pill" onClick={() => openSheet('legacy')}
             aria-label={`Prestige rank ${game.prestigeLevel}, ${prestigeTitle(game.prestigeLevel)}: +${Math.round(prestigeBonus(game.prestigeLevel) * 100)}% demand. Open Prestige.`}>
