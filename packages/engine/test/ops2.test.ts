@@ -108,7 +108,7 @@ describe('segments and IPO day', () => {
       answer(s);
       s.pendingEvent = null;
       applyActionInPlace(s, { type: 'listCompany' });
-      expect(s.pendingEvent?.id).toBe('ipoDay');
+      expect((s.pendingEvent as { id: string } | null)?.id).toBe('ipoDay');
       applyActionInPlace(s, { type: 'resolveEvent', choiceId: choice });
       expect(s.pendingEvent).toBeNull();
       expect(checkIntegrity(s)).toEqual([]);
