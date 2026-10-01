@@ -3,7 +3,7 @@ import type { IndustryId } from './industries';
 
 /**
  * Sector upgrades: levelled purchases that are capitalised as PP&E (capex) and depreciated.
- * Each level multiplies one lever of the business model. Prestige resets them.
+ * Each level multiplies one lever of the business model. They never run out: past the old top level each extra level is dearer and adds less.
  */
 export interface UpgradeEffects {
   capacity?: number;
@@ -97,8 +97,32 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
   ],
 };
 
-export function upgradeCost(def: UpgradeDef, currentLevel: number, costMult = 1): Pence {
-  return Math.round((def.baseCost * Math.pow(def.costGrowth, currentLevel) * costMult) / 100) * 100;
+/** Levels never run out, but there is a ceiling so numbers stay sane. */
+export const UPGRADE_CEILING = 40;
+/** Cost growth per level beyond the old top level: steeper, so each extra level really costs more. */
+export const BEYOND_COST_GROWTH = 2.0;
+/** Each level beyond the old top level adds this share of the one before it. */
+export const BEYOND_EFFECT_DECAY = 0.7;
+/** Annual revenue at which upgrades start costing more than their list price. */
+export const INCOME_SCALE_REFERENCE: Pence = gbp(500_000);
+export const INCOME_SCALE_EXPONENT = 0.6;
+
+/** Upgrades cost more as the business earns more: x1 up to £500k a year of revenue, then (revenue / £500k)^0.6. */
+export const incomeScale = (annualRevenue: Pence): number =>
+  Math.max(1, Math.pow(Math.max(0, annualRevenue) / INCOME_SCALE_REFERENCE, INCOME_SCALE_EXPONENT));
+
+/** The levels that count for effects: full strength up to the old top level, then fading returns. */
+export function effectiveLevels(level: number, maxLevel: number): number {
+  if (level <= maxLevel) return level;
+  let extra = 0;
+  for (let k = 1; k <= level - maxLevel; k++) extra += Math.pow(BEYOND_EFFECT_DECAY, k);
+  return maxLevel + extra;
+}
+
+export function upgradeCost(def: UpgradeDef, currentLevel: number, costMult = 1, scale = 1): Pence {
+  const base = def.baseCost * Math.pow(def.costGrowth, Math.min(currentLevel, def.maxLevel))
+    * Math.pow(BEYOND_COST_GROWTH, Math.max(0, currentLevel - def.maxLevel));
+  return Math.round((base * costMult * scale) / 100) * 100;
 }
 
 export interface UpgradeModifiers {
@@ -114,8 +138,9 @@ export interface UpgradeModifiers {
 export function upgradeModifiers(industryId: IndustryId, levels: Record<string, number>): UpgradeModifiers {
   const m: UpgradeModifiers = { capacityMult: 1, marketMult: 1, reachMult: 1, qualityPerMonth: 0, unitCostMult: 1, churnMult: 1, spoilageMult: 1 };
   for (const def of UPGRADES[industryId]) {
-    const n = levels[def.id] ?? 0;
-    if (!n) continue;
+    const raw = levels[def.id] ?? 0;
+    if (!raw) continue;
+    const n = effectiveLevels(raw, def.maxLevel);
     const e = def.perLevel;
     if (e.capacity) m.capacityMult *= 1 + e.capacity * n;
     if (e.market) m.marketMult *= 1 + e.market * n;

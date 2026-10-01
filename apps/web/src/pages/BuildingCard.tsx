@@ -37,11 +37,11 @@ export function BuildingCard({ game }: { game: GameState }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
-      <div className="mt-2 flex items-center gap-1" aria-label={`Level ${o.level} of ${o.def.maxLevel}`}>
+      <div className="mt-2 flex items-center gap-1" aria-label={`Level ${o.level}`}>
         {Array.from({ length: o.def.maxLevel }, (_, i) => (
-          <span key={i} className={`h-2.5 flex-1 rounded-full border-2 border-outline ${i < o.level ? 'bg-[var(--go)]' : 'bg-surface-2'}`} />
+          <span key={i} className={`h-2.5 flex-1 rounded-full border-2 border-outline ${i < Math.min(o.level, o.def.maxLevel) ? 'bg-[var(--go)]' : 'bg-surface-2'}`} />
         ))}
-        <span className="ml-1 text-xs font-black">{o.maxed ? 'MAX' : `Lv ${o.level}/${o.def.maxLevel}`}</span>
+        <span className="ml-1 text-xs font-black">{o.maxed ? 'MAX' : o.level > o.def.maxLevel ? `Lv ${o.level} ★` : `Lv ${o.level}`}</span>
       </div>
       {o.maxed ? (
         <p className="mt-2 text-sm font-bold">Fully upgraded: this building is as good as it gets.</p>
@@ -54,6 +54,11 @@ export function BuildingCard({ game }: { game: GameState }) {
           <p className="mt-1.5 text-[11px] leading-snug text-ink-2">
             {blocked ?? `Capex: ${formatGBP(o.cost, { compact: true })} of cash now, then about ${formatGBP(monthly, { compact: true })} a month of depreciation for ${o.def.lifeMonths / 12} years.`}
           </p>
+          {(o.scale > 1.05 || o.level >= o.def.maxLevel) && (
+            <p className="mt-1 text-[11px] leading-snug text-ink-2">
+              {o.scale > 1.05 ? `Costs ×${o.scale.toFixed(1)} at your income. ` : ''}{o.level >= o.def.maxLevel ? 'Past level ' + o.def.maxLevel + ' each level is dearer and adds less.' : ''}
+            </p>
+          )}
         </>
       )}
       <button type="button" className="mt-1 text-xs font-extrabold text-ink-2 underline" onClick={() => openSheet('upgrades')}>See all upgrades</button>

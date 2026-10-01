@@ -3,7 +3,7 @@ import { formatGBP, type Pence } from './money';
 import { completeAcquisition } from './model/acquisitions';
 import { industryOf, ROLE_IDS, type RoleId } from './model/industries';
 import { loanOffer, MAX_TERM, MIN_TERM, overdraftLimit, spreadFor } from './model/loans';
-import { currentBalanceSheet } from './model/metrics';
+import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
@@ -11,11 +11,13 @@ import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
+import { prestigeBonus, prestigeTitle } from './model/rank';
 import { MAX_TRAINING_SPEND, PAY_LEVELS } from './model/morale';
 import { monthlyProjectCost, projectCheck, projectDef } from './model/rnd';
 import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
 import { logItem, newId, ownership, type GameState, type InsuranceTier, type PayLevel } from './model/state';
-import { UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
+
+import { incomeScale, UPGRADE_CEILING, UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
 import { valuationOf } from './model/valuation';
 import { acceptCheck, signContract } from './model/contracts';
 import { COVER, INSURANCE_TIERS } from './model/insurance';
@@ -109,18 +111,22 @@ export interface UpgradeOption {
   cost: Pence;
   maxed: boolean;
   locked: string | null;
+  /** How much dearer the business's income makes this upgrade (1 = list price). */
+  scale: number;
 }
 
 /** The sector's upgrades with current level, next-level cost and lock reason. */
 export function upgradeOptions(s: GameState): UpgradeOption[] {
   const mult = modifiersOf(s).upgradeCostMult;
+  const t = trailingPL(s, 12);
+  const scale = incomeScale(annualise(t.summary.revenue, t.months));
   return UPGRADES[s.industryId].map((def) => {
     const level = s.upgrades[def.id] ?? 0;
     const req = def.requires;
     const locked = req && (s.upgrades[req.id] ?? 0) < req.level
       ? `Needs ${UPGRADES[s.industryId].find((u) => u.id === req.id)?.name} level ${req.level}`
       : null;
-    return { def, level, cost: upgradeCost(def, level, mult), maxed: level >= def.maxLevel, locked };
+    return { def, level, cost: upgradeCost(def, level, mult, scale), maxed: level >= UPGRADE_CEILING, locked, scale };
   });
 }
 
@@ -468,7 +474,7 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       // applies at once) and moves the next target up.
       s.prestigeLevel = (s.prestigeLevel ?? 0) + 1;
       s.prestigeAward += check.points;
-      logItem(s, 'milestone', `Prestige ${s.prestigeLevel}!`, `Your stake of ${formatGBP(check.stake)} earned ${check.points} Legacy points and a permanent demand bonus. The company carries on; the next prestige needs ${formatGBP(prestigeThreshold(s.prestigeLevel))}.`);
+      logItem(s, 'milestone', `Prestige ${s.prestigeLevel}!`, `Your stake of ${formatGBP(check.stake)} earned ${check.points} Legacy points. You are now rank ${s.prestigeLevel} (${prestigeTitle(s.prestigeLevel)}): demand is +${Math.round(prestigeBonus(s.prestigeLevel) * 100)}% from now on, applied straight away. The company carries on; the next prestige needs ${formatGBP(prestigeThreshold(s.prestigeLevel))}.`);
       break;
     }
     case 'setGuildLevel': {

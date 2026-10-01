@@ -562,6 +562,11 @@ test('a company saved at the old prestige screen just carries on', async ({ page
   expect(saved.version).toBe(5);
   expect(saved.prestigeLevel).toBe((sold.prestigeLevel ?? 0) + 1);
   expect(saved.month).toBe(sold.month);
+  // The rank and its multiplier are visible in the top bar and on the Prestige panel.
+  const rank = saved.prestigeLevel;
+  await expect(page.getByRole('button', { name: new RegExp(`^Prestige rank ${rank}, .*: \\+${rank * 2}% demand`) })).toBeVisible();
+  await openDock(page, 'Prestige');
+  await expect(page.getByRole('dialog', { name: 'Prestige & Legacy' }).getByText(new RegExp(`\\+${rank * 2}% demand \\(rank ${rank}\\)`))).toBeVisible();
 });
 
 test('a sold company saved at the current version carries on too', async ({ page }) => {
