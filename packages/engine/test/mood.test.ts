@@ -28,7 +28,7 @@ describe('mood and feel', () => {
     const broke = fresh();
     broke.ledger.balances.cash = -1;
     expect(musicMood(broke)).toBe('tense');
-    broke.status = 'bankrupt';
+    broke.status = 'insolvent';
     expect(musicMood(broke)).toBe('calm');
   });
 
