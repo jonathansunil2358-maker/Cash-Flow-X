@@ -5,6 +5,7 @@ import { DIFFICULTIES } from './difficulty';
 import { industryOf, ROLE_IDS, type RoleId } from './industries';
 import { plSummary } from '../ledger/statements';
 import { boostActive, perkEffects } from './perks';
+import { claimPayout, outageDemand } from './insurance';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
 import { scheduleIntoQueue } from './workingCapital';
@@ -23,6 +24,14 @@ export const FIRST_EVENT_MONTH = 2;
 const posterFor = (s: GameState): Poster => (memo, lines, cf = 'operating', cfLabel) => {
   post(s.ledger, s.month, memo, lines, { cf, cfLabel });
 };
+
+/** Post an insurance payout for a loss that was just posted (if the company is covered). */
+function claim(s: GameState, P: Poster, cost: Pence, what: string): string {
+  const payout = claimPayout(s, cost);
+  if (payout <= 0) return '';
+  P(`Insurance claim paid: ${what}`, [dr('cash', payout), cr('otherIncome', payout)]);
+  return ` Your insurer paid ${formatGBP(payout)}.`;
+}
 
 const lastRevenue = (s: GameState): Pence => {
   const r = s.history[s.history.length - 1];
@@ -136,7 +145,25 @@ export const AUTO_EVENTS: AutoEventDef[] = [
     start: (s, _rng, P) => {
       const amount = sized(s, 0.05, 1_500_00);
       P('Break-in: repairs and replacement kit', [dr('otherCosts', amount), cr('cash', amount)]);
-      return `Thieves broke in overnight. Repairs and replacement kit cost ${formatGBP(amount)}.`;
+      return `Thieves broke in overnight. Repairs and replacement kit cost ${formatGBP(amount)}.${claim(s, P, amount, 'break-in')}`;
+    },
+  },
+  {
+    type: 'fire', title: 'Fire at the premises', polarity: 'bad', weight: 0.5, duration: [0, 0], effects: {}, when: (s) => s.month >= 6,
+    start: (s, _rng, P) => {
+      const amount = sized(s, 0.35, 4_000_00);
+      P('Fire damage: clean-up and repairs', [dr('otherCosts', amount), cr('cash', amount)]);
+      addTemporary(s, 'outage', 'Fire closure', 1, { demandMult: outageDemand(s) }, false);
+      return `A fire closed the premises for a month. Clean-up and repairs cost ${formatGBP(amount)} and trade fell.${claim(s, P, amount, 'fire')}`;
+    },
+  },
+  {
+    type: 'cyber', title: 'Cyber attack', polarity: 'bad', weight: 0.5, duration: [0, 0], effects: {}, when: (s) => s.month >= 6,
+    start: (s, _rng, P) => {
+      const amount = sized(s, 0.25, 3_000_00);
+      P('Cyber attack: recovery and specialists', [dr('otherCosts', amount), cr('cash', amount)]);
+      s.reputation = Math.max(0, s.reputation - (s.insurance === 'full' ? 2 : 5));
+      return `Criminals locked your systems. Recovery cost ${formatGBP(amount)} and customers noticed.${claim(s, P, amount, 'cyber attack')}`;
     },
   },
 ];
@@ -228,18 +255,19 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { repair },
         choices: [
           { id: 'emergency', label: `Emergency repair (${formatGBP(repair)})`, hint: 'Fixed today. No lasting damage.', impact: [{ label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Emergency repair', [dr('otherCosts', p.repair), cr('cash', p.repair)]); return `Repaired for ${formatGBP(p.repair)}.`; } },
+            apply: (st, _rng, P, p) => { P('Emergency repair', [dr('otherCosts', p.repair), cr('cash', p.repair)]); return `Repaired for ${formatGBP(p.repair)}.${claim(st, P, p.repair, 'repair')}`; } },
           { id: 'cheap', label: `Cheap fix (${formatGBP(Math.round(repair / 3))})`, hint: 'Might not hold: about a 50% chance it fails again.', impact: [{ label: 'Risk', up: false }],
             apply: (st, rng, P, p) => {
               const cost = Math.round(p.repair / 3);
               P('Temporary repair', [dr('otherCosts', cost), cr('cash', cost)]);
-              if (chance(rng, 0.5)) return `The ${formatGBP(cost)} fix held.`;
-              addTemporary(st, 'outage', 'Outage', 1, { demandMult: 0.6 }, true);
+              const paid = claim(st, P, cost, 'repair');
+              if (chance(rng, 0.5)) return `The ${formatGBP(cost)} fix held.${paid}`;
+              addTemporary(st, 'outage', 'Outage', 1, { demandMult: outageDemand(st) }, true);
               st.brand *= 0.85;
               return 'The fix failed. Demand is down 40% for a month and your brand took a hit.';
             } },
           { id: 'wait', label: 'Wait for the warranty repair', hint: 'Free, but demand drops 40% for a month.', impact: [{ label: 'Revenue', up: false }],
-            apply: (st) => { addTemporary(st, 'outage', 'Outage', 1, { demandMult: 0.6 }, true); return 'Demand will be 40% lower this month while you wait.'; } },
+            apply: (st) => { addTemporary(st, 'outage', 'Outage', 1, { demandMult: outageDemand(st) }, true); return `Demand will be ${st.insurance === 'full' ? 15 : 40}% lower this month while you wait.`; } },
         ],
       };
     },
@@ -255,7 +283,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { fee, penalty },
         choices: [
           { id: 'adviser', label: `Hire a tax adviser (${formatGBP(fee)})`, hint: 'Professional fees, but no penalty.', impact: [{ label: 'Cash', up: false }],
-            apply: (_st, _rng, P, p) => { P('Tax adviser fees', [dr('otherCosts', p.fee), cr('cash', p.fee)]); return 'The inspection closed with no changes.'; } },
+            apply: (st, _rng, P, p) => { P('Tax adviser fees', [dr('otherCosts', p.fee), cr('cash', p.fee)]); return `The inspection closed with no changes.${claim(st, P, p.fee, 'tax adviser fees')}`; } },
           { id: 'diy', label: 'Handle it yourself', hint: `Free, with about a 40% chance of a ${formatGBP(penalty)} penalty.`, impact: [{ label: 'Risk', up: false }],
             apply: (_st, rng, P, p) => {
               if (!chance(rng, 0.4)) return 'You got through it. No penalty.';

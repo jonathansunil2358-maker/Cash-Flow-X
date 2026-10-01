@@ -14,9 +14,13 @@ import { prestigeCheck } from './model/prestige';
 import { MAX_TRAINING_SPEND, PAY_LEVELS } from './model/morale';
 import { monthlyProjectCost, projectCheck, projectDef } from './model/rnd';
 import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
-import { logItem, newId, ownership, type GameState, type PayLevel } from './model/state';
+import { logItem, newId, ownership, type GameState, type InsuranceTier, type PayLevel } from './model/state';
 import { UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
 import { valuationOf } from './model/valuation';
+import { acceptCheck, signContract } from './model/contracts';
+import { COVER, INSURANCE_TIERS } from './model/insurance';
+import { floatCheck, listCheck, marketCap, nextGuidance } from './model/listing';
+import { extraSites, openSiteCheck, siteRent, SITE_BREAK_MONTHS, SITE_LIFE_MONTHS } from './model/sites';
 import { createRng } from './rng';
 
 export type InvestmentProduct = 'deposit' | 'fund';
@@ -45,6 +49,13 @@ export type Action =
   | { type: 'buyUpgrade'; upgradeId: string }
   | { type: 'resolveEvent'; choiceId: string }
   | { type: 'activateBoost'; boostId: BoostId }
+  | { type: 'openSite' }
+  | { type: 'closeSite' }
+  | { type: 'setInsurance'; tier: InsuranceTier }
+  | { type: 'acceptContract'; offerId: string }
+  | { type: 'declineContract'; offerId: string }
+  | { type: 'listCompany' }
+  | { type: 'buyBack'; amount: Pence }
   | { type: 'prestige' }
   | { type: 'setAway'; away: boolean }
   | { type: 'setGuildLevel'; level: number }
@@ -81,7 +92,10 @@ function requireFunds(s: GameState, amount: Pence, what: string): void {
 
 /** Equity raise terms: investors buy at a 15% discount to the current equity valuation. */
 export function equityRaiseTerms(s: GameState): { preMoney: Pence; maxAmount: Pence; available: boolean; reason?: string } {
-  const preMoney = Math.round(valuationOf(s).equityValue * Math.min(1, EQUITY_DISCOUNT + modifiersOf(s).equityDiscountDelta));
+  // A listed company raises money at (almost) the market price.
+  const preMoney = s.listed
+    ? Math.round(marketCap(s) * 0.97)
+    : Math.round(valuationOf(s).equityValue * Math.min(1, EQUITY_DISCOUNT + modifiersOf(s).equityDiscountDelta));
   if (s.lastEquityRaiseMonth !== null && s.month - s.lastEquityRaiseMonth < EQUITY_COOLDOWN_MONTHS) {
     return { preMoney, maxAmount: 0, available: false, reason: `Investors need ${EQUITY_COOLDOWN_MONTHS} months between rounds.` };
   }
@@ -356,6 +370,77 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       s.ppeAssets.push({ id: newId(s, 'A'), label, cost: opt.cost, lifeMonths: opt.def.lifeMonths, accumulated: 0 });
       s.upgrades[opt.def.id] = opt.level + 1;
       logItem(s, 'action', `Upgraded: ${label}`, `${opt.def.description} Capitalised as PP&E (${formatGBP(opt.cost)}) and depreciated over ${opt.def.lifeMonths / 12} years.`);
+      break;
+    }
+    case 'openSite': {
+      const check = openSiteCheck(s);
+      if (!check.allowed) fail(check.reason ?? 'You cannot open another site yet.');
+      requireFunds(s, check.cost, 'the fit-out');
+      post(L, m, 'Fit-out of a new site', [dr('ppe', check.cost), cr('cash', check.cost)], { cf: 'investing', cfLabel: 'Purchase of property, plant & equipment' });
+      s.ppeAssets.push({ id: newId(s, 'A'), label: 'New site fit-out', cost: check.cost, lifeMonths: SITE_LIFE_MONTHS, accumulated: 0 });
+      s.pendingSites.push(m + 2);
+      logItem(s, 'action', 'New site: fit-out started', `Fit-out cost ${formatGBP(check.cost)} (capitalised). It opens in 2 months, but the rent of ${formatGBP(check.rent)} a month starts now.`);
+      break;
+    }
+    case 'closeSite': {
+      if (s.pendingSites.length) {
+        s.pendingSites.pop();
+        logItem(s, 'action', 'Fit-out cancelled', 'The unfinished site was cancelled. The fit-out money is spent.');
+        break;
+      }
+      if (extraSites(s) < 1) fail('You have no extra site to close.');
+      const fee = siteRent(s, ind) * SITE_BREAK_MONTHS;
+      post(L, m, 'Lease break fee: closing a site', [dr('otherCosts', fee), cr('cash', fee)], { cf: 'operating' });
+      s.sites -= 1;
+      logItem(s, 'action', 'Site closed', `You paid a ${formatGBP(fee)} break fee (${SITE_BREAK_MONTHS} months of rent). Capacity and reach fall back.`);
+      break;
+    }
+    case 'setInsurance': {
+      if (!INSURANCE_TIERS.includes(action.tier)) fail('Unknown cover level.');
+      if (s.insurance === action.tier) fail('You already have that cover.');
+      s.insurance = action.tier;
+      logItem(s, 'action', `Insurance: ${COVER[action.tier].name}`, COVER[action.tier].blurb);
+      break;
+    }
+    case 'acceptContract': {
+      const check = acceptCheck(s, action.offerId);
+      if (!check.allowed) fail(check.reason ?? 'You cannot take that contract.');
+      const offer = s.contractOffers.find((o) => o.id === action.offerId)!;
+      const c = signContract(s, offer);
+      logItem(s, 'action', `Contract signed with ${c.client}`, `${c.units} a month for ${c.months} months at ${formatGBP(c.price)} each, paid in ${c.paymentDays} days. Your capacity is committed to them first.`);
+      break;
+    }
+    case 'declineContract': {
+      if (!s.contractOffers.some((o) => o.id === action.offerId)) fail('That offer has gone.');
+      s.contractOffers = s.contractOffers.filter((o) => o.id !== action.offerId);
+      break;
+    }
+    case 'listCompany': {
+      const check = listCheck(s);
+      if (!check.allowed) fail(check.reason ?? 'You cannot list yet.');
+      const before = ownership(s);
+      post(L, m, 'Shares issued in the stock market listing (net of 6% costs)', [dr('cash', check.proceeds), cr('shareCapital', check.proceeds)], {
+        cf: 'financing', cfLabel: 'Proceeds from issue of shares (net of costs)',
+      });
+      s.shares.total += check.shares;
+      s.listed = true;
+      s.listedMonth = m;
+      s.sentiment = 1;
+      s.priceHistory = [];
+      s.guidance = { month: m + 3, target: nextGuidance(s) };
+      logItem(s, 'milestone', 'You are listed!', `${formatGBP(check.proceeds)} raised after costs. Your ownership fell from ${(before * 100).toFixed(1)}% to ${(ownership(s) * 100).toFixed(1)}%. Each quarter the market expects a profit: beat it and the price rises.`);
+      break;
+    }
+    case 'buyBack': {
+      if (!isWholePence(action.amount) || action.amount <= 0) fail('Enter an amount to spend.');
+      const check = floatCheck(s, action.amount);
+      if (!check.ok) fail(check.reason ?? 'You cannot buy back shares now.');
+      const cost = check.shares * check.price;
+      if (cost > L.balances.cash) fail('You need the cash in the bank to buy back shares.');
+      if (cost > distributableReserves(s)) fail(`Buy-backs are limited to distributable reserves of ${formatGBP(Math.max(0, distributableReserves(s)))}.`);
+      post(L, m, `Share buy-back: ${check.shares} shares`, [dr('retainedEarnings', cost), cr('cash', cost)], { cf: 'financing', cfLabel: 'Purchase of own shares' });
+      s.shares.total -= check.shares;
+      logItem(s, 'action', 'Shares bought back', `${check.shares} shares at ${formatGBP(check.price)}. Your stake rose to ${(ownership(s) * 100).toFixed(1)}%.`);
       break;
     }
     case 'resolveEvent': {

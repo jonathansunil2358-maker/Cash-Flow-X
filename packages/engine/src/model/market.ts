@@ -2,6 +2,8 @@ import { chance, type Rng } from '../rng';
 import type { IndustryConfig } from './industries';
 import { modifiersOf } from './modifiers';
 import { moraleProductivity } from './morale';
+import { listedDemandMult } from './listing';
+import { siteCapacityMult, siteDemandMult, siteProductivity } from './sites';
 import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
 import { DIFFICULTIES } from './difficulty';
 import { logItem, yearOf, type GameState } from './state';
@@ -21,7 +23,7 @@ export function capacityMultiplier(s: GameState, ind: IndustryConfig): number {
 }
 
 export function capacityOf(s: GameState, ind: IndustryConfig): number {
-  return (ind.founderCapacity + s.staff.ops * ind.capacityPerOps) * capacityMultiplier(s, ind) * modifiersOf(s).capacityMult * moraleProductivity(s.morale);
+  return (ind.founderCapacity + s.staff.ops * ind.capacityPerOps) * capacityMultiplier(s, ind) * modifiersOf(s).capacityMult * moraleProductivity(s.morale) * siteCapacityMult(s) * siteProductivity(s);
 }
 
 /** Brand points at which reach is ~63% of the way from 5% to 100%. */
@@ -67,7 +69,7 @@ export interface DemandInfo {
 
 export function demandFor(s: GameState, ind: IndustryConfig): DemandInfo {
   const mods = modifiersOf(s);
-  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * seasonFactor(s, ind) * promoDemandMult(s) * (s.away ? AWAY_DEMAND : 1);
+  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * seasonFactor(s, ind) * promoDemandMult(s) * siteDemandMult(s) * listedDemandMult(s) * (s.away ? AWAY_DEMAND : 1);
   const playerAttractiveness = attractiveness(s.quality, effectivePrice(s), ind.basePrice, ind.priceElasticity);
   const competitorAttractiveness = s.competitors.reduce(
     (a, c) => a + attractiveness(c.quality, c.price, ind.basePrice, ind.priceElasticity, c.strength),

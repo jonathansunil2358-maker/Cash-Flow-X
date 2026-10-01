@@ -16,6 +16,13 @@ const decision: fc.Arbitrary<Action> = fc.oneof(
   fc.record({ type: fc.constant('fire' as const), role: fc.constantFrom('ops' as const, 'rnd' as const, 'sales' as const), count: fc.integer({ min: 1, max: 2 }) }),
   fc.record({ type: fc.constant('setMarketing' as const), amount: fc.integer({ min: 0, max: 30_000_00 }) }),
   fc.record({ type: fc.constant('setPrice' as const), price: fc.integer({ min: 100, max: 40_000 }) }),
+  fc.constant({ type: 'openSite' as const }),
+  fc.constant({ type: 'closeSite' as const }),
+  fc.record({ type: fc.constant('setInsurance' as const), tier: fc.constantFrom('none' as const, 'basic' as const, 'full' as const) }),
+  fc.record({ type: fc.constant('acceptContract' as const), offerId: fc.constantFrom('K1', 'K2', 'K3', 'K4', 'K5', 'K6') }),
+  fc.record({ type: fc.constant('declineContract' as const), offerId: fc.constantFrom('K1', 'K2', 'K3') }),
+  fc.constant({ type: 'listCompany' as const }),
+  fc.record({ type: fc.constant('buyBack' as const), amount: fc.integer({ min: 1, max: 500_000_00 }) }),
 );
 
 function play(industryId: IndustryId, difficulty: DifficultyId, seed: string, steps: Action[][]): GameState {
@@ -45,6 +52,8 @@ describe('new mechanics under replay', () => {
           expect(replayed.projects).toEqual(s.projects);
           expect(replayed.projectsDone).toEqual(s.projectsDone);
           expect(replayed.competitors).toEqual(s.competitors);
+          expect([replayed.sites, replayed.pendingSites, replayed.insurance, replayed.contracts, replayed.contractOffers, replayed.sentiment, replayed.priceHistory])
+            .toEqual([s.sites, s.pendingSites, s.insurance, s.contracts, s.contractOffers, s.sentiment, s.priceHistory]);
           expect(finalScore(replayed).score).toBe(finalScore(s).score);
           expect(checkIntegrity(s)).toEqual([]);
         },

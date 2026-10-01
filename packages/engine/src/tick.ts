@@ -21,6 +21,10 @@ import {
 import { effectiveTaxRate, TAX_PAYMENT_LAG } from './model/tax';
 import { valuationOf } from './model/valuation';
 import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapital';
+import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './model/contracts';
+import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
+import { premiumFor } from './model/insurance';
+import { advanceSites, rentedExtraSites } from './model/sites';
 import { advanceProjects } from './model/rnd';
 import { advanceMorale, grossPayroll, leaverCost, moraleProductivity, rollLeavers } from './model/morale';
 import { advancePromo, effectivePrice } from './model/promotions';
@@ -146,10 +150,13 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
 
   advanceProjects(s, rng, P, !!opts.simulation);
 
-  const rent = Math.round((ind.rentBase + ind.rentPerHead * headcount(s)) * s.rentIndex);
+  const rent = Math.round((ind.rentBase * (1 + rentedExtraSites(s)) + ind.rentPerHead * headcount(s)) * s.rentIndex);
   if (m % 3 === 0) P('Quarterly rent paid in advance', [dr('prepayments', rent * 3), cr('cash', rent * 3)]);
   const fromPrepaid = Math.min(rent, Math.max(0, L.balances.prepayments));
   P('Rent for the month', [dr('rent', rent), cr('prepayments', fromPrepaid), cr('cash', rent - fromPrepaid)]);
+
+  const premium = premiumFor(s);
+  if (premium > 0) P('Insurance premium', [dr('insurance', premium), cr('cash', premium)]);
 
   if (s.marketingBudget > 0) {
     P('Marketing campaigns (on supplier credit)', [dr('marketing', s.marketingBudget), cr('payables', s.marketingBudget)]);
@@ -224,6 +231,13 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   }
   accrueTax(s, P, yearEnd);
 
+  // 10b. Growth systems: new sites open, contracts run down, offers arrive, the share price moves.
+  advanceSites(s, !!opts.simulation);
+  advanceContracts(s, !!opts.simulation);
+  if (s.listed) P('Listed company costs (compliance, auditors, investor relations)', [dr('dealCosts', LISTED_MONTHLY_COST), cr('cash', LISTED_MONTHLY_COST)]);
+  advanceListing(s, rng, !!opts.simulation);
+  if (!opts.simulation) maybeOffer(s, rng);
+
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);
   advancePromo(s);
@@ -233,8 +247,12 @@ function runSubscription(
   s: GameState, ind: IndustryConfig, rng: Rng, d: DemandInfo, capacity: number, costMult: number, P: Poster, churnMult: number,
 ): Volume {
   const m = s.month;
+  // Contract seats are served first and use up capacity that other customers could have had.
+  const committed = contractUnits(s);
+  const servedSeats = Math.min(committed, Math.floor(capacity));
+  const spotCapacity = capacity - servedSeats;
   const total0 = totalCustomers(s);
-  const overload = total0 > capacity ? (total0 - capacity) / total0 : 0;
+  const overload = total0 > spotCapacity ? (total0 - spotCapacity) / total0 : 0;
   const baseChurn = ind.baseChurn * Math.sqrt(averageCompetitorQuality(s) / s.quality) * Math.pow(effectivePrice(s) / ind.basePrice, 0.7);
   const churn = Math.min(0.25, Math.max(0.003, baseChurn * churnMult + overload * 0.25));
 
@@ -270,7 +288,19 @@ function runSubscription(
     for (let i = 0; i < 12; i++) s.deferredSchedule[i] += perMonth;
   }
 
-  const serveCost = Math.round(totalCustomers(s) * ind.unitCost * costMult);
+  let seatsLeft = servedSeats;
+  for (const c of s.contracts) {
+    const served = Math.min(c.units, seatsLeft);
+    seatsLeft -= served;
+    if (served > 0) {
+      const rev = served * c.price;
+      P(`Contract seats invoiced: ${c.client}`, [dr('receivables', rev), cr('revenue', rev)]);
+      scheduleIntoQueue(s.receivablesQueue, rev, c.paymentDays);
+    }
+    if (served < c.units) contractPenalty(s, c, c.units - served, P);
+  }
+
+  const serveCost = Math.round((totalCustomers(s) + servedSeats) * ind.unitCost * costMult);
   if (serveCost > 0) {
     P('Hosting & service delivery costs', [dr('cogs', serveCost), cr('payables', serveCost)]);
     scheduleIntoQueue(s.payablesQueue, serveCost, s.supplierDays);
@@ -285,9 +315,12 @@ function runUnits(
   s.acquiredDemand *= 0.99;
   const demand = roundProb(d.demand * noise(rng, 0.05) + s.acquiredDemand, rng) + s.bonusDemand;
   s.bonusDemand = 0;
-  const sellable = Math.min(demand, roundProb(capacity, rng));
+  // Contract units are delivered first; the spot market gets what is left.
+  const cap = roundProb(capacity, rng);
+  const committed = Math.min(contractUnits(s), cap);
+  const sellable = Math.min(demand, cap - committed);
 
-  const target = Math.ceil(sellable * (1 + s.stockCoverMonths));
+  const target = Math.ceil((sellable + committed) * (1 + s.stockCoverMonths));
   const buy = Math.max(0, target - s.inventoryUnits);
   if (buy > 0) {
     const cost = Math.round(buy * ind.unitCost * costMult);
@@ -296,11 +329,25 @@ function runUnits(
     s.inventoryUnits += buy;
   }
 
-  const sold = Math.min(sellable, s.inventoryUnits);
-  if (sold > 0) {
-    const revenue = sold * effectivePrice(s);
-    P(`Sales: ${formatInt(sold)} ${ind.unitPlural}`, [dr('receivables', revenue), cr('revenue', revenue)]);
+  const contractSold = Math.min(committed, s.inventoryUnits);
+  const spotSold = Math.min(sellable, s.inventoryUnits - contractSold);
+  const sold = contractSold + spotSold;
+  if (spotSold > 0) {
+    const revenue = spotSold * effectivePrice(s);
+    P(`Sales: ${formatInt(spotSold)} ${ind.unitPlural}`, [dr('receivables', revenue), cr('revenue', revenue)]);
     scheduleIntoQueue(s.receivablesQueue, revenue, s.customerDays);
+  }
+  if (s.contracts.length) {
+    for (const { contract: c, units } of serveContracts(s, contractSold)) {
+      if (units > 0) {
+        const rev = units * c.price;
+        P(`Contract sales: ${formatInt(units)} ${ind.unitPlural} to ${c.client}`, [dr('receivables', rev), cr('revenue', rev)]);
+        scheduleIntoQueue(s.receivablesQueue, rev, c.paymentDays);
+      }
+      if (units < c.units) contractPenalty(s, c, c.units - units, P);
+    }
+  }
+  if (sold > 0) {
     const cogs = sold === s.inventoryUnits ? L.balances.inventory : Math.round((L.balances.inventory * sold) / s.inventoryUnits);
     P('Cost of goods sold (weighted average cost)', [dr('cogs', cogs), cr('inventory', cogs)]);
     s.inventoryUnits -= sold;
@@ -312,7 +359,13 @@ function runUnits(
     P(`Stock written off: ${spoiled} ${ind.unitPlural}`, [dr('inventoryWriteOff', value), cr('inventory', value)]);
     s.inventoryUnits -= spoiled;
   }
-  return { demand, unitsSold: sold, lostSales: demand - sold, newCustomers: 0, churned: 0 };
+  return { demand, unitsSold: sold, lostSales: demand - spotSold, newCustomers: 0, churned: 0 };
+}
+
+/** A client is owed units you could not deliver: pay the agreed penalty. */
+function contractPenalty(s: GameState, c: { client: string; price: Pence; penaltyPct: number }, short: number, P: Poster): void {
+  const fee = Math.round((short * c.price * c.penaltyPct) / 100);
+  if (fee > 0) P(`Contract penalty: ${formatInt(short)} undelivered to ${c.client}`, [dr('otherCosts', fee), cr('cash', fee)]);
 }
 
 function testCovenants(s: GameState, P: Poster): void {
