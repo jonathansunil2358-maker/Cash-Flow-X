@@ -7,6 +7,7 @@ import { plSummary } from '../ledger/statements';
 import { boostActive, perkEffects } from './perks';
 import { claimPayout, outageDemand } from './insurance';
 import { PERSONALITIES, rosterOf } from './roster';
+import { mentorOf } from './story';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
 import { scheduleIntoQueue } from './workingCapital';
@@ -64,6 +65,18 @@ interface AutoEventDef {
 }
 
 export const AUTO_EVENTS: AutoEventDef[] = [
+  {
+    type: 'pandemic', title: 'A pandemic', polarity: 'bad', weight: 0.12, duration: [4, 8], effects: { demandMult: 0.75, unitCostMult: 1.1 }, when: (s) => s.month >= 12,
+    start: () => 'A sudden health scare keeps people at home. Demand falls 25% and supplies cost 10% more while it lasts.',
+  },
+  {
+    type: 'portStrike', title: 'Port strike', polarity: 'bad', weight: 0.12, duration: [3, 6], effects: { unitCostMult: 1.25 }, when: (s) => s.month >= 12,
+    start: () => 'Dock workers have walked out. Imports are stuck and supplies cost 25% more until it ends.',
+  },
+  {
+    type: 'techBreakthrough', title: 'Tech breakthrough', polarity: 'good', weight: 0.15, duration: [4, 8], effects: { demandMult: 1.15, unitCostMult: 0.95 }, when: (s) => s.month >= 12,
+    start: () => 'A new technology makes everything easier. Demand +15% and supplies 5% cheaper for a while.',
+  },
   {
     type: 'boom', title: 'Economic boom', polarity: 'good', weight: 2, duration: [6, 12], effects: { demandMult: 1.12 }, excludes: ['recession'],
     start: () => 'Consumer and business spending is rising. Market demand +12% while the boom lasts.',
@@ -195,7 +208,111 @@ interface ChoiceEventDef {
 
 const roleName = (s: GameState, r: RoleId) => industryOf(s).roles[r].title.toLowerCase();
 
+const CUSTOMERS = ['Mrs Okonkwo', 'Dr Fielding', 'The Harbour Cafe', 'Mr Lindqvist', 'Ms Abara', 'Ridgeway School', 'Councillor Pike', 'Little Jo'];
+
 export const CHOICE_EVENTS: ChoiceEventDef[] = [
+  {
+    id: 'mentor', title: 'Your mentor is in town', polarity: 'good', weight: 1.5, icon: 'key',
+    when: (s) => s.month >= 8 && s.month % 12 >= 4 && s.month % 12 <= 7 && !s.log.some((l) => l.title === `Mentor visit ${Math.floor(s.month / 12)}`),
+    setup: (s) => {
+      const m = mentorOf(Math.floor(s.month / 12));
+      const fee = sized(s, 0.02, 300_00);
+      return {
+        story: `${m.name}, who knows everything about ${m.specialty.toLowerCase()}, has an hour for you. "${m.lesson}" Which lesson do you want to take away?`,
+        params: { fee },
+        choices: [
+          { id: 'costs', label: `Cost clinic (${formatGBP(fee)})`, hint: 'Supplies cost 3% less for six months.', impact: [{ label: 'Costs', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); addTemporary(st, 'mentor-costs', 'Mentor: cost clinic', 6, { unitCostMult: 0.97 }, true); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'You found savings in places you had stopped looking.'; } },
+          { id: 'brand', label: `Story workshop (${formatGBP(fee)})`, hint: 'A lasting lift to your brand.', impact: [{ label: 'Brand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.brand *= 1.12; logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'Your story sharpened and word spread.'; } },
+          { id: 'team', label: 'Team lunch (free)', hint: 'Morale up.', impact: [{ label: 'Morale', up: true }],
+            apply: (st) => { st.morale = Math.min(100, st.morale + 6); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'The team left buzzing.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'customerLetter', title: 'A letter from a customer', polarity: 'good', weight: 0.8, icon: 'heart',
+    when: (s) => s.month >= 6 && lastRevenue(s) > 0,
+    setup: (s, rng) => {
+      const who = CUSTOMERS[Math.min(CUSTOMERS.length - 1, Math.floor(rng.next() * CUSTOMERS.length))];
+      const cost = sized(s, 0.01, 150_00);
+      const variant = Math.floor(rng.next() * 3);
+      const story = variant === 0 ? `${who} writes that a recent order was not quite right, but they like what you do and would like to carry on.`
+        : variant === 1 ? `${who} wants a small special order, a little outside your usual range, and would be a loyal customer if you can help.`
+          : `${who} has posted a glowing review and asks whether there is a way to say thanks to other regulars too.`;
+      return {
+        story, params: { cost },
+        choices: [
+          { id: 'generous', label: `Go the extra mile (${formatGBP(cost)})`, hint: 'Reputation up.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Goodwill gesture to a customer', [dr('otherCosts', p.cost), cr('cash', p.cost)]); return `${who} tells everyone.`; } },
+          { id: 'fair', label: 'A polite, standard reply', hint: 'Free. Small reputation gain.', impact: [{ label: 'Reputation', up: true }],
+            apply: () => `${who} appreciates the reply.` },
+          { id: 'dismiss', label: 'Ignore it', hint: 'Free, but people notice.', impact: [{ label: 'Reputation', up: false }],
+            apply: () => `${who} is not impressed.` },
+        ],
+      };
+    },
+  },
+  {
+    id: 'press', title: 'A journalist wants an interview', polarity: 'good', weight: 0.8, icon: 'rocket',
+    when: (s) => s.month >= 9 && s.reputation >= 30,
+    setup: () => ({
+      story: 'A business reporter is writing about your sector and wants a quote from you. A good interview is free publicity; a bad one lingers.',
+      params: {},
+      choices: [
+        { id: 'open', label: 'Be open and bold', hint: 'About 70% a great piece, 30% an awkward one.', impact: [{ label: 'Brand', up: true }, { label: 'Risk', up: false }],
+          apply: (st, rng) => { if (chance(rng, 0.7)) { st.brand *= 1.1; st.reputation = Math.min(100, st.reputation + 2); return 'The piece is a hit: your phone does not stop ringing.'; } st.reputation = Math.max(0, st.reputation - 2); return 'A line was taken out of context. A few awkward days.'; } },
+        { id: 'careful', label: 'Stick to the facts', hint: 'Safe: a little brand lift.', impact: [{ label: 'Brand', up: true }],
+          apply: (st) => { st.brand *= 1.03; return 'A sensible, forgettable quote. No harm done.'; } },
+        { id: 'decline', label: 'No comment', hint: 'Nothing happens.', impact: [], apply: () => 'You politely decline. Your rival does not.' },
+      ],
+    }),
+  },
+  {
+    id: 'founderLife', title: 'You have been working flat out', polarity: 'good', weight: 0.7, icon: 'coffee',
+    when: (s) => s.month >= 10 && s.morale < 80,
+    setup: (s) => {
+      const fee = sized(s, 0.015, 250_00);
+      return {
+        story: 'Friends say you have not had a day off in months. The business could run without you for a few days, probably.',
+        params: { fee },
+        choices: [
+          { id: 'holiday', label: 'Take a proper holiday', hint: 'Trade dips 2% for a month, morale up.', impact: [{ label: 'Revenue', up: false }, { label: 'Morale', up: true }],
+            apply: (st) => { addTemporary(st, 'holiday', 'Founder on holiday', 1, { demandMult: 0.98 }, true); st.morale = Math.min(100, st.morale + 4); return 'You came back with ideas and a tan.'; } },
+          { id: 'delegate', label: `Hire a deputy for the week (${formatGBP(fee)})`, hint: 'A small morale lift, no dip.', impact: [{ label: 'Cash', up: false }, { label: 'Morale', up: true }],
+            apply: (st, _rng, P, p) => { P('Cover for the founder', [dr('wages', p.fee), cr('cash', p.fee)]); st.morale = Math.min(100, st.morale + 2); return 'The deputy kept things ticking.'; } },
+          { id: 'work', label: 'Work through it', hint: 'A 10% chance of burnout: weaker trade for two months.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng) => { st.morale = Math.max(0, st.morale - 3); if (chance(rng, 0.1)) { addTemporary(st, 'burnout', 'Founder burnout', 2, { demandMult: 0.95 }, true); return 'You burned out. Two slow months while you recover.'; } return 'You got away with it, this time.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'bigBet', title: 'A once-in-a-lifetime bet', polarity: 'good', weight: 0.4, icon: 'diamond',
+    when: (s) => s.month >= 12 && s.ledger.balances.cash >= 20_000_00,
+    setup: (s) => {
+      const stake = Math.round((s.ledger.balances.cash * 0.15) / 10_000) * 10_000;
+      return {
+        story: `A contact offers you a place in a risky one-off deal. Put in ${formatGBP(stake)} and there is a better-than-even chance of getting almost double back. Lose, and it is gone.`,
+        params: { stake },
+        choices: [
+          { id: 'bet', label: `Bet ${formatGBP(stake)}`, hint: 'About 55% to win 80% on top, 45% to lose it all.', impact: [{ label: 'Risk', up: false }, { label: 'Cash', up: true }],
+            apply: (st, rng, P, p) => {
+              if (chance(rng, 0.55)) {
+                const win = Math.round(p.stake * 0.8);
+                P('Big bet paid off', [dr('cash', win), cr('otherIncome', win)]);
+                return `It paid off! You made ${formatGBP(win)}.`;
+              }
+              P('Big bet lost', [dr('otherCosts', p.stake), cr('cash', p.stake)]);
+              return `It went wrong and the ${formatGBP(p.stake)} is gone.`;
+            } },
+          { id: 'pass', label: 'Politely pass', hint: 'Nothing gained, nothing lost.', impact: [],
+            apply: () => 'You kept your money and slept well.' },
+        ],
+      };
+    },
+  },
   {
     id: 'staffAsk', title: 'A team member has a request', polarity: 'good', weight: 1.2, icon: 'heart',
     when: (s) => s.month >= 6 && headcount(s) >= 3,
@@ -467,6 +584,8 @@ const REPUTATION: Record<string, number> = {
   'breakdown.emergency': 2, 'breakdown.cheap': -1, 'breakdown.wait': -3,
   'inspection.adviser': 1, 'inspection.diy': -1,
   'rentReview.accept': 0, 'rentReview.negotiate': 0, 'rentReview.move': -1,
+  'customerLetter.generous': 2, 'customerLetter.fair': 1, 'customerLetter.dismiss': -3, 'press.open': 0, 'press.careful': 0, 'press.decline': 0, 'mentor.costs': 0, 'mentor.brand': 0, 'mentor.team': 0, 'founderLife.holiday': 0, 'founderLife.delegate': 0, 'founderLife.work': 0,
+  'bigBet.bet': 0, 'bigBet.pass': 0,
   'staffAsk.raise': 1, 'staffAsk.bonus': 1, 'staffAsk.timeoff': 1, 'staffAsk.decline': -1,
   'investor.accept': 2, 'investor.negotiate': 1, 'investor.decline': 0,
   'bigDeal.accept': 3, 'bigDeal.decline': -1,

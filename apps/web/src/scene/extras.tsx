@@ -202,3 +202,97 @@ export function Helipad({ x, z, night }: { x: number; z: number; night: boolean 
     </group>
   );
 }
+
+/** One bought decoration, standing at its spot on the island. */
+export function DecorItem({ id, x, z, night }: { id: string; x: number; z: number; night: boolean }) {
+  const blades = useRef<Group>(null);
+  const spark = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (blades.current) blades.current.rotation.z = t * 1.4;
+    if (spark.current) spark.current.children.forEach((c, i) => { c.position.y = 1.0 + ((t * 0.8 + i * 0.3) % 1) * 0.9; c.scale.setScalar(0.5 + Math.abs(Math.sin(t * 3 + i)) * 0.7); });
+  });
+  return (
+    <group position={[x, 0, z]}>
+      {id === 'flowers' && (
+        <>
+          <Blk w={1.3} h={0.12} d={0.5} c={C.woodDark} rad={0.04} />
+          {[-0.5, -0.25, 0, 0.25, 0.5].map((dx, i) => <Ball key={dx} r={0.1} x={dx} y={0.2} z={(i % 2) * 0.1 - 0.05} c={[C.pink, C.yellow, C.red, C.purple, C.orange][i]} />)}
+        </>
+      )}
+      {id === 'bench' && (
+        <>
+          <Blk w={0.9} h={0.08} d={0.34} y={0.28} c={C.wood} rad={0.02} />
+          <Blk w={0.9} h={0.3} d={0.06} y={0.36} z={-0.15} c={C.wood} rad={0.02} />
+          <Blk w={0.06} h={0.28} d={0.3} x={-0.38} c={C.woodDark} rad={0.01} />
+          <Blk w={0.06} h={0.28} d={0.3} x={0.38} c={C.woodDark} rad={0.01} />
+        </>
+      )}
+      {id === 'fountain' && (
+        <>
+          <Cyl r={0.7} h={0.2} c={C.grey} seg={22} />
+          <Cyl r={0.58} h={0.06} y={0.2} c={C.glassDark} seg={22} />
+          <Cyl r={0.1} h={0.55} y={0.2} c={C.grey} seg={10} />
+          <Cyl r={0.34} h={0.08} y={0.7} c={C.grey} seg={16} />
+          <Ball r={0.12} y={0.95} c={C.glass} o={0.8} ns />
+        </>
+      )}
+      {id === 'flags' && [-0.5, 0, 0.5].map((dx, i) => (
+        <group key={dx} position={[dx, 0, 0]}>
+          <Cyl r={0.03} h={1.6} c={C.steel} seg={6} />
+          <Blk w={0.5} h={0.3} d={0.02} x={0.26} y={1.25} c={[C.red, C.white, C.blue][i]} rad={0.01} />
+        </group>
+      ))}
+      {id === 'statue' && (
+        <>
+          <Blk w={0.7} h={0.4} d={0.7} c={C.grey} rad={0.05} />
+          <Cyl r={0.2} rt={0.14} h={0.7} y={0.4} c="#e0b030" seg={10} m={0.5} />
+          <Ball r={0.17} y={1.3} c="#e0b030" />
+        </>
+      )}
+      {id === 'windmill' && (
+        <>
+          <Cyl r={0.4} rt={0.22} h={1.4} c={C.cream} seg={10} />
+          <Cyl r={0.3} rt={0.01} h={0.5} y={1.4} c={C.red} seg={10} />
+          <group ref={blades} position={[0, 1.25, 0.32]}>
+            <Blk w={1.5} h={0.12} d={0.03} c={C.wood} rad={0.01} />
+            <Blk w={0.12} h={1.5} d={0.03} c={C.wood} rad={0.01} />
+          </group>
+        </>
+      )}
+      {id === 'gazebo' && (
+        <>
+          <Cyl r={0.8} h={0.08} c={C.sand} seg={8} />
+          {[0, 1, 2, 3].map((i) => <Cyl key={i} r={0.04} h={1.2} x={Math.cos(i * Math.PI / 2 + 0.78) * 0.65} z={Math.sin(i * Math.PI / 2 + 0.78) * 0.65} y={0.08} c={C.white} seg={6} />)}
+          <Cyl r={0.95} rt={0.02} h={0.5} y={1.28} c={C.teal} seg={8} />
+        </>
+      )}
+      {id === 'fireworks' && (
+        <>
+          <Cyl r={0.2} h={0.9} c={C.dark} seg={8} />
+          <Blk w={0.5} h={0.12} d={0.5} y={0.9} c={C.red} rad={0.03} />
+          <group ref={spark}>
+            {[C.yellow, C.pink, C.teal, C.orange, C.purple].map((c, i) => <Ball key={i} r={0.07} x={Math.cos(i * 1.3) * 0.3} z={Math.sin(i * 1.3) * 0.3} c={c} e={night ? c : undefined} ns />)}
+          </group>
+        </>
+      )}
+    </group>
+  );
+}
+
+/** A small trophy hall whose gold cups grow with your awards and achievements. */
+export function TrophyHall({ x, z, cups, night }: { x: number; z: number; cups: number; night: boolean }) {
+  return (
+    <group position={[x, 0, z]}>
+      <Blk w={1.5} h={0.9} d={1.1} c={C.cream} rad={0.06} />
+      <Blk w={1.7} h={0.18} d={1.3} y={0.9} c={C.red} rad={0.05} />
+      <Blk w={0.5} h={0.6} d={0.05} y={0} z={0.56} c={C.glass} rad={0.02} e={night ? '#ffe9a8' : undefined} />
+      {Array.from({ length: Math.min(8, cups) }, (_, i) => (
+        <group key={i} position={[-0.6 + (i % 4) * 0.4, 1.12 + Math.floor(i / 4) * 0.28, 0]}>
+          <Cyl r={0.08} rt={0.11} h={0.14} c="#e0b030" seg={8} m={0.5} />
+          <Cyl r={0.03} h={0.08} y={-0.06} c="#e0b030" seg={6} m={0.5} />
+        </group>
+      ))}
+    </group>
+  );
+}

@@ -22,7 +22,7 @@ construction, and an integrity check proves it every month.
 | R&D projects | Point three R&D staff at a named multi-month project (new product line, cost cutting, quality leap). It costs money every month, can fail, and pays off permanently through the same modifiers as upgrades |
 | Analysis | 16 ratios with definitions and industry benchmarks, profit bridge (waterfall), 12-month forecast using the real engine, EV/EBITDA vs revenue multiple vs 5-year DCF |
 | M&A | Acquisition targets with seller-adjusted EBITDA, paid due diligence, consolidation, goodwill |
-| Modes | Endless sandbox on Easy / Medium / Hard, plus the "Profitable but broke" working-capital case study |
+| Modes | Endless sandbox on Easy / Medium / Hard, plus four case studies (see Teaching below) |
 | Difficulty | Easy £100k (70% good events, unlimited rebirths), Medium £50k (60%, 3 rebirths per prestige), Hard £25k (35%, one life, no prestige, no perks) |
 | Events | ~20% chance a month. Automatic events (booms, rate moves, grants, break-ins) plus choice cards that pause the game (client terms, poached staff, breakdowns, tax inspections, rent reviews, angel investors, bulk deals, grants) |
 | Upgrades | Eight levelled upgrades per sector (capacity, market, reach, quality, churn, spoilage, costs), each capitalised as PP&E, with prerequisite chains; each stands as its own building on the island |
@@ -35,6 +35,13 @@ construction, and an integrity check proves it every month.
 | Online | Google sign-in; runs verified in chunks by the Worker (same engine, compact checkpoints, checksums); server-owned Legacy points, perks and prestiges |
 | Updates | Games saved on an older version are upgraded in place (`migrateState` in the engine) and carry on with the new rules, so an update never wipes a company. An online company that was being verified is carried over to the server once (`POST /runs/:id/carryover`): the server accepts it only for runs from before the update, and only if it is the same company, its books balance and its growth is plausible. After that, every month is verified by replay again |
 | Holding companies | Open join, 30 members, visibility (full / summary / hidden), level perks from combined valuation, weekly goals, members investing in each other (new shares, 49% cap, dividends, buy-outs) |
+| Surprise & story | Hot and cold streaks, market rumours that may be true, a sudden-death big bet, rare black swans, mystery boxes and a sticker album, hidden achievements. Named rival bosses, a yearly mentor, customer letters, press interviews, founder life, team careers |
+| Showing off | Island decorations, a logo maker, photo mode with filters, a trophy hall, a year-in-review card and winner replays. Everything here is cosmetic: it never changes the numbers |
+| Smarter play | Advisors that sometimes disagree, risk meter, break-even, a six-month cash calendar, autopilot standing orders (part of the replayed action log), saved what-if plans, a plan marketplace, side ventures that settle after 6 to 12 months |
+| Community | Friend duels, a weekend tournament bracket, a shared community goal, a rival of the week, and a "watch the winner" replay that re-runs the real engine. Needs sign-in |
+| Progression | Company culture picked at the start (validated and replayed by the server like the extra challenges), reputation tiers, a monthly season pass, founder skills (conveniences only), sector mastery badges |
+| Mood | Optional adaptive music, island weather that follows the seasons, a different sound for each kind of news, crowd reactions and confetti for firsts |
+| Teaching | A daily "spot the mistake" trial balance, a daily ratio detective, a yearly audit day (a clean audit lifts reputation), an explain-it glossary built from your own company, and four case studies (profitable but broke, the cash crunch, the growth trap, the price war) |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout

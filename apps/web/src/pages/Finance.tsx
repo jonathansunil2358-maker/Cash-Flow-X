@@ -1,3 +1,4 @@
+import { VentureCard } from './Progress';
 import {
   COVENANT_MAX_DEBT_EBITDA, COVENANT_MIN_INTEREST_COVER, covenantTest, distributableReserves, EQUITY_FEE, equityRaiseTerms,
   formatGBP, formatPct, leasesCurrentPortion, loanOffer, loanRate, monthLabel, overdraftLimit, ownership, scheduledRepayment, spreadFor, type GameState,
@@ -19,6 +20,7 @@ export function Finance({ game }: { game: GameState }) {
         <EquityCard game={game} />
         <DividendCard game={game} />
         <TreasuryCard game={game} />
+        <VentureCard game={game} />
         <TaxCard game={game} />
         {game.leases.length > 0 && <LeasesCard game={game} />}
       </div>

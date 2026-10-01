@@ -66,8 +66,8 @@ export function Info({ text, className = '' }: { text: ReactNode; className?: st
   );
 }
 
-export function Stat({ label, value, sub, tone, help }: {
-  label: string; value: ReactNode; sub?: ReactNode; tone?: 'good' | 'bad' | 'neutral'; help?: ReactNode;
+export function Stat({ label, value, sub, tone, help, extra }: {
+  label: string; value: ReactNode; sub?: ReactNode; tone?: 'good' | 'bad' | 'neutral'; help?: ReactNode; extra?: ReactNode;
 }) {
   const toneClass = tone === 'good' ? 'text-good-text' : tone === 'bad' ? 'text-critical-text' : 'text-ink-2';
   return (
@@ -75,6 +75,7 @@ export function Stat({ label, value, sub, tone, help }: {
       <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-ink-2">
         {label}
         {help && <Info text={help} />}
+        {extra}
       </div>
       <div className="tnum text-xl font-black text-ink sm:text-2xl">{value}</div>
       {sub && <div className={`text-xs font-bold ${toneClass}`}>{sub}</div>}

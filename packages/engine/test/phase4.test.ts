@@ -6,7 +6,7 @@ import {
 import { playPolicy } from './helpers';
 
 const answer = (s: GameState) => {
-  if (s.pendingEvent) applyActionInPlace(s, { type: 'resolveEvent', choiceId: s.pendingEvent.choices[0].id });
+  if (s.status === 'playing' && s.pendingEvent) applyActionInPlace(s, { type: 'resolveEvent', choiceId: s.pendingEvent.choices[0].id });
 };
 
 describe('chunked verification', () => {

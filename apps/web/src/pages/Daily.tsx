@@ -1,6 +1,7 @@
 import { dailyChallenge, DAILY_MONTHS, formatGBP, INDUSTRIES, msUntilNextDaily, utcDay, type GameState } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { EntryList } from '../components/FixedBits';
+import { WatchWinner } from './Community';
 import { Button, Card, KeyValue, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api, ONLINE, type DailyBoard } from '../lib/api';
@@ -84,6 +85,7 @@ export function DailyChallengeCard({ game }: { game: GameState }) {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
+            {online && <WatchWinner kind="daily" keyId={day} />}
             {online && !rankedUsed && <Button variant="primary" disabled={playingDaily} onClick={() => setConfirm('ranked')}>Play today's challenge</Button>}
             <Button variant={online && !rankedUsed ? 'secondary' : 'primary'} disabled={playingDaily} onClick={() => setConfirm('practice')}>
               {online ? 'Practise (not ranked)' : 'Play today\'s challenge'}

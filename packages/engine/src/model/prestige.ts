@@ -1,10 +1,15 @@
 import type { Pence } from '../money';
+import type { LearnState } from './learn';
+import type { PassState } from './progress';
 import { modifierBonus } from './modifiers-opt';
 import { DIFFICULTIES, type DifficultyId } from './difficulty';
 import type { DailyState, Mission } from './gamification';
 import type { IndustryId } from './industries';
 import type { Cosmetics } from './cosmetics';
 import type { QuestState } from './quests';
+import type { DecorState } from './decor';
+import type { Logo } from './logo';
+import type { Plan } from './plans';
 import { BOOSTS, perkPurchase, type ActiveBoost, type BoostId, type PerkLevels } from './perks';
 import { isFixedScenario } from '../scenarios';
 import { ownership, type GameState } from './state';
@@ -62,6 +67,23 @@ export interface Profile {
   cosmetics?: Cosmetics;
   /** Today's quests and the streak (see quests.ts). Optional so older saves load unchanged. */
   quests?: QuestState;
+  /** Mystery boxes waiting, how many were opened, collected stickers and album pages already paid. */
+  boxes?: number;
+  boxesOpened?: number;
+  stickers?: string[];
+  albumClaimed?: string[];
+  /** Island decorations bought and switched on, and the company logo. */
+  decor?: DecorState;
+  logo?: Logo;
+  /** Saved scenario plans (see plans.ts). */
+  plans?: Plan[];
+  /** Founder skills learned and this month's season pass (see progress.ts). */
+  skills?: string[];
+  /** Milestones already celebrated (see mood.ts). */
+  milestones?: string[];
+  /** Puzzle answers and glossary terms met (see learn.ts). */
+  learn?: LearnState;
+  pass?: PassState;
 }
 
 export const STARTER_GEMS = 50;

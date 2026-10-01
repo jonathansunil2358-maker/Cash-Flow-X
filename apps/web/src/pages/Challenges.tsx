@@ -35,10 +35,10 @@ export function ChallengeCard({ game }: { game: GameState }) {
   };
   useEffect(() => { if (online && valid) void load(code); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [online, game.status, game.month]);
 
-  const make = async () => {
+  const make = async (duel = false) => {
     setBusy(true);
     try {
-      const r = await api.createChallenge();
+      const r = await api.createChallenge(duel);
       setCode(r.code);
       await load(r.code);
       await share(r.code);
@@ -71,7 +71,8 @@ export function ChallengeCard({ game }: { game: GameState }) {
     <Card id="card-challenge" title="Challenge a friend"
       subtitle={`Make a code and send it. Everyone with it plays the same company for ${FIXED_MONTHS} months, once, and you compare your final stakes on a private board.`}>
       <div className="space-y-3">
-        {online && <Button variant="primary" disabled={busy || playing} onClick={make}>{busy ? 'Making a code…' : 'Make a challenge and share it'}</Button>}
+        {online && <Button variant="primary" disabled={busy || playing} onClick={() => make(false)}>{busy ? 'Making a code…' : 'Make a challenge and share it'}</Button>}
+        {online && <Button disabled={busy || playing} onClick={() => make(true)}>Duel a friend (just the two of you)</Button>}
         <div className="flex flex-wrap items-end gap-2">
           <label className="block text-xs font-black tracking-wider text-ink-2" htmlFor="challenge-code">HAVE A CODE?
             <TextInput id="challenge-code" value={code} maxLength={6} className="mt-1 w-36 uppercase" placeholder="ABC234"

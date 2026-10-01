@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { dailyBoard } from './daily';
 import { challengeView, claimWeeklyReward, createChallenge, weeklyView } from './fixed';
+import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
 import { claimWeekly, createGuild, guildDetail, joinGuild, leaveGuild, listGuilds } from './guilds';
@@ -189,12 +190,22 @@ app.get('/weekly', requireUser, async (c) => {
 app.post('/rewards/weekly', requireUser, async (c) => c.json(await claimWeeklyReward(c.env, c.get('user'))));
 app.post('/challenges', requireUser, async (c) => {
   await limit(c, 'challenges');
-  return c.json(await createChallenge(c.env, c.get('user')), 201);
+  const b = await body<{ duel?: unknown }>(c);
+  return c.json(await createChallenge(c.env, c.get('user'), b.duel === true), 201);
 });
 app.get('/challenges/:code', requireUser, async (c) => {
   c.header('cache-control', 'private, no-store');
   return c.json(await challengeView(c.env, c.get('user'), c.req.param('code')!));
 });
+app.get('/community', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await communityView(c.env, c.get('user'))); });
+app.post('/rewards/community', requireUser, async (c) => c.json(await claimCommunity(c.env, c.get('user'))));
+app.get('/tournament', requireUser, async (c) => { c.header('cache-control', 'private, max-age=30'); return c.json(await tournamentView(c.env, c.get('user'))); });
+app.get('/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await rivalView(c.env, c.get('user'))); });
+app.get('/replays/:kind/:key', requireUser, async (c) => { c.header('cache-control', 'private, max-age=60'); return c.json(await replayOf(c.env, c.req.param('kind')!, c.req.param('key')!, Number(c.req.query('rank') ?? 1))); });
+app.get('/plans', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await listPlans(c.env, c.get('user'), c.req.query('sort'))); });
+app.post('/plans', requireUser, async (c) => { await limit(c, 'plans'); return c.json(await publishPlan(c.env, c.get('user'), await body(c)), 201); });
+app.post('/plans/:id/like', requireUser, async (c) => c.json(await togglePlanLike(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/plans/:id/delete', requireUser, async (c) => c.json(await deletePlanShared(c.env, c.get('user'), c.req.param('id')!)));
 app.post('/rewards/season/:board', requireUser, async (c) => c.json(await claimSeasonReward(c.env, c.get('user'), c.req.param('board') as Board)));
 
 app.onError((err, c) => {

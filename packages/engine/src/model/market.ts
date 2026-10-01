@@ -6,6 +6,7 @@ import { listedDemandMult } from './listing';
 import { siteCapacityMult, siteDemandMult, siteProductivity } from './sites';
 import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
 import { rivalPressure } from './pressure';
+import { bossOf } from './story';
 import { DIFFICULTIES } from './difficulty';
 import { logItem, yearOf, type GameState } from './state';
 
@@ -163,8 +164,9 @@ export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, l
     const cut = (slasher ? 0.07 : 0.04) + rng.next() * (slasher ? 0.06 : 0.04);
     rival.cutMonths = 3 + Math.min(3, Math.floor(rng.next() * 4));
     rival.price = Math.max(Math.round(rival.price * (1 - cut)), Math.round(rival.normalPrice * (slasher ? 0.78 : RIVAL_PRICE_FLOOR)));
+    const boss = bossOf(s.competitors.indexOf(rival));
     logItem(s, 'event', `${rival.name} cuts prices`,
-      `${rival.name} dropped prices by about ${Math.round(cut * 100)}% for the next ${rival.cutMonths} months to win back customers from you.`);
+      `${rival.name} dropped prices by about ${Math.round(cut * 100)}% for the next ${rival.cutMonths} months to win back customers from you. ${boss.name}: "${boss.catchphrase}"`);
   }
 
   const year = yearOf(s.month);
@@ -173,7 +175,7 @@ export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, l
       const step = 3 + Math.min(3, Math.floor(rng.next() * 4));
       c.quality = Math.min(100, c.quality + step);
       c.lastLaunchYear = year;
-      logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. Time to look at your own product.`);
+      logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. ${bossOf(i).name} is gloating. Time to look at your own product.`);
     }
   });
 }

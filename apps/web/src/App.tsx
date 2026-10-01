@@ -1,7 +1,8 @@
 import {
-  cosmeticsOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, musicMood, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
+import { isMusicOn, playMusic, stopMusic } from './lib/music';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAccount } from './lib/account';
 import { ONLINE } from './lib/api';
@@ -21,6 +22,9 @@ import { Onboarding } from './pages/Onboarding';
 import { Operations, UpgradesPanel } from './pages/Operations';
 import { Coach } from './pages/Coach';
 import { CelebrationModal, OfflineModal } from './pages/Overlays';
+import { PhotoButton } from './pages/Photo';
+import { YearReviewModal } from './pages/Review';
+import { LogoBadge } from './components/LogoBadge';
 import { Settings } from './pages/Settings';
 import { Tutorial } from './pages/Tutorial';
 import { useGame, type Sheet, type Speed } from './store';
@@ -109,6 +113,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
         <Hud game={game} />
         <XpBar />
         <SceneArea game={game} />
+        <MusicDriver game={game} />
         {!playing && <GameOver game={game} />}
         <Alerts game={game} />
         <QuickStats game={game} />
@@ -149,6 +154,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
       <EventModal game={game} />
       <OfflineModal />
       <CelebrationModal />
+      <YearReviewModal />
       <Tutorial game={game} />
     </div>
   );
@@ -162,7 +168,7 @@ function Hud({ game }: { game: GameState }) {
   return (
     <header className="cfx-hud flex-col !flex-nowrap !items-stretch !gap-2 !p-2.5">
       <div className="flex items-center gap-2.5">
-        <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />
+        {profile.logo ? <LogoBadge logo={logoOf(profile)} icon={game.icon} /> : <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />}
         <div className="min-w-0 flex-1">
           <div className="cfx-hud__name">{game.companyName}</div>
           <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}{profile.prestigeCount > 0 && game.difficulty !== 'hard' ? ` · ★ ${prestigeTitle(profile.prestigeCount)}` : ''}</div>
@@ -182,6 +188,12 @@ function Hud({ game }: { game: GameState }) {
         <button type="button" className="cfx-pill" onClick={() => openSheet('missions')} aria-label={`${profile.gems} gems. Open Missions.`}>
           <img src={CURRENCY_ICONS.gem} alt="" />{profile.gems}<span className="cfx-pill__plus" aria-hidden>+</span>
         </button>
+        {luckOf(game) && (
+          <button type="button" className="cfx-pill" onClick={() => openSheet('team')}
+            aria-label={`${luckOf(game)!.title}: demand ${luckOf(game)!.effects.demandMult! > 1 ? 'up' : 'down'} 5% for a few months. Open Business.`}>
+            {luckOf(game)!.effects.demandMult! > 1 ? '🍀' : '❄️'}<span className="text-xs">{luckOf(game)!.title}</span>
+          </button>
+        )}
         {game.prestigeLevel > 0 && (
           <button type="button" className="cfx-pill" onClick={() => openSheet('legacy')}
             aria-label={`Prestige rank ${game.prestigeLevel}, ${prestigeTitle(game.prestigeLevel)}: +${Math.round(prestigeBonus(game.prestigeLevel) * 100)}% demand. Open Prestige.`}>
@@ -219,6 +231,16 @@ function SkyBackdrop() {
   const skin = useGame((s) => skinOf(cosmeticsOf(s.profile).skin));
   const sky = isNight() ? skin.palette.skyNight : skin.palette.sky;
   return sky ? <div className="absolute inset-0" style={{ background: sky }} aria-hidden /> : null;
+}
+
+/** Keeps the background music in step with how the company is doing. */
+function MusicDriver({ game }: { game: GameState }) {
+  const mood = musicMood(game);
+  useEffect(() => {
+    if (isMusicOn()) playMusic(mood);
+  }, [mood]);
+  useEffect(() => () => stopMusic(), []);
+  return null;
 }
 
 function SceneArea({ game }: { game: GameState }) {
@@ -273,6 +295,7 @@ function SceneArea({ game }: { game: GameState }) {
         ))}
       </div>
       <BuildingCard game={game} />
+      {scene3d && <PhotoButton game={game} />}
     </section>
   );
 }

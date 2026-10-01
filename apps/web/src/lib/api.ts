@@ -88,11 +88,22 @@ export interface WeeklyBoard {
   me: FixedMe | null;
   reward: { week: string; rank: number; gems: number; claimed: boolean } | null;
 }
+export interface CommunityView { week: string; months: number; target: number; reached: boolean; players: number; contributed: boolean; claimed: boolean; gems: number }
+export interface TournamentMatch { round: 'quarter' | 'semi' | 'final'; a: { id: string; name: string; score: number } | null; b: { id: string; name: string; score: number } | null; aScore: number | null; bScore: number | null; winner: { id: string; name: string; score: number } | null }
+export interface TournamentView {
+  week: string; saturday: string; sunday: string; entrants: { id: string; name: string; score: number }[]; me: boolean;
+  bracket: { quarters: TournamentMatch[]; semis: TournamentMatch[]; final: TournamentMatch; champion: { id: string; name: string; score: number } | null } | null;
+}
+export interface RivalView { week: string; rank?: number; you: number; rival: { id: string; name: string; title: string | null; icon: string; netWorth: number; company: string | null; industry: string | null; rank: number } | null }
+export interface SharedPlan { id: string; name: string; price: number; marketing: number; hires: number; likes: number; author: string; title: string | null; liked: boolean; mine: boolean }
+export interface ReplayData { kind: string; key: string; rank: number; name: string; title: string | null; score: number; months: number; game: { seed: string; industryId: IndustryId; companyName: string; scenarioId: string }; actions: { month: number; action: Action }[] }
+
 export interface ChallengeView {
   code: string;
   creator: string;
   expiresAt: string;
   expired: boolean;
+  maxPlayers?: number;
   challenge: { seed: string; industryId: IndustryId; companyName: string; months: number };
   entries: FixedEntry[];
   me: FixedMe | null;
@@ -140,7 +151,16 @@ export const api = {
     request<{ actionsVerified: number; month: number; status: string }>(`/runs/${runId}/carryover`, { body: b }),
   weekly: (week?: string) => request<WeeklyBoard>(`/weekly${week ? `?week=${encodeURIComponent(week)}` : ''}`),
   claimWeeklyEvent: () => request<{ gems: number; week: string; rank: number }>('/rewards/weekly', { body: {} }),
-  createChallenge: () => request<{ code: string; expiresAt: string; challenge: ChallengeView['challenge'] }>('/challenges', { body: {} }),
+  createChallenge: (duel = false) => request<{ code: string; expiresAt: string; maxPlayers?: number; challenge: ChallengeView['challenge'] }>('/challenges', { body: { duel } }),
+  community: () => request<CommunityView>('/community'),
+  claimCommunity: () => request<{ gems: number; week: string }>('/rewards/community', { body: {} }),
+  tournament: () => request<TournamentView>('/tournament'),
+  rival: () => request<RivalView>('/rival'),
+  plans: (sort: 'top' | 'new' = 'top') => request<{ plans: SharedPlan[] }>(`/plans?sort=${sort}`),
+  publishPlan: (plan: unknown) => request<{ id: string }>('/plans', { body: { plan } }),
+  likePlan: (id: string) => request<{ liked: boolean; likes: number }>(`/plans/${id}/like`, { body: {} }),
+  deleteSharedPlan: (id: string) => request<{ ok: boolean }>(`/plans/${id}/delete`, { body: {} }),
+  replay: (kind: 'daily' | 'weekly' | 'challenge', key: string, rank = 1) => request<ReplayData>(`/replays/${kind}/${encodeURIComponent(key)}?rank=${rank}`),
   challenge: (code: string) => request<ChallengeView>(`/challenges/${encodeURIComponent(code)}`),
   daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),
   syncRun: (runId: string, b: { fromAction: number; actions: { month: number; action: Action }[]; month: number; checksum: string }) =>

@@ -8,7 +8,7 @@ import { Button, Field, KeyValue, MoneyInput, StatusPill } from '../components/u
 import { useGame } from '../store';
 import { Fold } from './Strategy';
 import {
-  complianceCost, complianceRate, OPTIONAL_MODIFIERS, rankCostMult, rivalPressure, saturationFactor, wageInflation, RENT_INFLATION, trailingPL, annualise, modifierBonus,
+  complianceCost, complianceRate, CULTURES, cultureOf, OPTIONAL_MODIFIERS, rankCostMult, rivalPressure, saturationFactor, wageInflation, RENT_INFLATION, trailingPL, annualise, modifierBonus,
 } from '@cfx/engine';
 
 export function SitesCard({ game }: { game: GameState }) {
@@ -181,6 +181,7 @@ export function PressuresCard({ game }: { game: GameState }) {
   const annual = annualise(t.summary.revenue, t.months);
   const compliance = complianceCost(game);
   const rank = game.prestigeLevel ?? 0;
+  const cultureId = cultureOf(game.modifiers);
   const mods = OPTIONAL_MODIFIERS.filter((m) => (game.modifiers ?? []).includes(m.id));
   const share = game.history.at(-1)?.kpis.preferenceShare ?? 0;
   const parts: string[] = [];
@@ -197,6 +198,7 @@ export function PressuresCard({ game }: { game: GameState }) {
           ['Wages each new year', `+${Math.round(wageInflation(game) * 100)}%`],
           ['Rent each new year', `+${Math.round(RENT_INFLATION * 100)}%`],
           ['Compliance, audit and legal', annual > 0 ? `${formatPct(complianceRate(annual), 1)} of revenue (${formatGBP(compliance, { compact: true })} a month); free below £2m a year` : 'Free below £2m a year'],
+          ...(cultureId ? [['Company culture', `${CULTURES.find((c) => c.id === cultureId)!.name}: ${CULTURES.find((c) => c.id === cultureId)!.blurb}`] as [string, string]] : []),
           ['Prestige rank', rank > 0 ? `Supplier costs +${Math.round((rankCostMult(game) - 1) * 100)}%, rivals ${Math.round((rivalPressure(game) - 1) * 100)}% sharper` : 'No rank yet'],
         ]} />
         {mods.length > 0 && (

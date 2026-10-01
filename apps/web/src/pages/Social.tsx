@@ -5,8 +5,9 @@ import { useAccount } from '../lib/account';
 import { api, type Board, type BoardEntry, type GuildDetail, type GuildMember, type GuildSummary, type Visibility } from '../lib/api';
 import { ICON_LABELS, ICON_ORDER, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
+import { CommunityTab } from './Community';
 
-type Tab = 'guild' | 'boards' | 'portfolio';
+type Tab = 'guild' | 'boards' | 'community' | 'portfolio';
 
 export function Social({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>('guild');
@@ -14,9 +15,10 @@ export function Social({ game }: { game: GameState }) {
   if (!me) return <p className="text-sm text-ink-2">Sign in to join a holding company and appear on leaderboards.</p>;
   return (
     <div className="space-y-4">
-      <Tabs value={tab} onChange={setTab} items={[{ id: 'guild', label: 'Holding company' }, { id: 'boards', label: 'Leaderboards' }, { id: 'portfolio', label: 'Portfolio' }]} />
+      <Tabs value={tab} onChange={setTab} items={[{ id: 'guild', label: 'Holding company' }, { id: 'boards', label: 'Leaderboards' }, { id: 'community', label: 'Community' }, { id: 'portfolio', label: 'Portfolio' }]} />
       {tab === 'guild' && <Guild game={game} />}
       {tab === 'boards' && <Leaderboards />}
+      {tab === 'community' && <CommunityTab />}
       {tab === 'portfolio' && <Portfolio />}
     </div>
   );

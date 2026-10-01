@@ -52,7 +52,8 @@ export function checkIntegrity(s: GameState, record?: MonthRecord): string[] {
   if (rouAcc !== -b.rouAccumDepreciation) tag(`lease register depreciation ${rouAcc} ≠ ledger ${-b.rouAccumDepreciation}`);
   if (leaseLiab !== -b.leaseLiability) tag(`lease schedules ${leaseLiab} ≠ lease liabilities ${-b.leaseLiability}`);
 
-  if (s.deposit + s.fundValue !== b.investments) tag(`investment holdings ${s.deposit + s.fundValue} ≠ ledger ${b.investments}`);
+  const ventures = (s.ventures ?? []).reduce((a, v) => a + v.stake, 0);
+  if (s.deposit + s.fundValue + ventures !== b.investments) tag(`investment holdings ${s.deposit + s.fundValue + ventures} ≠ ledger ${b.investments}`);
   if (b.prepayments < 0) tag('negative prepayments');
   if (b.accruals > 0) tag('accruals has a debit balance');
   return errors;

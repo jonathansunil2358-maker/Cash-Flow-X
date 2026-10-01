@@ -690,3 +690,317 @@ test('a company worth millions gets a helipad and the 3D scene still renders', a
   await page.waitForTimeout(1500);
   expect(errors).toEqual([]);
 });
+
+test('Batch A: mystery boxes, sticker album, hidden achievements and the rumour mill', async ({ page }) => {
+  await freshCompany(page, 'Surp');
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.boxes = 3;
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await skipTourIfShown(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const mill = biz.locator('#card-rumours');
+  await mill.getByRole('button', { name: 'Open' }).click();
+  await expect(mill.getByText(/No rumours right now/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const boxes = missions.locator('#card-boxes');
+  await expect(boxes.getByRole('button', { name: 'Open a box (3)' })).toBeVisible();
+  await boxes.getByRole('button', { name: 'Open a box (3)' }).click();
+  await expect(boxes.getByRole('status')).toBeVisible();
+  await expect(boxes.getByRole('button', { name: 'Open a box (2)' })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).boxes)).toBe(2);
+  await expect(missions.locator('#card-album').getByText(/Sticker album \(\d+\/42\)/)).toBeVisible();
+  await expect(missions.getByText('???').first()).toBeVisible();
+});
+
+test('Batch B: rival bosses with catchphrases and this year\'s mentor', async ({ page }) => {
+  await freshCompany(page, 'Story');
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const rivals = biz.locator('#card-rivals');
+  await rivals.getByRole('button', { name: 'Open' }).click();
+  await expect(rivals.getByText(/Victor Crane/)).toBeVisible();
+  await expect(rivals.getByText(/Everyone has a price/)).toBeVisible();
+  const team = biz.locator('#card-roster');
+  await team.getByRole('button', { name: 'Open' }).click();
+  await expect(team.getByText(/This year's mentor: Dame Harriet Cole/)).toBeVisible();
+});
+
+test('Batch C: decorations, logo, photo studio, trophy hall and the year in review', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  g.awards = [{ year: 2026, id: 'profit' }, { year: 2027, id: 'growth' }];
+  await page.addInitScript((game) => {
+    if (localStorage.getItem('cfx:seeded')) return;
+    localStorage.setItem('cfx:seeded', '1');
+    localStorage.setItem('cfx:save:autosave', JSON.stringify(game));
+    localStorage.setItem('cfx:meta:autosave', JSON.stringify({ slot: 'autosave', companyName: game.companyName, industryId: game.industryId, label: 'x', savedAt: new Date().toISOString(), status: 'playing' }));
+    localStorage.setItem(`cfx:pref:tour:${game.industryId}`, 'done');
+    localStorage.setItem('cfx:profile', JSON.stringify({ version: 3, xp: 0, achievements: { first_sale: 'x', first_profit: 'x', insured: 'x' }, missions: [], missionsCompleted: 0, daily: { lastClaim: null, streak: 0 }, legacyPoints: 0, legacyEarned: 0, prestigeCount: 0, perks: {}, gems: 400, boosts: [], rebirthsUsed: 0, runs: [], lifetime: { companies: 0, bankruptcies: 0, retired: 0, months: 0, bestStake: 0 } }));
+  }, g);
+  await page.clock.install();
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Player name' }).fill(`Show${Date.now().toString(36).slice(-6)}`);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('section[aria-label="Your business"] canvas')).toBeVisible({ timeout: 20_000 });
+  // Freeze game time so no month closes (and no celebration pops up) while the test clicks around.
+  await clearOverlays(page);
+  await page.clock.pauseAt(new Date(Date.now() + 1_000));
+
+  // Settings: buy and place decorations, make a logo.
+  await clearOverlays(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const decor = page.locator('#card-decor');
+  await decor.getByRole('button', { name: /Buy for 40/ }).click();
+  await expect(decor.getByRole('button', { name: 'On the island' })).toHaveCount(1);
+  await decor.getByRole('button', { name: 'On the island' }).click();
+  await expect(decor.getByRole('button', { name: 'Place it' })).toHaveCount(1);
+  await decor.getByRole('button', { name: 'Place it' }).click();
+  const logo = page.locator('#card-logo');
+  await logo.getByRole('button', { name: 'hex' }).click();
+  await expect(logo.getByRole('button', { name: 'hex' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).logo.shape)).toBe('hex');
+  await expect(page.getByRole('main').getByRole('img', { name: 'Company logo' })).toBeVisible();
+
+  // Photo studio.
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await page.getByRole('button', { name: 'Photo mode' }).click();
+  const studio = page.getByRole('dialog', { name: 'Photo studio' });
+  await expect(studio.getByLabel('Photo preview')).toBeVisible();
+  await studio.getByRole('button', { name: 'Sepia' }).click();
+  await expect(studio.getByRole('button', { name: 'Sepia' })).toHaveAttribute('aria-pressed', 'true');
+  await studio.getByRole('button', { name: 'Close' }).click();
+  await expect(studio).toHaveCount(0);
+  await expect(page.locator('section[aria-label="Your business"] canvas')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('Batch C: the year in review appears at a new year', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  const dialog = page.getByRole('dialog', { name: /Year in review/ });
+  for (let i = 0; i < 14 && !(await dialog.isVisible()); i++) {
+    await clearOverlays(page);
+    await page.clock.runFor(10_500);
+  }
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText(/Revenue/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'On to next year' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('Batch D: advisors, risk meter, break-even, autopilot, cash calendar and saved plans', async ({ page }) => {
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const advisors = biz.locator('#card-advisors');
+  await advisors.getByRole('button', { name: 'Open' }).click();
+  await expect(advisors.getByText(/Priya, your CFO/)).toBeVisible();
+  await expect(advisors.getByText(/Marcus, head of marketing/)).toBeVisible();
+  await expect(advisors.getByText(/Olu, head of operations/)).toBeVisible();
+  const risk = biz.locator('#card-risk');
+  await risk.getByRole('button', { name: 'Open' }).click();
+  await expect(risk.getByText(/(Calm|Keep an eye on it|Danger|Critical): \d+/)).toBeVisible();
+  const be = biz.locator('#card-breakeven');
+  await be.getByRole('button', { name: 'Open' }).click();
+  await expect(be.getByText(/Fixed costs last month/)).toBeVisible();
+  const auto = biz.locator('#card-autopilot');
+  await auto.getByRole('button', { name: 'Open' }).click();
+  await auto.getByRole('button', { name: 'Add' }).first().click();
+  await expect(auto.getByText(/of last month's sales/)).toBeVisible();
+  expect((await savedGame(page)).rules).toEqual([{ kind: 'marketingPct', pct: 8 }]);
+  await auto.getByRole('button', { name: 'Remove' }).click();
+  await expect(auto.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+  expect((await savedGame(page)).rules).toBeUndefined();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Finance');
+  const cal = page.locator('#card-calendar');
+  await cal.getByRole('button', { name: 'Open' }).click();
+  await expect(cal.getByText(/Payroll and on-costs/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Books');
+  await page.getByRole('tab', { name: /Forecast/ }).click();
+  const whatif = page.locator('#card-whatif');
+  await whatif.getByLabel('Price change').fill('10');
+  await whatif.getByLabel('Plan name').fill('Premium');
+  await whatif.getByRole('button', { name: 'Save plan' }).click();
+  await expect(whatif.getByText('Saved plans')).toBeVisible();
+  await expect(whatif.getByText('Premium', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).plans[0].name)).toBe('Premium');
+  await whatif.getByRole('button', { name: 'Delete Premium' }).click();
+  await expect(whatif.getByText('Saved plans')).toHaveCount(0);
+});
+
+test('Batch E: community goal, rival of the week, tournament, plan market and duels', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Comm');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await clearOverlays(page);
+  await page.getByRole('button', { name: /Holding company and leaderboards/ }).click();
+  await page.getByRole('tab', { name: 'Community' }).click();
+  await expect(page.locator('#card-community')).toBeVisible();
+  await expect(page.locator('#card-rival')).toBeVisible();
+  await expect(page.locator('#card-tournament')).toBeVisible();
+  await expect(page.locator('#card-market')).toBeVisible();
+});
+
+test('Batch F: culture, side ventures, reputation tier, season pass, skills and mastery', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Finance: back a venture.
+  await openDock(page, 'Finance');
+  const venture = page.locator('#card-venture');
+  await venture.getByLabel('Venture').selectOption('safe');
+  await venture.getByRole('button', { name: 'Back it' }).click();
+  await expect.poll(async () => ((await savedGame(page)).ventures ?? []).length).toBe(1);
+  await expect(venture.getByText(/until month/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  // Dashboard shows the reputation tier.
+  await clearOverlays(page);
+  await openDock(page, 'Books');
+  await expect(page.getByRole('dialog', { name: /Books/ }).getByText(/^Reputation/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+
+  // Missions: season pass, skills (none yet at level 1) and mastery.
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.locator('#card-pass')).toBeVisible();
+  await expect(missions.locator('#card-skills').getByRole('button', { name: /Learn/ }).first()).toBeVisible();
+  await expect(missions.locator('#card-mastery')).toBeVisible();
+});
+
+test('Batch F: a new company can pick a culture, and it shows in the pressures card', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Cult');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('radio', { name: /Frugal/ }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['culture-frugal']);
+});
+
+test('Batch G: music and weather switches, and a first gets a party', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  g.prestigeLevel = 1; // the "new rank" milestone is reached at once
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Settings: both switches persist.
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByLabel('Background music').check();
+  await settings.getByLabel('Weather on the island').uncheck();
+  expect(await page.evaluate(() => [localStorage.getItem('cfx:pref:music'), localStorage.getItem('cfx:pref:weather')])).toEqual(['on', 'off']);
+  await settings.getByLabel('Background music').uncheck();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  // A player already being tracked for milestones gets a celebration the first time one is reached.
+  await page.clock.runFor(10_500);
+  await clearOverlays(page);
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.milestones = [];
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  const party = page.getByRole('dialog').filter({ hasText: /Milestone!/ });
+  for (let i = 0; i < 14 && !(await party.isVisible()); i++) {
+    const choice = page.locator('.cfx-choice').first();
+    if (await choice.isVisible()) await choice.click();
+    await page.clock.runFor(10_500);
+  }
+  await expect(party).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.cfx-confetti')).toBeVisible();
+});
+
+test('Batch H: puzzles, explain cards, glossary, audit day and the new case studies', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Books overview: an explain card. The first time a word is opened it joins the glossary.
+  await openDock(page, 'Books');
+  const books = page.getByRole('dialog', { name: /Books/ });
+  await books.getByRole('button', { name: 'Explain EBITDA' }).click();
+  await expect(books.getByRole('note').filter({ hasText: /interest, tax, depreciation/i })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).learn.terms)).toEqual(['ebitda']);
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+
+  // Missions: the two daily puzzles, audit day and the glossary.
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const spot = missions.locator('#card-spot');
+  await expect(spot.getByRole('table', { name: 'Trial balance' })).toBeVisible();
+  await spot.getByRole('group', { name: 'Which account is wrong?' }).getByRole('button').first().click();
+  await expect(spot.getByRole('status')).toContainText(/Right!|Not quite\./);
+  const detective = missions.locator('#card-detective');
+  await detective.getByRole('group', { name: 'What is the problem?' }).getByRole('button').first().click();
+  await expect(detective.getByRole('status')).toContainText(/Right!|Not quite\./);
+  const learn = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).learn);
+  expect(learn.spotDay).toBeTruthy();
+  expect(learn.detectiveDay).toBeTruthy();
+  const audit = missions.locator('#card-audit');
+  await audit.getByRole('button', { name: 'Open' }).click();
+  await expect(audit.getByText(/auditors|Nothing to report/).first()).toBeVisible();
+  const glossary = missions.locator('#card-glossary');
+  await glossary.getByRole('button', { name: 'Open' }).click();
+  await expect(glossary.getByText('EBITDA', { exact: true })).toBeVisible();
+});
+
+test('Batch H: the new case studies are on the start screen and play', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Case');
+  for (const name of ['Case study: The cash crunch', 'Case study: The growth trap', 'Case study: The price war']) {
+    await expect(page.getByRole('button', { name })).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Case study: The price war' }).click();
+  await page.getByRole('button', { name: 'Take the job' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText('Ledgerly Ltd');
+  await skipTour(page);
+  const g = await savedGame(page);
+  expect(g.scenarioId).toBe('price-war');
+  expect(g.industryId).toBe('software');
+});

@@ -25,6 +25,11 @@ import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './m
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
+import { runAutopilot } from './model/autopilot';
+import { advanceStory } from './model/story';
+import { advanceSurprise } from './model/surprise';
+import { advanceAudit } from './model/audit';
+import { advanceVentures } from './model/venture';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
@@ -88,6 +93,9 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
     post(L, m, memo, lines, { cf, cfLabel });
   };
 
+  // 0. Standing orders from the player's autopilot rules.
+  if (!opts.simulation) runAutopilot(s);
+
   // 1. Year start
   if (m > 0 && m % 12 === 0) {
     s.salaryIndex *= 1 + wageInflation(s);
@@ -100,8 +108,10 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   }
 
   // 1b. Board meetings and annual awards look back at the closed months.
+  advanceStory(s, !!opts.simulation);
   advanceBoard(s, !!opts.simulation);
   advanceAwards(s, !!opts.simulation);
+  advanceAudit(s, !!opts.simulation);
 
   // 2. Economy
   runEvents(s, rng, !opts.simulation);
@@ -248,6 +258,8 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   if (s.listed) P('Listed company costs (compliance, auditors, investor relations)', [dr('dealCosts', LISTED_MONTHLY_COST), cr('cash', LISTED_MONTHLY_COST)]);
   advanceListing(s, rng, !!opts.simulation);
   if (!opts.simulation) maybeOffer(s, rng);
+  advanceSurprise(s, rng, !!opts.simulation);
+  advanceVentures(s, rng, !!opts.simulation);
 
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);

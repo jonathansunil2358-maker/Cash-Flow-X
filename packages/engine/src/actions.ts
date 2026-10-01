@@ -9,6 +9,7 @@ import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
 import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
+import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
 import { prestigeBonus, prestigeTitle } from './model/rank';
@@ -19,6 +20,7 @@ import { logItem, newId, ownership, type GameState, type InsuranceTier, type Pay
 
 import { incomeScale, UPGRADE_CEILING, UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
 import { valuationOf } from './model/valuation';
+import { cleanRules, RULE_INFO } from './model/autopilotRules';
 import { acceptCheck, signContract } from './model/contracts';
 import { COVER, INSURANCE_TIERS } from './model/insurance';
 import { floatCheck, listCheck, marketCap, nextGuidance } from './model/listing';
@@ -36,6 +38,7 @@ export type Action =
   | { type: 'startProject'; projectId: string }
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
+  | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -51,6 +54,7 @@ export type Action =
   | { type: 'buyUpgrade'; upgradeId: string }
   | { type: 'resolveEvent'; choiceId: string }
   | { type: 'activateBoost'; boostId: BoostId }
+  | { type: 'setRules'; rules: unknown }
   | { type: 'openSite' }
   | { type: 'closeSite' }
   | { type: 'setInsurance'; tier: InsuranceTier }
@@ -148,7 +152,11 @@ export function applyAction(state: GameState, action: Action): GameState {
   return s;
 }
 
-export function applyActionInPlace(s: GameState, action: Action): void {
+/**
+ * Apply an action. `record` is false only for the company's own autopilot, whose steps are
+ * re-derived by every replay and so must not be in the action log (or they would run twice).
+ */
+export function applyActionInPlace(s: GameState, action: Action, record = true): void {
   if (s.status !== 'playing') fail('The game is over.');
   const ind = industryOf(s);
   const L = s.ledger;
@@ -209,6 +217,12 @@ export function applyActionInPlace(s: GameState, action: Action): void {
         action.level === 'above' ? 'The wage bill is 12% higher. Morale, productivity and loyalty rise.'
           : action.level === 'below' ? 'The wage bill is 10% lower, but morale and productivity will slip and people may leave.'
             : 'Standard pay. Morale settles at its normal level.');
+      break;
+    }
+    case 'startVenture': {
+      const check = ventureCheck(s, action.kind, action.amount);
+      if (!check.ok) fail(check.reason!);
+      startVenture(s, action.kind, action.amount);
       break;
     }
     case 'setTraining': {
@@ -378,6 +392,13 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       logItem(s, 'action', `Upgraded: ${label}`, `${opt.def.description} Capitalised as PP&E (${formatGBP(opt.cost)}) and depreciated over ${opt.def.lifeMonths / 12} years.`);
       break;
     }
+    case 'setRules': {
+      const check = cleanRules(action.rules);
+      if (!check.ok) fail(check.reason ?? 'Those rules are not allowed.');
+      s.rules = check.rules.length ? check.rules : undefined;
+      logItem(s, 'action', check.rules.length ? 'Autopilot rules set' : 'Autopilot rules cleared', check.rules.map((r) => RULE_INFO[r.kind].name).join(', ') || 'The company is back under your control.');
+      break;
+    }
     case 'openSite': {
       const check = openSiteCheck(s);
       if (!check.allowed) fail(check.reason ?? 'You cannot open another site yet.');
@@ -511,5 +532,5 @@ export function applyActionInPlace(s: GameState, action: Action): void {
     default:
       fail('Unknown action.');
   }
-  s.actionLog.push({ month: m, action });
+  if (record) s.actionLog.push({ month: m, action });
 }

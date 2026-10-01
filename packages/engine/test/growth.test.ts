@@ -154,13 +154,14 @@ describe('stock market listing', () => {
     const own = ownership(t);
     const cash = t.ledger.balances.cash;
     const total = t.shares.total;
+    const floatBefore = publicFloat(t);
     const equityBefore = valuationOf(t).equityValue;
     applyActionInPlace(t, { type: 'listCompany' });
     expect(t.listed).toBe(true);
     expect(t.shares.total).toBeGreaterThan(total);
     expect(ownership(t)).toBeLessThan(own);
     expect(t.ledger.balances.cash).toBeGreaterThan(cash);
-    expect(publicFloat(t)).toBe(t.shares.total - total);
+    expect(publicFloat(t)).toBe(floatBefore + (t.shares.total - total));
     expect(equityBefore).toBeGreaterThan(0);
     for (let i = 0; i < 8; i++) step(t);
     expect(t.priceHistory.length).toBe(8);

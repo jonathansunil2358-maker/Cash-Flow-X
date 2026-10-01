@@ -1,6 +1,7 @@
 import { FIXED_MONTHS, formatGBP, INDUSTRIES, isoWeek, msUntilNextWeek, weeklyChallenge, type GameState } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { countdown, EntryList, StartConfirm } from '../components/FixedBits';
+import { WatchWinner } from './Community';
 import { Button, Card, KeyValue, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api, ONLINE, type WeeklyBoard } from '../lib/api';
@@ -80,6 +81,7 @@ export function WeeklyEventCard({ game }: { game: GameState }) {
           <StartConfirm label="Start the weekly event" ranked={confirm === 'ranked' && online} onCancel={() => setConfirm(null)} onGo={(saveFirst) => go(confirm === 'practice', saveFirst)} />
         ) : (
           <div className="flex flex-wrap items-center gap-2">
+            {online && <WatchWinner kind="weekly" keyId={week} />}
             {online && !me && <Button variant="primary" disabled={playing} onClick={() => setConfirm('ranked')}>Play this week's event</Button>}
             <Button variant={online && !me ? 'secondary' : 'primary'} disabled={playing} onClick={() => setConfirm('practice')}>{online ? 'Practise (not ranked)' : "Play this week's event"}</Button>
             {!online && ONLINE && <span className="text-xs text-muted">Sign in to be on the weekly board.</span>}

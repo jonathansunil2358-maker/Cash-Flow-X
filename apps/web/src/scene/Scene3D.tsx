@@ -1,12 +1,13 @@
-import { cosmeticsOf, formatGBP, headcount, skinOf, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { cosmeticsOf, decorDef, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
-import { Vector3, type Group, type Mesh } from 'three';
+import { Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from 'three';
 import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
+import { isWeatherOn } from '../lib/weather';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
-import { Billboard, Ferry, Fisher, Gull, Helipad, Lighthouse, PhoneBox, Pond } from './extras';
+import { Billboard, DecorItem, Ferry, Fisher, Gull, Helipad, Lighthouse, PhoneBox, Pond, TrophyHall } from './extras';
 import { Ball, Blk, Bush, C, Car, Cyl, Lamp, Tree } from './parts';
 
 /**
@@ -72,7 +73,7 @@ function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: n
   );
 }
 
-function Island({ night, doorX, sk, rich }: { night: boolean; doorX: number; sk: SkinPalette; rich: boolean }) {
+function Island({ night, doorX, sk, rich, cups, placed }: { night: boolean; doorX: number; sk: SkinPalette; rich: boolean; cups: number; placed: string[] }) {
   const asphalt = night ? '#3f4550' : '#5d6470';
   const paving = night ? '#a9a294' : '#ddd5c4';
   const line = '#fff8ec';
@@ -185,7 +186,9 @@ function Island({ night, doorX, sk, rich }: { night: boolean; doorX: number; sk:
 
       {/* landmarks and wildlife */}
       <Lighthouse x={-7.4} z={7.4} night={night} />
-      {rich && <Helipad x={-1.4} z={6.6} night={night} />}
+      {rich && <Helipad x={-2.2} z={7.3} night={night} />}
+      {cups > 0 && <TrophyHall x={-7.1} z={-0.2} cups={cups} night={night} />}
+      {placed.map((id) => { const d = decorDef(id); return d ? <DecorItem key={id} id={id} x={d.at[0]} z={d.at[1]} night={night} /> : null; })}
       <Pond x={5.6} z={-5.0} night={night} />
       <PhoneBox x={-4.9} z={1.05} />
       <Fisher x={JETTY_X - 0.3} z={GRASS / 2 + 1.7} />
@@ -305,7 +308,7 @@ function makeRoute(start: Pt, legs: Leg[], speed: number): Route {
 }
 
 /** Moves its children along a route. `forward` is the model's nose: cars face +x, people +z. */
-function Mover({ route, offset, forward, bob = false, children }: { route: Route; offset: number; forward: 'x' | 'z'; bob?: boolean; children: ReactNode }) {
+function Mover({ route, offset, forward, bob = false, cheer = false, children }: { route: Route; offset: number; forward: 'x' | 'z'; bob?: boolean; cheer?: boolean; children: ReactNode }) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }, delta) => {
     const g = ref.current;
@@ -317,7 +320,7 @@ function Mover({ route, offset, forward, bob = false, children }: { route: Route
     const z = step.a[1] + (step.b[1] - step.a[1]) * k;
     const moving = step.a !== step.b;
     g.visible = !step.hide;
-    g.position.set(x, bob && moving ? Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.06 : 0, z);
+    g.position.set(x, cheer ? Math.abs(Math.sin(clock.elapsedTime * 7 + offset)) * 0.3 : bob && moving ? Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.06 : 0, z);
     if (moving) {
       const dx = step.b[0] - step.a[0];
       const dz = step.b[1] - step.a[1];
@@ -461,6 +464,34 @@ function staffRoute(i: number): Route {
   return makeRoute(pts[0], pts.slice(1), 0.5);
 }
 
+/** Rain, snow or a warm dusk glow, following the in-game season. Pure decoration. */
+function WeatherFx({ kind }: { kind: 'rain' | 'snow' }) {
+  const count = kind === 'rain' ? 160 : 120;
+  const ref = useRef<InstancedMesh>(null);
+  const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ x: ((i * 53) % 100) / 100 * 28 - 14, z: ((i * 31) % 100) / 100 * 28 - 14, y: ((i * 17) % 100) / 100 * 11, v: 0.6 + ((i * 7) % 10) / 10 })), [count]);
+  const dummy = useMemo(() => new Object3D(), []);
+  useFrame(({ clock }) => {
+    const m = ref.current;
+    if (!m) return;
+    const t = clock.elapsedTime;
+    seeds.forEach((p, i) => {
+      const fall = kind === 'rain' ? 9 : 1.6;
+      const y = 11 - (((p.y + t * fall * p.v) % 11) + 11) % 11;
+      dummy.position.set(p.x + (kind === 'snow' ? Math.sin(t * 0.8 + i) * 0.4 : 0), y, p.z);
+      dummy.rotation.z = kind === 'rain' ? 0.15 : 0;
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, count]} frustumCulled={false}>
+      {kind === 'rain' ? <boxGeometry args={[0.02, 0.45, 0.02]} /> : <sphereGeometry args={[0.07, 6, 5]} />}
+      <meshBasicMaterial color={kind === 'rain' ? '#9ec9ff' : '#ffffff'} transparent opacity={kind === 'rain' ? 0.55 : 0.9} />
+    </instancedMesh>
+  );
+}
+
 function Cloud({ x, z, y = 7, speed }: { x: number; z: number; y?: number; speed: number }) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }) => {
@@ -571,6 +602,13 @@ export default function Scene3D({ game }: { game: GameState }) {
   const occupied = new Set(built.map((u) => u.plot));
   const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  // The team jumps for joy for a month after the board is pleased.
+  const cheering = game.board?.last === 'hit' && game.month - (game.board.due - 3) <= 1;
+  const weatherOn = isWeatherOn();
+  const weather = weatherOn ? weatherFor(game) : 'clear';
+  const decor = useGame((s) => s.profile.decor);
+  const placed = useMemo(() => decorOf({ decor }).placed, [decor]);
+  const cups = useGame((s) => (game.awards?.length ?? 0) + Math.floor(Object.keys(s.profile.achievements).length / 3));
   const rich = (game.history.at(-1)?.valuation?.equityValue ?? 0) >= 5_000_000_00;
   const skinId = useGame((s) => cosmeticsOf(s.profile).skin);
   const sk = skinOf(skinId).palette;
@@ -587,7 +625,9 @@ export default function Scene3D({ game }: { game: GameState }) {
   const open = game.status === 'playing';
   // Busier businesses draw more traffic: more visiting cars (and fuller ones), more bus and
   // ferry passengers, and more cars already parked.
-  const visiting = open ? 1 + (customers >= 4 ? 1 : 0) + (customers >= 7 ? 1 : 0) : 0;
+  // Over capacity? Customers queue, so another vehicle waits at the door.
+  const overCapacity = (volume?.utilisation ?? 0) > 1;
+  const visiting = open ? Math.min(3, 1 + (customers >= 4 ? 1 : 0) + (customers >= 7 || overCapacity ? 1 : 0)) : 0;
   const riders = customers >= 5 ? 2 : 1;
   const busPairs = customers >= 6 ? 2 : 1;
   const ferryPairs = customers >= 4 ? 1 : 0;
@@ -636,18 +676,18 @@ export default function Scene3D({ game }: { game: GameState }) {
 
   return (
     <div className="relative h-full w-full">
-    <Canvas orthographic shadows dpr={[1, 2]} camera={{ position: [14.3, 14.4, 14.3], zoom: 24, near: -80, far: 200 }} gl={{ alpha: true, antialias: true }}
+    <Canvas orthographic shadows dpr={[1, 2]} camera={{ position: [14.3, 14.4, 14.3], zoom: 24, near: -80, far: 200 }} gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
       aria-label={`3D view of ${game.companyName}: headquarters with ${floors} floor${floors > 1 ? 's' : ''}, ${built.length} upgrade buildings, ${staff} staff, and customers arriving by car, bus and boat`}>
       <Zoom />
       <TagProjector els={tagEls} points={tagPoints} />
-      <ambientLight intensity={night ? 0.45 : 0.8} />
+      <ambientLight intensity={night ? 0.45 : weather === 'dusk' ? 0.62 : weather === 'rain' ? 0.65 : 0.8} color={weather === 'dusk' && !night ? '#ffd2a1' : '#ffffff'} />
       <hemisphereLight args={['#ffffff', sk.ground, night ? 0.2 : 0.4]} />
       <directionalLight position={[10, 16, 6]} intensity={night ? 0.75 : 1.35} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={14} shadow-camera-bottom={-14} />
       <Sea night={night} sk={sk} />
       <Boat night={night} />
       <group position={[0, -0.2, 0]}>
-        <Island night={night} doorX={doorX} sk={sk} rich={rich} />
+        <Island night={night} doorX={doorX} sk={sk} rich={rich} cups={cups} placed={placed} />
         <group position={[HQ_POS[0], 0, HQ_POS[1]]}>
           <Headquarters industry={game.industryId} floors={floors} />
         </group>
@@ -689,7 +729,7 @@ export default function Scene3D({ game }: { game: GameState }) {
         )}
 
         {Array.from({ length: staff }, (_, i) => (
-          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} /></Mover>
+          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob cheer={cheering}><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} /></Mover>
         ))}
       </group>
       <Gull r={6} y={5.5} speed={0.35} phase={0} />
@@ -698,6 +738,7 @@ export default function Scene3D({ game }: { game: GameState }) {
       <Cloud x={-10} z={-8} speed={0.3} />
       <Cloud x={4} z={-11} y={8} speed={0.22} />
       <Cloud x={14} z={2} y={6.5} speed={0.26} />
+      {weather === 'rain' || weather === 'snow' ? <WeatherFx kind={weather} /> : null}
     </Canvas>
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {tags.map((t) => (

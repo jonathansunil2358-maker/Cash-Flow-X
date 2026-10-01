@@ -2,9 +2,12 @@ import { Button, Card, PageTitle } from '../components/ui';
 import { useState } from 'react';
 import { useAccount } from '../lib/account';
 import { api, ONLINE } from '../lib/api';
+import { musicMood } from '@cfx/engine';
+import { isMusicOn, playMusic, setMusicOn, stopMusic } from '../lib/music';
+import { isWeatherOn, setWeatherOn } from '../lib/weather';
 import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
-import { ShopCard } from './Shop';
+import { DecorCard, LogoCard, ShopCard } from './Shop';
 
 export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () => void }) {
   const { save, quit, undo, undoStack, pauseOnPanels, setPauseOnPanels, scene3d, setScene3d, setTourOpen, openSheet, game, refreshAccount, toast } = useGame();
@@ -12,6 +15,8 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
   const [name, setName] = useState(me?.user.name ?? '');
   const [sound, setSound] = useState(isSoundOn());
   const [buzz, setBuzz] = useState(isHapticsOn());
+  const [music, setMusic] = useState(isMusicOn());
+  const [weather, setWeather] = useState(isWeatherOn());
   return (
     <div className="space-y-5">
       <PageTitle title="Settings" />
@@ -53,6 +58,22 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
           <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={buzz} aria-label="Vibration"
             onChange={(e) => { setHapticsOn(e.target.checked); setBuzz(e.target.checked); if (e.target.checked) playSound('click'); }} />
         </label>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <span className="block font-extrabold">Background music</span>
+            <span className="block text-xs text-ink-2">A gentle tune made on the fly that gets brighter when you are in profit and tenser when cash is short. Off by default.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={music} aria-label="Background music"
+            onChange={(e) => { setMusicOn(e.target.checked); setMusic(e.target.checked); if (e.target.checked && game) playMusic(musicMood(game)); else stopMusic(); }} />
+        </label>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <span className="block font-extrabold">Weather on the island</span>
+            <span className="block text-xs text-ink-2">Rain, snow and dusk that follow the seasons. Purely for looks.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={weather} aria-label="Weather on the island"
+            onChange={(e) => { setWeatherOn(e.target.checked); setWeather(e.target.checked); }} />
+        </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button onClick={undo} disabled={!undoStack.length || game?.status !== 'playing'}>Undo last decision</Button>
           <Button onClick={cycleTheme}>Theme: {theme}</Button>
@@ -61,6 +82,8 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
         </div>
       </Card>
       <ShopCard />
+      <DecorCard />
+      {game && <LogoCard icon={game.icon} />}
       {me && (
         <Card title="Account" subtitle={game?.server ? (game.server.flagged ? `This company failed verification: ${game.server.flagged}` : `This company is verified up to ${game.server.syncedMonth} months in.`) : undefined}>
           <label className="block text-xs font-black tracking-wider text-ink-2" htmlFor="player-name">PLAYER NAME (SHOWN ON LEADERBOARDS)</label>

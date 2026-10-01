@@ -2,8 +2,8 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  awardPrestige, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
-  type Profile, type Rng,
+  addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -28,7 +28,7 @@ export interface Toast {
 
 export interface Celebration {
   id: number;
-  kind: 'achievement' | 'level' | 'mission';
+  kind: 'achievement' | 'level' | 'mission' | 'milestone';
   title: string;
   text: string;
   gems: number;
@@ -97,7 +97,20 @@ interface Store {
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
   /** Cosmetics and founder titles (never affect a score). */
+  review: YearReview | null;
+  dismissReview: () => void;
+  buyDecor: (id: string) => void;
+  toggleDecor: (id: string) => void;
+  setLogo: (logo: Partial<Logo>) => void;
+  savePlanAction: (plan: unknown) => void;
+  deletePlanAction: (id: string) => void;
   claimQuest: (id: string) => void;
+  learnSkill: (id: string) => void;
+  answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
+  seeTerm: (id: string) => void;
+  claimPass: () => void;
+  openBox: () => BoxOpening<Profile> | null;
+  claimAlbumPage: (pageId: string) => void;
   buySkin: (id: string) => void;
   equipSkin: (id: string) => void;
   setTitle: (id: string | null) => void;
@@ -111,6 +124,11 @@ interface Store {
   dismissToast: (id: number) => void;
   dismissCelebration: () => void;
 }
+
+/** Achievements that also give a sticker for the album. */
+const ACHIEVEMENT_STICKER: Record<string, string> = {
+  first_profit: 'general-0', board_first: 'general-1', storm_survivor: 'general-2', award_first: 'general-3', big_bet_win: 'general-4', rumour_hound: 'general-5',
+};
 
 /** Which daily quest an action counts towards. */
 const QUEST_OF_ACTION: Partial<Record<Action['type'], QuestEvent>> = {
@@ -178,18 +196,31 @@ function progressAfter(
     xp += XP_REWARDS.monthClosed * closed;
     if (plSummary(after.history[after.history.length - 1].period.pl).profit > 0) xp += XP_REWARDS.profitableMonth;
   }
+  // Every award won is a mystery box.
+  const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
+  if (newAwards > 0) p = addBoxes(p, newAwards);
+  if (closed > 0) p = addPassPoints(p, closed);
   if (closed > 0 || extraXp > 0) {
     for (const a of newAchievements(after, p.achievements)) {
       p = { ...p, achievements: { ...p.achievements, [a.id]: today() }, gems: p.gems + a.gems };
+      const sticker = ACHIEVEMENT_STICKER[a.id];
+      if (sticker) p = grantSticker(p, sticker);
       xp += 25;
       celebrations.push({ id: nextId++, kind: 'achievement', title: a.name, text: a.description, gems: a.gems });
+    }
+    // Firsts get a party. A player who was never tracked before is caught up silently.
+    const ms = newMilestones(after, p.milestones);
+    p = { ...p, milestones: ms.seen };
+    for (const m of ms.celebrate) {
+      p = { ...p, gems: p.gems + 20 };
+      celebrations.push({ id: nextId++, kind: 'milestone', title: m.title, text: m.text, gems: 20 });
     }
     const missions = refillMissions(p.missions, after, mathRng);
     const remaining = [];
     for (const m of missions) {
       const st = missionStatus(m, after);
       if (st.done) {
-        p = { ...p, gems: p.gems + m.rewardGems, missionsCompleted: p.missionsCompleted + 1 };
+        p = addPassPoints({ ...p, gems: p.gems + m.rewardGems, missionsCompleted: p.missionsCompleted + 1 }, 5);
         xp += m.rewardXp;
         celebrations.push({ id: nextId++, kind: 'mission', title: 'Mission complete', text: st.title, gems: m.rewardGems });
       } else remaining.push(m);
@@ -214,7 +245,15 @@ function popsFor(before: GameState, after: GameState): Pop[] {
   const pl = plSummary(after.history[after.history.length - 1].period.pl);
   const cash = after.ledger.balances.cash - before.ledger.balances.cash;
   const fmt = (p: number) => `${p >= 0 ? '+' : '−'}£${Math.abs(Math.round(p / 100)).toLocaleString('en-GB')}`;
-  return [{ id: nextId++, text: `${fmt(pl.profit)} profit`, good: pl.profit >= 0 }, { id: nextId++, text: `${fmt(cash)} cash`, good: cash >= 0 }];
+  const out: Pop[] = [{ id: nextId++, text: `${fmt(pl.profit)} profit`, good: pl.profit >= 0 }, { id: nextId++, text: `${fmt(cash)} cash`, good: cash >= 0 }];
+  // The crowd reacts: a cheer or a groan for the big moments.
+  if (after.board?.last && (after.board.hits !== before.board?.hits || after.board.misses !== before.board?.misses)) {
+    out.push(after.board.last === 'hit' ? { id: nextId++, text: '👏 The board is delighted!', good: true } : { id: nextId++, text: '😬 The board is not happy', good: false });
+  }
+  if ((after.awards?.length ?? 0) > (before.awards?.length ?? 0)) out.push({ id: nextId++, text: '🏆 Award winner!', good: true });
+  const ev = after.lastEvent;
+  if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) out.push({ id: nextId++, text: ev.polarity === 'good' ? '😀 Good news!' : '😟 Bad news', good: ev.polarity === 'good' });
+  return out;
 }
 
 export const useGame = create<Store>((set, get) => {
@@ -227,11 +266,19 @@ export const useGame = create<Store>((set, get) => {
       game: after, profile, celebrations: [...get().celebrations, ...celebrations].slice(-6),
       pops: [...get().pops, ...popsFor(before, after)].slice(-6), ...extra,
     });
-    if (celebrations.length) playSound('fanfare');
+    // Each kind of news has its own sound.
+    const rivalMove = after.competitors.some((c, i) => c.cutMonths > 0 && !(before.competitors[i]?.cutMonths > 0));
+    const boardResult = !!after.board?.last && (after.board.hits !== before.board?.hits || after.board.misses !== before.board?.misses);
+    if (celebrations.some((c) => c.kind === 'milestone')) playSound('confetti');
+    else if (celebrations.length) playSound('fanfare');
+    else if ((after.awards?.length ?? 0) > (before.awards?.length ?? 0)) playSound('award');
+    else if (boardResult) playSound(after.board!.last === 'hit' ? 'board' : 'bad');
+    else if (rivalMove) playSound('rival');
     else if (after.pendingEvent && !before.pendingEvent) playSound('event');
     const ev = after.lastEvent;
     if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) {
       get().toast(ev.polarity === 'good' ? 'good' : 'bad', `${ev.title}: ${ev.text}`);
+      if (!celebrations.length) playSound(ev.polarity === 'good' ? 'good' : 'bad');
     }
   };
 
@@ -246,6 +293,7 @@ export const useGame = create<Store>((set, get) => {
     pauseOnPanels: readPref('pauseOnPanels') !== 'false',
     scene3d: readPref('scene3d') !== 'false',
     toasts: [],
+    review: null,
     celebrations: [],
     pops: [],
     offline: null,
@@ -331,6 +379,7 @@ export const useGame = create<Store>((set, get) => {
       if (!game || game.status !== 'playing' || game.pendingEvent) return;
       const next = advanceMonth(game);
       commit(game, next, 0, { undoStack: [], monthProgress: 0 });
+      if (next.status === 'playing' && next.month % 12 === 0 && next.month > game.month) set({ review: yearReview(next) });
       // Daily quests: a month closed, a profitable month, a board target beaten.
       let q = recordQuest(get().profile, utcDay(), 'month');
       const last = next.history.at(-1);
@@ -587,11 +636,107 @@ export const useGame = create<Store>((set, get) => {
       }
     },
 
+    dismissReview() {
+      set({ review: null });
+    },
+
+    buyDecor(id) {
+      try {
+        set({ profile: persistProfile(buyDecorItem(get().profile, id)) });
+        get().toast('good', 'Decoration bought and placed on your island.');
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    toggleDecor(id) {
+      try {
+        set({ profile: persistProfile(toggleDecorItem(get().profile, id)) });
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    setLogo(logo) {
+      try {
+        set({ profile: persistProfile(setLogoOnProfile(get().profile, logo)) });
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    savePlanAction(plan) {
+      try {
+        set({ profile: persistProfile(savePlan(get().profile, plan, planSlotsOf(get().profile))) });
+        get().toast('success', 'Plan saved.');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    deletePlanAction(id) {
+      set({ profile: persistProfile(deletePlan(get().profile, id)) });
+    },
+
     claimQuest(id) {
       try {
         const r = claimQuestReward(get().profile, utcDay(), id);
-        set({ profile: persistProfile(r.profile) });
+        set({ profile: persistProfile(r.bonus ? addBoxes(r.profile, 1) : r.profile) });
         get().toast('good', r.bonus ? `Quest done: +${r.gems} gems, and +${r.bonus} for finishing all three!` : `Quest done: +${r.gems} gems.`);
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    openBox() {
+      try {
+        const r = openBoxReward(get().profile);
+        set({ profile: persistProfile(r.profile) });
+        playSound('success');
+        return r;
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+        return null;
+      }
+    },
+
+    answerPuzzle(kind, day, right) {
+      const r = recordAnswer(get().profile, kind, day, right);
+      if (r.profile === get().profile) return;
+      set({ profile: persistProfile(r.profile) });
+      if (r.gems) { get().toast('good', `Right! +${r.gems} gems.`); playSound('success'); }
+    },
+
+    seeTerm(id) {
+      const next = seeTermOn(get().profile, id);
+      if (next !== get().profile) set({ profile: persistProfile(next) });
+    },
+
+    learnSkill(id) {
+      const next = learnSkillOn(get().profile, id);
+      if (next === get().profile) { get().toast('error', 'You need a free skill point for that.'); return; }
+      set({ profile: persistProfile(next) });
+      get().toast('good', 'Skill learned.');
+      playSound('success');
+    },
+
+    claimPass() {
+      const r = claimPassTier(get().profile);
+      if (!r) { get().toast('error', 'No reward to claim yet. Keep playing.'); return; }
+      let p = r.profile;
+      if (r.reward.kind === 'gems') p = { ...p, gems: p.gems + r.reward.amount };
+      else p = addBoxes(p, 1);
+      set({ profile: persistProfile(p) });
+      get().toast('good', r.reward.kind === 'gems' ? `Season pass tier ${r.tier}: ${r.reward.amount} gems.` : `Season pass tier ${r.tier}: a mystery box.`);
+      playSound('success');
+    },
+
+    claimAlbumPage(pageId) {
+      try {
+        set({ profile: persistProfile(claimAlbumPage(get().profile, pageId)) });
+        get().toast('good', 'Album page complete: gems added.');
         playSound('success');
       } catch (e) {
         get().toast('error', (e as Error).message);

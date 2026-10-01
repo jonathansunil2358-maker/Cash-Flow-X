@@ -1,9 +1,9 @@
 import {
   ActionError, applyAction, AWARDS, boardTarget, DIFFICULTIES, forecast, formatGBP, formatPct, INDUSTRIES, moodOf, PERSONALITIES,
-  questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
+  forecastMonthsOf, planSlotsOf, mentorOf, planActions, plansOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
-import { Button, Card, Field, KeyValue, Meter, StatusPill } from '../components/ui';
+import { Button, Card, Field, KeyValue, Meter, StatusPill, TextInput } from '../components/ui';
 import { CURRENCY_ICONS } from '../lib/icons';
 import { shareResultCard } from '../lib/shareCard';
 import { useGame } from '../store';
@@ -75,6 +75,7 @@ export function TeamCard({ game }: { game: GameState }) {
     <Fold id="card-roster" title="Your team"
       summary={total ? `${total} people, ${mood.label.toLowerCase()} ${mood.face}. Open to meet them.` : 'Nobody yet. Hire your first person.'}
       subtitle="Everyone you hire has a name and a personality. They sometimes come to you with a request.">
+      <p className="mb-2 text-xs text-ink-2">This year's mentor: <b>{mentorOf(Math.floor(game.month / 12)).name}</b> ({mentorOf(Math.floor(game.month / 12)).specialty}). They drop by once a year.</p>
       {team.length === 0 ? <p className="text-sm text-ink-2">Hire someone in the Team panel to meet them here.</p> : (
         <ul className="grid gap-2 sm:grid-cols-2">
           {team.map((p) => (
@@ -135,10 +136,15 @@ export function TrophyCard({ game }: { game: GameState }) {
 
 /** Drag a few levers and see what the next twelve months would look like, without committing. */
 export function WhatIfCard({ game }: { game: GameState }) {
+  const { profile, savePlanAction, deletePlanAction, act } = useGame();
+  const plans = plansOf(profile, 99);
+  const slots = planSlotsOf(profile);
+  const horizon = forecastMonthsOf(profile);
+  const [planName, setPlanName] = useState('');
   const [price, setPrice] = useState(0);
   const [marketing, setMarketing] = useState(100);
   const [hires, setHires] = useState(0);
-  const base = useMemo(() => forecast(game, 12), [game]);
+  const base = useMemo(() => forecast(game, horizon), [game, horizon]);
   const result = useMemo(() => {
     const actions: Action[] = [];
     if (price !== 0) actions.push({ type: 'setPrice', price: Math.max(100, Math.round((game.price * (100 + price)) / 100 / 100) * 100) });
@@ -150,9 +156,9 @@ export function WhatIfCard({ game }: { game: GameState }) {
     } catch (e) {
       return { error: e instanceof ActionError ? e.message : 'Could not try that.' } as const;
     }
-    const f = forecast(s, 12);
+    const f = forecast(s, horizon);
     return { f, error: null } as const;
-  }, [game, price, marketing, hires]);
+  }, [game, price, marketing, hires, horizon]);
   const sum = (f: ReturnType<typeof forecast>, k: 'profit' | 'revenue') => f.points.reduce((a, p) => a + p[k], 0);
   const end = (f: ReturnType<typeof forecast>) => f.points.at(-1)?.cash ?? game.ledger.balances.cash;
   const delta = (a: number, b: number) => { const d = b - a; return `${d >= 0 ? '+' : '−'}${formatGBP(Math.abs(d), { compact: true })}`; };
@@ -173,13 +179,37 @@ export function WhatIfCard({ game }: { game: GameState }) {
       {result.error ? <p role="alert" className="mt-3 text-sm font-bold text-critical-text">{result.error}</p> : result.f && (
         <div className="mt-3">
           <KeyValue rows={[
-            ['12-month profit', `${formatGBP(sum(result.f, 'profit'), { compact: true })} (${changed ? delta(sum(base, 'profit'), sum(result.f, 'profit')) : 'same as now'})`],
-            ['12-month revenue', `${formatGBP(sum(result.f, 'revenue'), { compact: true })} (${changed ? delta(sum(base, 'revenue'), sum(result.f, 'revenue')) : 'same as now'})`],
-            ['Cash in 12 months', `${formatGBP(end(result.f), { compact: true })} (${changed ? delta(end(base), end(result.f)) : 'same as now'})`],
+            [`${horizon}-month profit`, `${formatGBP(sum(result.f, 'profit'), { compact: true })} (${changed ? delta(sum(base, 'profit'), sum(result.f, 'profit')) : 'same as now'})`],
+            [`${horizon}-month revenue`, `${formatGBP(sum(result.f, 'revenue'), { compact: true })} (${changed ? delta(sum(base, 'revenue'), sum(result.f, 'revenue')) : 'same as now'})`],
+            [`Cash in ${horizon} months`, `${formatGBP(end(result.f), { compact: true })} (${changed ? delta(end(base), end(result.f)) : 'same as now'})`],
             ['Lowest cash', formatGBP(result.f.minCash, { compact: true })],
           ]} />
           {result.f.insolventInMonths && <p className="mt-2 text-sm font-bold text-critical-text">Careful: this runs out of money in {result.f.insolventInMonths} months.</p>}
           {changed && <Button className="mt-2" onClick={() => { setPrice(0); setMarketing(100); setHires(0); }}>Reset sliders</Button>}
+          {changed && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <TextInput value={planName} maxLength={30} placeholder="Name this plan" aria-label="Plan name" onChange={(e) => setPlanName(e.target.value)} className="w-44" />
+              <Button disabled={!planName.trim() || plans.length >= slots} onClick={() => { savePlanAction({ name: planName.trim(), price, marketing, hires }); setPlanName(''); }}>Save plan</Button>
+              {plans.length >= slots && <span className="text-xs text-muted">Delete a plan to save another.</span>}
+            </div>
+          )}
+        </div>
+      )}
+      {plans.length > 0 && (
+        <div className="mt-3">
+          <h3 className="mb-1 text-sm font-bold">Saved plans</h3>
+          <ul className="space-y-1.5">
+            {plans.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2 text-sm">
+                <span className="min-w-0"><b>{p.name}</b> <span className="text-xs text-ink-2">price {p.price > 0 ? '+' : ''}{p.price}% · marketing {p.marketing}% · hire {p.hires}</span></span>
+                <span className="flex gap-1.5">
+                  <Button onClick={() => { setPrice(p.price); setMarketing(p.marketing); setHires(p.hires); }}>Preview</Button>
+                  <Button variant="primary" disabled={game.status !== 'playing'} onClick={() => { for (const a of planActions(game, p)) if (!act(a)) break; }}>Do it</Button>
+                  <Button variant="danger" onClick={() => deletePlanAction(p.id)} aria-label={`Delete ${p.name}`}>×</Button>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       <p className="mt-2 text-xs text-muted">Forecasts use expected values, so real months will wobble around them. {formatPct(0.05, 0)} either way is normal.</p>

@@ -8,6 +8,7 @@ import { Analysis } from './Analysis';
 import { Dashboard } from './Dashboard';
 import { Deals } from './Deals';
 import { ListingCard } from './Growth';
+import { CalendarCard } from './Smart';
 import { Finance } from './Finance';
 import { Financials } from './Financials';
 import { ForecastPage } from './Forecast';
@@ -53,7 +54,7 @@ export function FinancePanel({ game }: { game: GameState }) {
   return (
     <div className="space-y-4">
       <Tabs value={tab} onChange={setTab} items={[{ id: 'funding', label: 'Funding' }, ...(ONLINE ? [{ id: 'investors' as const, label: offers ? `Investors (${offers})` : 'Investors' }] : []), { id: 'deals', label: canDeal ? 'M&A' : `M&A (level ${needed})` }]} />
-      {tab === 'funding' && <><Finance game={game} /><ListingCard game={game} /></>}
+      {tab === 'funding' && <><Finance game={game} /><CalendarCard game={game} /><ListingCard game={game} /></>}
       {tab === 'investors' && <Investors game={game} />}
       {tab === 'deals' && (canDeal ? <Deals game={game} /> : (
         <p className="rounded-2xl border-[3px] border-outline bg-surface-2 p-4 text-sm">Mergers & acquisitions unlock at founder level {needed}. You are level {level}: earn XP by closing months, making decisions and completing missions.</p>
