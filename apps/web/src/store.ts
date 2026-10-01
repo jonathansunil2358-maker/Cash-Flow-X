@@ -89,7 +89,11 @@ interface Store {
   buyPerk: (perkId: string) => Promise<void>;
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
-  openSheet: (s: Sheet | null, tab?: BooksTab) => void;
+  /** Open a panel; `scrollTo` is the id of a card inside it to bring into view. */
+  openSheet: (s: Sheet | null, tab?: BooksTab, scrollTo?: string) => void;
+  /** The upgrade picked by tapping its building or plot on the island. */
+  sceneFocus: string | null;
+  setSceneFocus: (id: string | null) => void;
   setBooksTab: (t: BooksTab) => void;
   toast: (kind: Toast['kind'], text: string, icon?: string) => void;
   dismissToast: (id: number) => void;
@@ -226,6 +230,7 @@ export const useGame = create<Store>((set, get) => {
     offline: null,
     preset: null,
     tourOpen: false,
+    sceneFocus: null,
 
     async start(opts) {
       const { profile } = get();
@@ -502,8 +507,13 @@ export const useGame = create<Store>((set, get) => {
       }
     },
 
-    openSheet(sheet, tab) {
-      set({ sheet, ...(tab ? { booksTab: tab } : {}) });
+    openSheet(sheet, tab, scrollTo) {
+      set({ sheet, sceneFocus: null, ...(tab ? { booksTab: tab } : {}) });
+      if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250);
+    },
+
+    setSceneFocus(sceneFocus) {
+      set({ sceneFocus });
     },
 
     setBooksTab(booksTab) {

@@ -9,6 +9,7 @@ import { useAwayCatchUp, useGameClock } from './lib/clock';
 import { CURRENCY_ICONS, iconUrl } from './lib/icons';
 import { readPref, writePref } from './lib/save';
 import { Books, FinancePanel } from './pages/Books';
+import { BuildingCard } from './pages/BuildingCard';
 import { Alerts, Dashboard } from './pages/Dashboard';
 import { EventModal } from './pages/EventModal';
 import { GameOver } from './pages/GameOver';
@@ -101,7 +102,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
 
   return (
     <div className="mx-auto flex max-w-[1440px] items-start gap-5 lg:px-5">
-      <main className="relative mx-auto flex w-full max-w-[480px] flex-col gap-2.5 px-3 pb-[112px] lg:mx-0 lg:shrink-0 lg:pb-6" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
+      <main className="relative mx-auto flex w-full max-w-[480px] flex-col gap-2.5 px-3 pb-[112px] lg:mx-0 lg:max-w-[680px] lg:shrink-0 lg:pb-6" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         <Hud game={game} />
         <XpBar />
         <SceneArea game={game} />
@@ -212,7 +213,7 @@ function SceneArea({ game }: { game: GameState }) {
   const r = 15;
   const circ = 2 * Math.PI * r;
   return (
-    <section className="relative h-[clamp(340px,50vh,520px)] overflow-hidden rounded-[32px] border-[3px] border-outline shadow-[var(--lift)]" aria-label="Your business" data-tour="scene">
+    <section className="relative left-1/2 aspect-[8/5] max-h-[600px] min-h-[300px] w-[min(calc(100vw-32px),880px)] -translate-x-1/2 overflow-hidden lg:left-0 lg:w-full lg:translate-x-0 rounded-[32px] border-[3px] border-outline shadow-[var(--lift)]" aria-label="Your business" data-tour="scene">
       {scene3d ? (
         <Suspense fallback={<div className="grid h-full place-items-center font-display text-lg text-on-sky">Building your plot…</div>}>
           <Scene3D game={game} />
@@ -247,6 +248,7 @@ function SceneArea({ game }: { game: GameState }) {
           </button>
         ))}
       </div>
+      <BuildingCard game={game} />
     </section>
   );
 }
