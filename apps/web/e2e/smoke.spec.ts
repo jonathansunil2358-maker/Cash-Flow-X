@@ -1288,3 +1288,39 @@ test('V3 Batch B: product designer, hiring market, reviews, export markets and r
   await prop.getByRole('button', { name: 'Open' }).click();
   await expect(prop.getByRole('button', { name: 'Buy the building' })).toBeVisible();
 });
+
+test('V3 Batch C: negotiation, pitch day, stock-take and cash-flow tetris', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+
+  const neg = m.locator('#card-negotiate');
+  await neg.getByRole('button', { name: 'Open' }).click();
+  await neg.getByRole('group', { name: 'Your offer' }).getByRole('button', { name: /Offer 100%/ }).click();
+  await expect(neg.getByRole('status')).toContainText(/You bought it for/);
+
+  const pitch = m.locator('#card-pitch');
+  await pitch.getByRole('button', { name: 'Open' }).click();
+  const boxes = pitch.getByRole('group', { name: 'Your numbers' }).getByRole('checkbox');
+  for (let i = 0; i < 3; i++) await boxes.nth(i).click();
+  await pitch.getByRole('button', { name: 'Make the pitch' }).click();
+  await expect(pitch.getByRole('status').first()).toContainText(/scored you \d+ out of 100/);
+
+  const stock = m.locator('#card-stocktake');
+  await stock.getByRole('button', { name: 'Open' }).click();
+  await stock.getByRole('checkbox').first().click();
+  await stock.getByRole('button', { name: /Hand in the count/ }).click();
+  await expect(stock.getByRole('status')).toContainText(/You found \d of 3/);
+
+  const tet = m.locator('#card-tetris');
+  await tet.getByRole('button', { name: 'Open' }).click();
+  await tet.getByRole('button', { name: 'Lock in the plan' }).click();
+  await expect(tet.getByRole('status')).toContainText(/Lowest balance/);
+
+  const minis = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).minis);
+  expect(Object.keys(minis).sort()).toEqual(['negotiate', 'pitch', 'stocktake', 'tetris']);
+});

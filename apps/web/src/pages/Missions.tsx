@@ -8,6 +8,7 @@ import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
 import { MuseumCard, TrailsCard } from './Collect';
+import { GamesCards } from './Minis';
 import { DiaryCard, DocumentaryCard, EomCard, NemesisCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
 import { AuditCard, DetectiveCard, GlossaryCard, InterviewCard, JournalCard, SpotCard, SprintCard } from './Learn';
 import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
@@ -104,6 +105,7 @@ export function Missions({ game }: { game: GameState }) {
       <JournalCard />
       <SprintCard />
       <InterviewCard game={game} />
+      <GamesCards game={game} />
       <AuditCard game={game} />
       <GlossaryCard game={game} />
       <NemesisCard game={game} />
