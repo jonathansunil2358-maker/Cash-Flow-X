@@ -106,13 +106,14 @@ export function Legacy({ game }: { game: GameState }) {
               <RankPanel rank={profile.prestigeCount} points={check.points} />
               <KeyValue rows={[
                 ['Your stake (equity value × ownership)', formatGBP(check.stake)],
+                ['Active on this company now', game.prestigeLevel > 0 ? `+${Math.round(prestigeBonus(game.prestigeLevel) * 100)}% demand (rank ${game.prestigeLevel})` : 'None yet'],
                 ['Needed to prestige', formatGBP(check.threshold)],
                 ['Legacy points if you prestige now', `${check.points} (√ of stake in £m, rounded down)`],
                 ['Gems on prestige', `${check.points * 25}`],
               ]} />
               <div className="mt-3"><Meter value={check.stake / check.threshold} label="Progress to prestige" /></div>
               <Button className="mt-4" variant="primary" disabled={!check.eligible}
-                onClick={() => act({ type: 'prestige' }, `Prestige! +${check.points} Legacy points. Your company carries on.`)}>
+                onClick={() => act({ type: 'prestige' }, `Prestige! Rank ${game.prestigeLevel + 1}: demand +${Math.round(prestigeBonus(game.prestigeLevel + 1) * 100)}% now, +${check.points} Legacy points. Your company carries on.`)}>
                 {check.eligible ? `Prestige now for ${check.points} Legacy` : check.reason}
               </Button>
             </>

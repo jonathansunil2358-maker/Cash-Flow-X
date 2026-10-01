@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyActionInPlace, checkIntegrity, modifiersOf, newGame, UPGRADES, upgradeModifiers, type IndustryId } from '../src/index';
+import {
+  applyActionInPlace, checkIntegrity, effectiveLevels, incomeScale, modifiersOf, newGame, UPGRADES, upgradeCost, upgradeModifiers, upgradeOptions, type IndustryId,
+} from '../src/index';
 
 const INDUSTRY_IDS = Object.keys(UPGRADES) as IndustryId[];
 
@@ -75,5 +77,42 @@ describe('new upgrades in play', () => {
     expect(after.unitCostMult).toBeLessThan(before.unitCostMult);
     expect(after.spoilageMult).toBeLessThan(before.spoilageMult);
     expect(checkIntegrity(s)).toEqual([]);
+  });
+});
+
+describe('income-scaled, uncapped upgrades', () => {
+  it('cost the list price for a small business and more as income grows', () => {
+    expect(incomeScale(0)).toBe(1);
+    expect(incomeScale(400_000_00)).toBe(1);
+    expect(incomeScale(5_000_000_00)).toBeCloseTo(Math.pow(10, 0.6), 5);
+    expect(incomeScale(50_000_000_00)).toBeGreaterThan(incomeScale(5_000_000_00) * 3);
+    const def = UPGRADES.software[0];
+    expect(upgradeCost(def, 0, 1, incomeScale(0))).toBe(upgradeCost(def, 0));
+    expect(upgradeCost(def, 0, 1, 3)).toBe(Math.round((def.baseCost * 3) / 100) * 100);
+  });
+
+  it('keep getting dearer past the old top level, and add less each time', () => {
+    const def = UPGRADES.software[0];
+    const top = def.maxLevel;
+    expect(upgradeCost(def, top)).toBeGreaterThan(upgradeCost(def, top - 1) * 1.5);
+    expect(upgradeCost(def, top + 1)).toBeGreaterThan(upgradeCost(def, top) * 1.9);
+    expect(effectiveLevels(top, top)).toBe(top);
+    const gain = (n: number) => effectiveLevels(n + 1, top) - effectiveLevels(n, top);
+    expect(gain(top)).toBeCloseTo(0.7);
+    expect(gain(top + 1)).toBeLessThan(gain(top));
+    expect(effectiveLevels(top + 30, top)).toBeLessThan(top + 2.4);
+  });
+
+  it('can be bought beyond the old top level, with the cost rising with the company\'s income', () => {
+    const s = newGame({ companyName: 'U', industryId: 'software', seed: 'UPG', difficulty: 'easy' });
+    s.ledger.balances.cash += 5_000_000_00;
+    s.ledger.balances.shareCapital -= 5_000_000_00;
+    s.upgrades.cloud = UPGRADES.software[0].maxLevel;
+    const before = upgradeOptions(s).find((o) => o.def.id === 'cloud')!;
+    expect(before.maxed).toBe(false);
+    expect(before.scale).toBe(1);
+    applyActionInPlace(s, { type: 'buyUpgrade', upgradeId: 'cloud' });
+    expect(s.upgrades.cloud).toBe(UPGRADES.software[0].maxLevel + 1);
+    expect(upgradeModifiers('software', s.upgrades).capacityMult).toBeGreaterThan(upgradeModifiers('software', { cloud: 5 }).capacityMult);
   });
 });

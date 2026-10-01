@@ -608,9 +608,9 @@ export default function Scene3D({ game }: { game: GameState }) {
     const ready = playing && !o.maxed && !o.locked && o.cost <= cash;
     tags.push(u.level > 0 ? {
       id: u.def.id, at: [px, 2.4, pz], rank: 0, onSelect: () => setSceneFocus(u.def.id),
-      label: `${u.def.name}, level ${u.level} of ${u.def.maxLevel}${o.maxed ? ', maxed' : ready ? ', next level affordable' : ''}. Open upgrade card.`,
+      label: `${u.def.name}, level ${u.level}${o.maxed ? ', maxed' : ready ? ', next level affordable' : ''}. Open upgrade card.`,
       content: <>{shortUpgradeName(u.def)} <span className="opacity-70">Lv {u.level}</span>
-        {o.maxed ? <b className="cfx-scene-tag__badge is-max">MAX</b> : ready ? <b className="cfx-scene-tag__badge">▲</b> : null}</>,
+        {o.maxed ? <b className="cfx-scene-tag__badge is-max">MAX</b> : u.level > u.def.maxLevel ? <b className="cfx-scene-tag__badge is-max">★</b> : ready ? <b className="cfx-scene-tag__badge">▲</b> : null}</>,
     } : {
       id: u.def.id, at: [px, 1.5, pz], rank: 2, ghost: true, onSelect: () => setSceneFocus(u.def.id),
       label: `Build ${u.def.name} for ${formatGBP(o.cost)}${o.locked ? ` (${o.locked})` : ''}. Open upgrade card.`,

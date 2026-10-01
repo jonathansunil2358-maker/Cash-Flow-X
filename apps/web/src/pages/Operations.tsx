@@ -214,22 +214,22 @@ function UpgradesCard({ game }: { game: GameState }) {
   const act = useGame((s) => s.act);
   const options = upgradeOptions(game);
   return (
-    <Card title={`${INDUSTRIES[game.industryId].name} upgrades`} subtitle="Each level is capex: capitalised as PP&E and depreciated over 5 years. Prestige resets them.">
+    <Card title={`${INDUSTRIES[game.industryId].name} upgrades`} subtitle="Each level is capex: capitalised as PP&E and depreciated over 5 years. Dearer as your income grows, and they never run out: past the top level each extra level costs more and adds less.">
       <div className="space-y-2">
         {options.map((o) => (
           <div key={o.def.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3">
             <div className="min-w-0">
-              <div className="font-medium">{o.def.name} <span className="text-xs font-normal text-ink-2">Lv {o.level}/{o.def.maxLevel}</span></div>
+              <div className="font-medium">{o.def.name} <span className="text-xs font-normal text-ink-2">Lv {o.level}{o.level > o.def.maxLevel ? ' ★' : ''}</span></div>
               <div className="text-xs text-ink-2">{o.def.description}{o.locked ? ` · ${o.locked}` : ''}</div>
-              <div className="mt-1 flex gap-1" aria-label={`Level ${o.level} of ${o.def.maxLevel}`}>
+              <div className="mt-1 flex gap-1" aria-label={`Level ${o.level}`}>
                 {Array.from({ length: o.def.maxLevel }, (_, i) => (
-                  <span key={i} className={`h-2 w-5 rounded-sm ${i < o.level ? 'bg-accent' : 'bg-surface-2'}`} />
+                  <span key={i} className={`h-2 w-5 rounded-sm ${i < Math.min(o.level, o.def.maxLevel) ? 'bg-accent' : 'bg-surface-2'}`} />
                 ))}
               </div>
             </div>
             <Button variant="primary" disabled={game.status !== 'playing' || o.maxed || !!o.locked}
               onClick={() => act({ type: 'buyUpgrade', upgradeId: o.def.id }, `${o.def.name} upgraded to level ${o.level + 1}.`)}>
-              {o.maxed ? 'Maxed' : `Upgrade ${formatGBP(o.cost, { compact: true })}`}
+              {o.maxed ? 'Maxed' : `Upgrade ${formatGBP(o.cost, { compact: true })}${o.scale > 1.05 ? ` (×${o.scale.toFixed(1)})` : ''}`}
             </Button>
           </div>
         ))}
