@@ -249,7 +249,7 @@ export async function carryOverRun(env: Env, user: UserRow, runId: string, b: Ca
   if (run.status !== 'playing' || !run.is_active) throw new HttpError(409, 'This company is not running.');
   const old = await gunzipJson<Record<string, any>>(run.checkpoint);
   if (old.version === STATE_VERSION) throw new HttpError(409, 'This company is already on the current version.');
-  if (old.version !== 3) throw new HttpError(409, 'This company is too old to carry over.');
+  if (typeof old.version !== 'number' || old.version < 3) throw new HttpError(409, 'This company is too old to carry over.');
 
   const st = b.state as GameState | null;
   const refuse = (why: string): never => { throw new HttpError(422, `This company cannot be carried over: ${why}`); };
