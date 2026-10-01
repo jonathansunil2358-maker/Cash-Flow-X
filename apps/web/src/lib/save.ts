@@ -1,4 +1,4 @@
-import { STATE_VERSION, migrateProfile, monthLabel, type GameState, type Profile } from '@cfx/engine';
+import { STATE_VERSION, migrateProfile, migrateState, monthLabel, type GameState, type Profile } from '@cfx/engine';
 
 /**
  * Save slots live in localStorage (per browser). Every access is wrapped: storage can be
@@ -33,12 +33,29 @@ export function saveGame(slot: SlotId, game: GameState): boolean {
   }
 }
 
+/** Games that were just upgraded from an older version, so the player can be told once. */
+const upgraded = new WeakSet<object>();
+export const consumeUpgrade = (game: GameState): boolean => upgraded.delete(game);
+
+/**
+ * Load a save. Games from an older version are upgraded in place (and written back), so a company
+ * in progress carries on with the new rules instead of being lost. An online company that was
+ * being verified is marked to be carried over to the server the next time the player is signed in.
+ */
 export function loadGame(slot: SlotId): GameState | null {
   try {
     const raw = localStorage.getItem(key(slot));
     if (!raw) return null;
-    const g = JSON.parse(raw) as GameState;
-    return g.version === STATE_VERSION ? g : null;
+    const parsed = JSON.parse(raw) as { version?: number };
+    const from = parsed?.version;
+    const g = migrateState(parsed);
+    if (!g) return null;
+    if (from !== STATE_VERSION) {
+      if (g.server && g.status === 'playing') g.server.carry = 'pending';
+      upgraded.add(g);
+      try { localStorage.setItem(key(slot), JSON.stringify(g)); } catch { /* the upgrade still works for this session */ }
+    }
+    return g;
   } catch {
     return null;
   }

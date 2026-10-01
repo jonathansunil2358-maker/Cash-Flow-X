@@ -2,14 +2,14 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  compactForServer, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
 import { startingMarketing } from './lib/coach';
 import { api, ApiError, ONLINE, type Me } from './lib/api';
-import { loadGame, loadProfile, readPref, saveGame, saveProfile, writePref, type SlotId } from './lib/save';
+import { consumeUpgrade, loadGame, loadProfile, readPref, saveGame, saveProfile, writePref, type SlotId } from './lib/save';
 
 /** Panels opened from the dock and HUD. */
 export type Sheet = 'team' | 'upgrades' | 'finance' | 'missions' | 'books' | 'legacy' | 'social' | 'settings';
@@ -70,6 +70,8 @@ interface Store {
   start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'> & { practice?: boolean }) => Promise<void>;
   /** Send new decisions to the server for verification (online runs). */
   syncNow: () => Promise<void>;
+  /** Carry an online company that was started on an older version over to the server (once). */
+  carryOver: () => Promise<void>;
   /** Reload the account and merge server-owned progress into the profile. */
   refreshAccount: () => Promise<void>;
   acceptOffer: (offer: Me['investments']['offers'][number]) => void;
@@ -105,6 +107,8 @@ interface Store {
 
 let nextId = 1;
 let syncing = false;
+let carrying = false;
+const UPGRADE_NOTICE = 'Your company was upgraded: seasons, promotions, morale and pay, R&D projects, rivals that react and a prestige rank are now in play. See the Business panel.';
 /** Sync online runs at least once per in-game year. */
 const SYNC_EVERY_MONTHS = 12;
 const mathRng: Rng = { next: () => Math.random() };
@@ -312,7 +316,7 @@ export const useGame = create<Store>((set, get) => {
 
     async syncNow() {
       const game = get().game;
-      if (!game?.server || game.server.flagged || syncing) return;
+      if (!game?.server || game.server.flagged || game.server.carry === 'pending' || syncing) return;
       if (game.pendingEvent) return; // the decision is part of this month's log; sync after it
       const from = game.server.synced;
       if (from === game.actionLog.length && game.month === game.server.syncedMonth) return;
@@ -332,7 +336,13 @@ export const useGame = create<Store>((set, get) => {
       } catch (e) {
         const err = e as ApiError;
         const cur = get().game;
-        if (err.status === 409 && typeof err.body.resendFrom === 'number' && cur?.server) {
+        if (err.status === 409 && err.body.code === 'CARRYOVER_REQUIRED' && cur?.server) {
+          // The server still has this company on the old rules: carry it over first, then sync as normal.
+          const updated = { ...cur, server: { ...cur.server, carry: 'pending' as const } };
+          set({ game: updated });
+          saveGame('autosave', updated);
+          void get().carryOver();
+        } else if (err.status === 409 && typeof err.body.resendFrom === 'number' && cur?.server) {
           // The server is at a different point (another tab, a lost response): resend from there.
           const updated = { ...cur, server: { ...cur.server, synced: err.body.resendFrom as number } };
           set({ game: updated });
@@ -349,9 +359,39 @@ export const useGame = create<Store>((set, get) => {
       }
     },
 
+    async carryOver() {
+      const game = get().game;
+      if (!game?.server || game.server.carry !== 'pending' || game.status !== 'playing' || carrying) return;
+      carrying = true;
+      const runId = game.server.runId;
+      try {
+        const r = await api.carryOver(runId, { state: compactForServer(game), actions: game.actionLog.length });
+        const cur = get().game;
+        if (cur?.server?.runId === runId) {
+          const updated = { ...cur, server: { ...cur.server, synced: r.actionsVerified, syncedMonth: r.month, carry: 'done' as const } };
+          saveGame('autosave', updated);
+          set({ game: updated });
+        }
+      } catch (e) {
+        const err = e as ApiError;
+        const cur = get().game;
+        // Offline or signed out: try again later. A refusal means this company cannot be ranked, but it still plays on.
+        if ([409, 422].includes(err.status) && cur?.server?.runId === runId) {
+          const note = err.status === 409 && /already on the current version/.test(err.message) ? undefined : err.message;
+          const updated = { ...cur, server: { ...cur.server, carry: note ? 'failed' as const : 'done' as const, ...(note ? { flagged: note } : {}) } };
+          saveGame('autosave', updated);
+          set({ game: updated });
+          if (note) get().toast('info', `${note} It carries on, but will not count for leaderboards.`);
+        }
+      } finally {
+        carrying = false;
+      }
+    },
+
     async refreshAccount() {
       const me = await useAccount.getState().refresh();
       if (!me) return;
+      void get().carryOver();
       set({ profile: persistProfile(mergeProfile(get().profile, me)) });
       const game = get().game;
       const level = me.guild?.level ?? 0;
@@ -438,6 +478,8 @@ export const useGame = create<Store>((set, get) => {
       }
       saveGame('autosave', game);
       set({ game, undoStack: [], sheet: null, monthProgress: 0 });
+      if (consumeUpgrade(game)) get().toast('info', UPGRADE_NOTICE);
+      void get().carryOver();
       return true;
     },
 
@@ -552,3 +594,10 @@ export const useActiveGame = (): GameState => {
   if (!g) throw new Error('No active game');
   return g;
 };
+
+// A game that was upgraded while the page loaded: tell the player once, and carry it over if they are signed in.
+{
+  const g = useGame.getState().game;
+  if (g && consumeUpgrade(g)) setTimeout(() => useGame.getState().toast('info', UPGRADE_NOTICE), 1500);
+  if (g?.server?.carry === 'pending') setTimeout(() => void useGame.getState().carryOver(), 2500);
+}

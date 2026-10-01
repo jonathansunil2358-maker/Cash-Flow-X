@@ -115,6 +115,8 @@ export const api = {
   buyPerk: (perkId: string) => request<{ perks: PerkLevels; legacyPoints: number }>('/me/perks', { body: { perkId } }),
   createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean }) =>
     request<RunStart>('/runs', { body: b }),
+  carryOver: (runId: string, b: { state: unknown; actions: number }) =>
+    request<{ actionsVerified: number; month: number; status: string }>(`/runs/${runId}/carryover`, { body: b }),
   daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),
   syncRun: (runId: string, b: { fromAction: number; actions: { month: number; action: Action }[]; month: number; checksum: string }) =>
     request<{ actionsVerified: number; status: string; netWorth?: number }>(`/runs/${runId}/sync`, { body: b }),

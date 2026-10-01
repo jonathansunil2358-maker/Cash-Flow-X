@@ -6,7 +6,7 @@ import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
 import { claimWeekly, createGuild, guildDetail, joinGuild, leaveGuild, listGuilds } from './guilds';
 import { declineInvestment, myInvestments, offerInvestment } from './investments';
-import { createRun, syncRun, type CreateRunBody, type SyncBody } from './runs';
+import { createRun, syncRun, type CreateRunBody, type SyncBody, carryOverRun, type CarryOverBody } from './runs';
 import { expireOffers, guildLevelOfUser, netWorthOf } from './social';
 import { cleanIcon, cleanName, HttpError, nowIso } from './util';
 
@@ -134,6 +134,11 @@ app.post('/me/perks', requireUser, async (c) => {
 app.post('/runs', requireUser, async (c) => {
   await limit(c, 'runs');
   return c.json(await createRun(c.env, c.get('user'), await body<CreateRunBody>(c)), 201);
+});
+
+app.post('/runs/:id/carryover', requireUser, async (c) => {
+  await limit(c, 'carryover');
+  return c.json(await carryOverRun(c.env, c.get('user'), c.req.param('id')!, await body<CarryOverBody>(c)));
 });
 
 app.post('/runs/:id/sync', requireUser, async (c) => c.json(await syncRun(c.env, c.get('user'), c.req.param('id')!, await body<SyncBody>(c))));

@@ -4,8 +4,13 @@
  * Plays real games with the engine, syncs them in chunks, and exercises holding companies,
  * investments, leaderboards and tamper detection.
  */
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, dailyChallenge, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, type Action, type GameState, type IndustryId,
+  applyActionInPlace, compactForServer, dailyChallenge, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -200,6 +205,53 @@ check('daily: the finished run is scored from the verified accounts', fin.status
   && board2.json.entries.some((e) => e.me), { fin, board: board2.json, month: eveP.game.month, status: eveP.game.status });
 check('daily: a past day cannot be queried in the future', (await call('/daily?day=2999-01-01', { token: eve.token })).status === 400);
 check('daily: bad days are refused', (await call('/daily?day=nope', { token: eve.token })).status === 400);
+
+// Carrying over a company that was started on the old version of the game.
+/** What the previous version stored for a company: the current state without the newer fields. */
+function asOldCheckpoint(g: GameState) {
+  const o = JSON.parse(JSON.stringify(compactForServer(g)));
+  o.version = 3;
+  for (const k of ['pay', 'trainingSpend', 'morale', 'promo', 'promoDipMonths', 'promoCooldown', 'projects', 'projectsDone']) delete o[k];
+  for (const c of o.competitors) { delete c.cutMonths; delete c.normalPrice; delete c.lastLaunchYear; }
+  delete o.ledger.balances.research;
+  for (const h of o.history) delete h.closing.research;
+  return o;
+}
+function storeOldCheckpoint(runId: string, g: GameState) {
+  const hex = Array.from(gzipSync(Buffer.from(JSON.stringify(asOldCheckpoint(g))))).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const file = join(tmpdir(), `cfx-legacy-${runId}.sql`);
+  writeFileSync(file, `UPDATE game_runs SET checkpoint = x'${hex}' WHERE id = '${runId}';`);
+  execFileSync('npx', ['wrangler', 'd1', 'execute', 'cash-flow-x', '--local', '--file', file], { stdio: 'ignore' });
+}
+const carry = (p: Player, state: unknown = compactForServer(p.game), actions = p.game.actionLog.length) =>
+  call<{ actionsVerified?: number; month?: number; error?: string; code?: string }>(`/runs/${p.runId}/carryover`, { token: p.token, body: { state, actions } });
+const tamper = (g: GameState, edit: (o: any) => void) => { const o = JSON.parse(JSON.stringify(compactForServer(g))); edit(o); return o; };
+
+const fay = await signUp('Fay');
+const legacy = await startRun('Fay', fay.token, 'software');
+await play(legacy, 8);
+const newRun = await carry(legacy);
+check('carry-over: a run on the current version cannot use it', newRun.status === 409, newRun);
+storeOldCheckpoint(legacy.runId, legacy.game);
+// The player carries on for a few months under "old rules" that the server never saw.
+for (let i = 0; i < 4; i++) { answer(legacy.game); applyPolicy(legacy.game); answer(legacy.game); tickInPlace(legacy.game); }
+answer(legacy.game);
+const needs = await sync(legacy);
+check('carry-over: an old stored company asks to be carried over before syncing', needs.status === 409 && (needs.json as { code?: string }).code === 'CARRYOVER_REQUIRED', needs);
+check('carry-over: an un-upgraded state is refused', (await carry(legacy, { ...compactForServer(legacy.game), version: 3 })).status === 422);
+check('carry-over: a different company is refused', (await carry(legacy, tamper(legacy.game, (o) => { o.seedLabel = 'SOMETHING-ELSE'; }))).status === 422);
+check('carry-over: unbalanced books are refused', (await carry(legacy, tamper(legacy.game, (o) => { o.ledger.balances.cash += 1000; }))).status === 422);
+check('carry-over: growth real play could not produce is refused', (await carry(legacy, tamper(legacy.game, (o) => { o.ledger.balances.cash += 90_000_000_00; o.ledger.balances.shareCapital -= 90_000_000_00; }))).status === 422);
+check('carry-over: unknown shareholders are refused', (await carry(legacy, tamper(legacy.game, (o) => { o.outsideHolders.push({ id: 'made-up', shares: 1, status: 'accepted' }); }))).status === 422);
+check('carry-over: a month far in the future is refused', (await carry(legacy, tamper(legacy.game, (o) => { o.month += 80; }))).status === 422);
+const ok = await carry(legacy);
+check('carry-over: the real company is accepted', ok.status === 200 && ok.json.actionsVerified === legacy.game.actionLog.length && ok.json.month === legacy.game.month, ok);
+legacy.synced = ok.json.actionsVerified ?? 0;
+check('carry-over: it can only happen once', (await carry(legacy)).status === 409);
+const after = await play(legacy, 14);
+check('carry-over: play after it is verified by replay as normal', after.status === 200 && legacy.synced === legacy.game.actionLog.length, after);
+const meF = await call<{ activeRun: { month: number } }>('/me', { token: fay.token });
+check('carry-over: the server tracks the new position', meF.json.activeRun?.month === legacy.game.month, meF.json.activeRun);
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;
