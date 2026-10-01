@@ -5,7 +5,7 @@
  * investments, leaderboards and tamper detection.
  */
 import {
-  applyActionInPlace, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, valuationOf, type Action, type GameState, type IndustryId,
+  applyActionInPlace, distributableReserves, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, valuationOf, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -111,6 +111,8 @@ check('join holding company', (await call(`/guilds/${g.json.id}/join`, { token: 
 const b = await startRun('Bob', bob.token, 'software');
 await play(b, 60);
 const div = 20_000_00;
+// Growth takes longer now that rivals fight back: keep trading until there are reserves to pay out.
+for (let y = 0; y < 15 && distributableReserves(b.game) < div; y++) await play(b, 12);
 applyActionInPlace(b.game, { type: 'payDividend', amount: div });
 const rb = await sync(b);
 const meB = await call<{ user: { personalCash: number } }>('/me', { token: bob.token });
@@ -135,7 +137,7 @@ const detail = await call<{ level: number; members: unknown[] }>(`/guilds/${g.js
 check('holding company lists both members', detail.json.members.length === 2, detail);
 
 // Alice prestiges: Bob is bought out, Alice earns Legacy points on the server.
-for (let i = 0; i < 24 && !prestigeCheck(a.game).eligible; i++) { answer(a.game); applyPolicy(a.game); answer(a.game); tickInPlace(a.game); }
+for (let y = 0; y < 15 && !prestigeCheck(a.game).eligible; y++) await play(a, 12);
 answer(a.game);
 if (prestigeCheck(a.game).eligible) {
   const pts = prestigeCheck(a.game).points;

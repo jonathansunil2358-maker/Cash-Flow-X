@@ -13,6 +13,7 @@ import {
 } from './model/market';
 import { leasesCurrentPortion, processLeases } from './model/leases';
 import { ytdPL } from './model/metrics';
+import { baseRentFor, nextStrain, premisesTier } from './model/growth';
 import { modifiersOf } from './model/modifiers';
 import {
   headcount, logItem, MAX_HISTORY, monthLabel, ownership, totalCustomers, WIN_EQUITY_VALUE, type GameState, type MonthKpis,
@@ -111,13 +112,20 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   s.quality = Math.min(100, Math.max(1,
     s.quality + ind.founderQuality + mods.qualityPerMonth + ind.qualityPerRnd * Math.pow(s.staff.rnd, 0.85) - ind.qualityDecay * s.quality));
   s.brand = s.brand * 0.9 + (s.marketingBudget / ind.marketingPerBrandPoint) * mods.brandGainMult;
+  const strain = s.strain ?? 0;
+  if (strain > 0) {
+    s.quality = Math.max(1, s.quality - 1.5 * strain);
+    s.reputation = Math.max(0, s.reputation - 2 * strain);
+  } else if (s.reputation < 50) {
+    s.reputation = Math.min(50, s.reputation + 0.5);
+  }
   const d = demandFor(s, ind);
-  const capacity = capacityOf(s, ind);
+  const capacity = capacityOf(s, ind) * (1 - 0.1 * strain);
   const costMult = s.economy.unitCostMult * supplierCostMultiplier(s, ind) * mods.unitCostMult;
 
   // 6. Revenue
   const vol = ind.model === 'subscription'
-    ? runSubscription(s, ind, rng, d, capacity, costMult, P, mods.churnMult)
+    ? runSubscription(s, ind, rng, d, capacity, costMult, P, mods.churnMult * (1 + strain))
     : runUnits(s, ind, rng, d, capacity, costMult, P, mods.spoilageMult);
 
   // 7. Operating costs
@@ -132,7 +140,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
     P('Payroll: net pay to staff, PAYE/NI/pension accrued', [dr('wages', total), cr('cash', net), cr('accruals', total - net)]);
   }
 
-  const rent = Math.round((ind.rentBase + ind.rentPerHead * headcount(s)) * s.rentIndex);
+  const rent = Math.round((baseRentFor(ind, premisesTier(headcount(s))) + ind.rentPerHead * headcount(s)) * s.rentIndex);
   if (m % 3 === 0) P('Quarterly rent paid in advance', [dr('prepayments', rent * 3), cr('cash', rent * 3)]);
   const fromPrepaid = Math.min(rent, Math.max(0, L.balances.prepayments));
   P('Rent for the month', [dr('rent', rent), cr('prepayments', fromPrepaid), cr('cash', rent - fromPrepaid)]);
@@ -384,6 +392,12 @@ function closeMonth(s: GameState, ind: IndustryConfig, d: DemandInfo, capacity: 
     baseRate: s.economy.baseRate,
     ownership: ownership(s),
   };
+  const strainBefore = s.strain ?? 0;
+  s.strain = nextStrain(strainBefore, kpis.utilisation);
+  kpis.strain = s.strain;
+  if (!opts.simulation && strainBefore < 0.5 && s.strain >= 0.5) {
+    logItem(s, 'notice', 'Your team is overstretched', 'Months above 95% of capacity are wearing people down: quality and reputation are slipping. Hire, or ease the load.');
+  }
   const record: MonthRecord = {
     month: m,
     period: L.period,

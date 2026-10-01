@@ -40,6 +40,8 @@ export interface IndustryConfig {
   /** Potential new customers (subscription) or units (unit) per month at 100% share and reach. */
   marketSize: number;
   marketGrowth: number;
+  /** New demand by calendar month, January first (averaged to 1): peaks and quiet spells to plan for. */
+  seasonality: number[];
   roles: Record<RoleId, RoleDef>;
   founderCapacity: number;
   capacityPerOps: number;
@@ -82,13 +84,14 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     priceElasticity: 1.2,
     unitCost: gbp(6),
     annualPrepaidShare: 0.3,
-    baseChurn: 0.03,
+    baseChurn: 0.04,
     stockCoverDefault: 0,
     spoilage: 0,
     receivableDays: 30,
     payableDays: 30,
-    marketSize: 800,
+    marketSize: 310,
     marketGrowth: 0.006,
+    seasonality: [1.1, 1.05, 1.05, 1.0, 1.0, 0.95, 0.85, 0.85, 1.1, 1.05, 1.0, 0.9],
     roles: {
       ops: { title: 'Customer success', salary: gbp(32000), effect: '+300 customers of service capacity each' },
       rnd: { title: 'Developers', salary: gbp(55000), effect: 'Improve product quality (raises share, cuts churn)' },
@@ -140,8 +143,9 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0.02,
     receivableDays: 45,
     payableDays: 45,
-    marketSize: 12000,
+    marketSize: 21000,
     marketGrowth: 0.005,
+    seasonality: [0.9, 0.75, 0.95, 1.0, 1.0, 1.05, 0.95, 0.9, 1.05, 1.05, 1.2, 1.3],
     roles: {
       ops: { title: 'Warehouse & production', salary: gbp(26000), effect: '+450 items/month of capacity each' },
       rnd: { title: 'Designers', salary: gbp(34000), effect: 'Improve collection quality' },
@@ -193,8 +197,9 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0.25,
     receivableDays: 0,
     payableDays: 30,
-    marketSize: 14000,
+    marketSize: 40000,
     marketGrowth: 0.006,
+    seasonality: [0.8, 0.85, 0.95, 1.0, 1.05, 1.1, 1.1, 1.05, 0.95, 1.0, 1.05, 1.3],
     roles: {
       ops: { title: 'Kitchen & floor staff', salary: gbp(24000), effect: '+380 covers/month of capacity each' },
       rnd: { title: 'Chefs (menu development)', salary: gbp(36000), effect: 'Improve food quality and reviews' },
@@ -241,13 +246,14 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     priceElasticity: 1.3,
     unitCost: gbp(5),
     annualPrepaidShare: 0.2,
-    baseChurn: 0.04,
+    baseChurn: 0.045,
     stockCoverDefault: 0,
     spoilage: 0,
     receivableDays: 0,
     payableDays: 30,
-    marketSize: 1100,
+    marketSize: 620,
     marketGrowth: 0.005,
+    seasonality: [1.45, 1.2, 1.1, 1.0, 1.05, 0.9, 0.8, 0.8, 1.1, 1.0, 0.85, 0.7],
     roles: {
       ops: { title: 'Trainers & front desk', salary: gbp(24000), effect: '+160 members of capacity each' },
       rnd: { title: 'Class programme leads', salary: gbp(30000), effect: 'Improve the member experience' },
@@ -299,8 +305,9 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0.01,
     receivableDays: 3,
     payableDays: 30,
-    marketSize: 25000,
+    marketSize: 29000,
     marketGrowth: 0.006,
+    seasonality: [0.85, 0.8, 0.9, 0.9, 0.95, 0.95, 0.95, 0.95, 1.0, 1.05, 1.5, 1.4],
     roles: {
       ops: { title: 'Fulfilment staff', salary: gbp(24000), effect: '+900 orders/month of capacity each' },
       rnd: { title: 'Product & UX', salary: gbp(42000), effect: 'Improve range and site conversion' },
@@ -354,6 +361,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 60,
     marketSize: 70,
     marketGrowth: 0.006,
+    seasonality: [0.8, 0.85, 1.3, 1.1, 1.05, 1.0, 0.95, 0.9, 1.25, 1.0, 0.9, 0.75],
     roles: {
       ops: { title: 'Technicians', salary: gbp(40000), effect: '+1.6 vehicles/month of capacity each' },
       rnd: { title: 'Engineers', salary: gbp(52000), effect: 'Improve conversion quality and range' },
@@ -388,4 +396,10 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
 };
 
 export const INDUSTRY_IDS = Object.keys(INDUSTRIES) as IndustryId[];
+/** This month's seasonal demand multiplier (the sector's curve, averaged to 1). */
+export function seasonalFactor(ind: IndustryConfig, month: number): number {
+  const mean = ind.seasonality.reduce((a, b) => a + b, 0) / ind.seasonality.length;
+  return ind.seasonality[((month % 12) + 12) % 12] / mean;
+}
+
 export const industryOf = (s: { industryId: IndustryId }): IndustryConfig => INDUSTRIES[s.industryId];

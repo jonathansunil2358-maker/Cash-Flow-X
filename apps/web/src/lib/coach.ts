@@ -1,5 +1,5 @@
 import {
-  cashFlowStatement, formatGBP, formatInt, formatPct, INDUSTRIES, plSummary, upgradeOptions, type GameState, type IndustryConfig, type Pence,
+  cashFlowStatement, formatGBP, formatInt, formatPct, INDUSTRIES, monthLabel, plSummary, seasonalFactor, upgradeOptions, type GameState, type IndustryConfig, type Pence,
 } from '@cfx/engine';
 
 /**
@@ -68,6 +68,21 @@ export function adviserTip(game: GameState): Tip | null {
   const profit = plSummary(last.period.pl).profit;
   const turnedAway = k.lostSales > Math.max(5, k.demand * 0.05);
 
+  const strain = k.strain ?? 0;
+  if (strain >= 0.35) {
+    return {
+      text: `Your team is overstretched (strain ${formatPct(strain, 0)}). Running flat out is wearing down quality and reputation. More ${ind.roles.ops.title.toLowerCase()} would ease the load.`,
+      action: 'Hire staff', target: { sheet: 'team', scrollTo: 'card-team' },
+    };
+  }
+  // Look two months ahead: peaks need staff and stock in place before they arrive.
+  const ahead = [1, 2].map((n) => ({ month: game.month + n, f: seasonalFactor(ind, game.month + n) })).sort((a, b) => b.f - a.f)[0];
+  if (ahead.f >= 1.2 && k.utilisation >= 0.8) {
+    return {
+      text: `${monthLabel(ahead.month).split(' ')[0]} is a busy month: demand runs about ${formatPct(ahead.f - 1, 0)} above normal. You're already at ${formatPct(k.utilisation, 0)} of capacity, so hire${ind.model === 'unit' ? ' and raise stock cover' : ''} before it arrives.`,
+      action: 'Prepare', target: { sheet: 'team', scrollTo: 'card-team' },
+    };
+  }
   if (turnedAway && k.utilisation >= 0.97) {
     return {
       text: `You turned away ${formatInt(k.lostSales)} ${ind.unitPlural} last month because you're at full capacity. More ${ind.roles.ops.title.toLowerCase()} would let you serve them.`,

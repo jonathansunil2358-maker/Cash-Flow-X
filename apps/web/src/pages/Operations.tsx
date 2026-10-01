@@ -1,5 +1,6 @@
 import {
-  attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, INDUSTRIES, reachOf,
+  attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, headcount, INDUSTRIES, monthLabel, PREMISES_STEPS, premisesMove,
+  premisesTier, reachOf, seasonalFactor, STRAIN_ON,
   recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
@@ -35,7 +36,11 @@ export function Operations({ game }: { game: GameState }) {
               [ind.model === 'subscription' ? `${ind.unitPlural} you can serve` : `${ind.unitPlural} you can deliver / month`, formatInt(capacity)],
               ['Current load', d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'],
               ['Automation uplift', `+${formatPct(capacityMultiplier(game, ind) - 1, 0)}`],
+              ['Team strain', d.last?.kpis.strain ? `${formatPct(d.last.kpis.strain, 0)}${d.last.kpis.strain >= 0.5 ? ': overstretched' : ''}` : 'None'],
+              ['Premises', PREMISES_STEPS[premisesTier(headcount(game))] ? `Fits up to ${PREMISES_STEPS[premisesTier(headcount(game))] - 1} staff` : 'Largest site'],
             ]} />
+            <p className="mt-2 text-xs text-ink-2">Running above {formatPct(STRAIN_ON, 0)} of capacity for months builds strain, which wears down quality, reputation and how much your team can handle.</p>
+            <SeasonStrip game={game} />
           </Card>
           <PriceCard game={game} />
           <MarketingCard game={game} reach={demand.reach} />
@@ -43,6 +48,33 @@ export function Operations({ game }: { game: GameState }) {
 
         {ind.model === 'unit' && <StockCard game={game} />}
         <TermsCard game={game} />
+      </div>
+    </div>
+  );
+}
+
+/** The sector's demand through the year, with this month highlighted, so peaks can be planned for. */
+function SeasonStrip({ game }: { game: GameState }) {
+  const ind = INDUSTRIES[game.industryId];
+  const months = Array.from({ length: 12 }, (_, i) => game.month + i);
+  const max = Math.max(...months.map((m) => seasonalFactor(ind, m)));
+  const now = seasonalFactor(ind, game.month);
+  return (
+    <div className="mt-3">
+      <div className="flex items-baseline justify-between text-xs">
+        <span className="font-extrabold">Seasonal demand, next 12 months</span>
+        <span className="text-ink-2">This month ×{now.toFixed(2)} {now >= 1.1 ? '(busy)' : now <= 0.9 ? '(quiet)' : ''}</span>
+      </div>
+      <div className="mt-1.5 flex h-14 items-end gap-1" role="img" aria-label={`Seasonal demand: ${months.map((m) => `${monthLabel(m).slice(0, 3)} ×${seasonalFactor(ind, m).toFixed(1)}`).join(', ')}`}>
+        {months.map((m, i) => {
+          const f = seasonalFactor(ind, m);
+          return (
+            <div key={m} className="flex h-full flex-1 flex-col items-center justify-end gap-0.5">
+              <div className={`w-full shrink-0 rounded-t-md border-2 border-outline ${i === 0 ? 'bg-[var(--coin)]' : f >= 1.1 ? 'bg-[var(--go)]' : f <= 0.9 ? 'bg-surface-2' : 'bg-[var(--primary)]'}`} style={{ height: `${Math.max(12, (f / max) * 100)}%` }} />
+              <span className="text-[9px] font-bold text-ink-2">{monthLabel(m).slice(0, 1)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -67,7 +99,8 @@ function RoleRow({ game, role }: { game: GameState; role: RoleId }) {
   const [count, setCount] = useState(1);
   const def = d.ind.roles[role];
   const salary = Math.round(def.salary * game.salaryIndex);
-  const oneOff = recruitmentFee(game, role) * count + d.ind.equipmentPerHire * count;
+  const move = premisesMove(game, d.ind, count);
+  const oneOff = recruitmentFee(game, role) * count + d.ind.equipmentPerHire * count + (move?.fitOut ?? 0);
   const monthly = Math.round((salary * 1.15 * count) / 12);
   const playing = game.status === 'playing';
   return (
@@ -88,6 +121,11 @@ function RoleRow({ game, role }: { game: GameState; role: RoleId }) {
         <Button variant="danger" disabled={!playing || game.staff[role] < count} onClick={() => act({ type: 'fire', role, count }, `${count} × ${def.title} made redundant.`)}>Let go</Button>
         <span className="text-xs text-muted">Hiring: {formatGBP(oneOff)} now, then {formatGBP(monthly)}/month. Redundancy: 1 month's salary each.</span>
       </div>
+      {move && (
+        <p className="mt-2 rounded-xl border-2 border-outline bg-[var(--coin)] px-2.5 py-1.5 text-xs font-bold text-[#3a2210]">
+          This takes you past {move.staffLimit} staff: you'll move to bigger premises. Fit-out {formatGBP(move.fitOut)} (included above, capitalised over 7 years) and a higher base rent.
+        </p>
+      )}
     </div>
   );
 }

@@ -64,6 +64,7 @@ export function newGame(opts: NewGameOptions): GameState {
     companyName: opts.companyName.trim().slice(0, 40),
     icon: opts.icon ?? 'rocket',
     reputation: 50,
+    strain: 0,
     away: false,
     industryId,
     scenarioId: scenario.id,

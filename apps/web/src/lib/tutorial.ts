@@ -63,7 +63,7 @@ const GUIDES: Record<IndustryId, SectorGuide> = {
     place: 'gym',
     cash: 'Direct debits arrive every month like clockwork. Annual memberships are cash now but deferred revenue on the balance sheet, earned over 12 months.',
     team: 'Each trainer can look after about 160 members. Class programme leads improve the experience, and Membership advisors bring more people through the door.',
-    upgrade: { id: 'app', why: '4% of members cancel every month. It cuts churn by 8% a level.' },
+    upgrade: { id: 'app', why: 'About 4.5% of members cancel every month. It cuts churn by 8% a level.' },
     finance: 'Big kit can be leased instead of bought (IFRS 16). It goes on the balance sheet as a right-of-use asset with a matching lease liability.',
     watch: 'Watch members against capacity: a full gym with low churn is a cash machine.',
     paid: 'Direct debit, 20% yearly',

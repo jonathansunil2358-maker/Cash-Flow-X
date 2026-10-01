@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ActionError, applyActionInPlace, compactForServer, continueRun, finalScore, guildLevelFor, INDUSTRY_IDS, modifiersOf, newGame,
+  ActionError, applyActionInPlace, compactForServer, continueRun, distributableReserves, finalScore, guildLevelFor, INDUSTRY_IDS, modifiersOf, newGame,
   outsideFraction, ownership, prestigeCheck, replay, stateChecksum, tickInPlace, toSubmission, valuationOf, type GameState,
 } from '../src/index';
-import { playPolicy } from './helpers';
+import { playPolicy, playUntil } from './helpers';
 
 const answer = (s: GameState) => {
   if (s.pendingEvent) applyActionInPlace(s, { type: 'resolveEvent', choiceId: s.pendingEvent.choices[0].id });
@@ -52,7 +52,7 @@ describe('chunked verification', () => {
 
 describe('holding company investments', () => {
   const grown = () => {
-    const s = playPolicy('software', 'INVEST', 48);
+    const s = playPolicy('software', 'INVEST', 72);
     answer(s);
     return s;
   };
@@ -78,13 +78,14 @@ describe('holding company investments', () => {
     const s = grown();
     const pre = valuationOf(s).equityValue;
     applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: Math.round(pre * 0.25), preMoney: pre });
-    const reserves = 10_000_00;
+    const reserves = Math.min(10_000_00, distributableReserves(s));
+    expect(reserves).toBeGreaterThan(0);
     applyActionInPlace(s, { type: 'payDividend', amount: reserves });
     expect(s.outsideHolders[0].dividends).toBe(Math.round((reserves * s.outsideHolders[0].shares) / s.shares.total));
   });
 
   it('buys investors out at valuation on prestige, restoring full ownership', () => {
-    const s = playPolicy('software', 'PRESTIGE', 72);
+    const s = playUntil('software', 'PRESTIGE', 240, (g) => prestigeCheck(g).eligible);
     answer(s);
     const pre = valuationOf(s).equityValue;
     applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: Math.round(pre * 0.05), preMoney: pre });

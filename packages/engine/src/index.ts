@@ -7,6 +7,7 @@ export * from './model/state';
 export * from './model/industries';
 export * from './model/metrics';
 export * from './model/market';
+export * from './model/growth';
 export * from './model/loans';
 export * from './model/tax';
 export * from './model/events';
