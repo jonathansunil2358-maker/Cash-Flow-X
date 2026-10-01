@@ -7,7 +7,7 @@ import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle
 import { suggestedMarketing } from '../lib/coach';
 import { useDerived } from '../lib/derived';
 import { useGame } from '../store';
-import { ContractsCard, InsuranceCard, SitesCard } from './Growth';
+import { ContractsCard, InsuranceCard, PressuresCard, SitesCard } from './Growth';
 import { MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
 
 export function Operations({ game }: { game: GameState }) {
@@ -48,6 +48,7 @@ export function Operations({ game }: { game: GameState }) {
         <PromotionsCard game={game} />
         <MoraleCard game={game} />
         <ProjectsCard game={game} />
+        <PressuresCard game={game} />
         <RivalsCard game={game} />
         <SitesCard game={game} />
         <ContractsCard game={game} />

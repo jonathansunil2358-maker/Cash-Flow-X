@@ -16,6 +16,7 @@ export interface RunSubmission {
   perks?: PerkLevels;
   boosts?: ActiveBoost[];
   prestigeLevel?: number;
+  modifiers?: string[];
   icon?: string;
   actions: { month: number; action: Action }[];
   /** Number of months played (the state's month counter at submission). */
@@ -35,6 +36,7 @@ export function toSubmission(s: GameState): RunSubmission {
     boosts: s.start.boosts,
     // The rank the company started with: prestiges done during the run are replayed from the action log.
     prestigeLevel: (s.prestigeLevel ?? 0) - s.actionLog.filter((a) => (a.action as { type?: string }).type === 'prestige').length,
+    modifiers: s.modifiers,
     icon: s.icon,
     actions: s.actionLog as { month: number; action: Action }[],
     months: s.month,
@@ -50,7 +52,7 @@ export function replay(sub: RunSubmission): GameState {
   const s = newGame({
     companyName: sub.companyName, industryId: sub.industryId, seed: sub.seed, scenarioId: sub.scenarioId,
     difficulty: sub.difficulty, equipmentFinance: sub.equipmentFinance, perks: sub.perks, boosts: sub.boosts,
-    prestigeLevel: sub.prestigeLevel, icon: sub.icon,
+    prestigeLevel: sub.prestigeLevel, modifiers: sub.modifiers, icon: sub.icon,
   });
   const actions = [...sub.actions];
   let i = 0;

@@ -316,6 +316,8 @@ export interface GameState {
   guidance: Guidance | null;
   /** The weekly event twist this company is playing under (display only; its effects are in `economy.active`). */
   twist: string | null;
+  /** Optional handicaps chosen when the company was started (each pays a bonus). Missing on older saves. */
+  modifiers?: string[];
   pay: PayLevel;
   /** Monthly training budget. */
   trainingSpend: Pence;

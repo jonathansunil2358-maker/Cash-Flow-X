@@ -8,6 +8,7 @@ import { startLease } from './model/leases';
 import { perkEffects, type ActiveBoost, type PerkLevels } from './model/perks';
 import { ENDLESS, logItem, newId, STATE_VERSION, type GameState } from './model/state';
 import { createRng, hashSeed } from './rng';
+import { cleanModifiers } from './model/modifiers-opt';
 import { isFixedKind, scenarioOf } from './scenarios';
 import { twistForSeed } from './fixed';
 
@@ -26,6 +27,8 @@ export interface NewGameOptions {
   perks?: PerkLevels;
   boosts?: ActiveBoost[];
   prestigeLevel?: number;
+  /** Optional handicaps (see OPTIONAL_MODIFIERS). Ignored on Hard and in challenges. */
+  modifiers?: string[];
   /** Business icon id (cosmetic). */
   icon?: string;
 }
@@ -57,6 +60,7 @@ export function newGame(opts: NewGameOptions): GameState {
   const boosts = diff.perksApply && !daily ? (opts.boosts ?? []).map((b) => ({ ...b })) : [];
   const effects = perkEffects(perks);
   const seed = hashSeed(opts.seed);
+  const modifiers = daily || difficulty === 'hard' ? [] : cleanModifiers(opts.modifiers);
 
   const s: GameState = {
     version: STATE_VERSION,
@@ -131,6 +135,7 @@ export function newGame(opts: NewGameOptions): GameState {
     boostActivations: {},
     prestigeLevel: daily ? 0 : opts.prestigeLevel ?? 0,
     prestigeAward: 0,
+    ...(modifiers.length ? { modifiers } : {}),
     start: { equipmentFinance: opts.equipmentFinance ?? 'buy', boosts: boosts.map((b) => ({ ...b })) },
     boosts,
     pendingEvent: null,
@@ -154,6 +159,8 @@ export function newGame(opts: NewGameOptions): GameState {
     s.twist = twist.id;
     s.economy.active.push({ type: 'weekly-twist', title: twist.name, startMonth: 0, remaining: 100_000, effects: twist.effects });
   }
+  if (modifiers.includes('tight-credit')) s.economy.active.push({ type: 'mod-credit', title: 'Tight credit', startMonth: 0, remaining: 100_000, effects: { lendingAppetite: 0.6 } });
+  if (modifiers.includes('slow-market')) s.economy.active.push({ type: 'mod-slow', title: 'Slow market', startMonth: 0, remaining: 100_000, effects: { demandMult: 0.9 } });
   recomputeEconomy(s);
 
   const capital = startingCash(difficulty, perks);

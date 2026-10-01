@@ -76,6 +76,7 @@ function RankPanel({ rank, points }: { rank: number; points: number }) {
           <li>You earn Legacy points, gems and Founder XP</li>
           <li>Your rank and its demand bonus start working immediately, and stay for every future company</li>
           <li>The stake needed for the next prestige goes up</li>
+          <li>The world gets tougher with every rank: suppliers cost 1.5% more and rivals are 10% sharper per rank</li>
         </ul>
       </div>
     </div>

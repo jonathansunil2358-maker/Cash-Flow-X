@@ -206,6 +206,13 @@ check('daily: the finished run is scored from the verified accounts', fin.status
 check('daily: a past day cannot be queried in the future', (await call('/daily?day=2999-01-01', { token: eve.token })).status === 400);
 check('daily: bad days are refused', (await call('/daily?day=nope', { token: eve.token })).status === 400);
 
+// Extra challenges: standard companies keep the chosen modifiers (cleaned); Hard ignores them.
+const mia = await signUp('Mia');
+const modRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, body: { seed: `MODS-${tag}`, industryId: 'software', difficulty: 'easy', equipmentFinance: 'buy', companyName: 'Mod Ltd', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, modifiers: ['slow-market', 'bogus', 'inflation'] } });
+check('modifiers: known ones are kept, unknown ones dropped', modRun.status === 201 && JSON.stringify(modRun.json.modifiers) === JSON.stringify(['slow-market', 'inflation']), modRun);
+const hardRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, body: { seed: `MODS2-${tag}`, industryId: 'software', difficulty: 'hard', equipmentFinance: 'buy', companyName: 'Hard Ltd', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, modifiers: ['slow-market'] } });
+check('modifiers: Hard ignores them (the server reports what the company really has)', hardRun.status === 201 && JSON.stringify(hardRun.json.modifiers) === '[]', hardRun);
+
 // Weekly event: same rules as the daily, with a twist, and a podium reward the week after.
 const week = weeklyChallenge(isoWeek());
 const hal = await signUp('Hal');

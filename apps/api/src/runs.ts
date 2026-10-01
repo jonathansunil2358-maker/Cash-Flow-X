@@ -1,5 +1,5 @@
 import {
-  BOOSTS, checkIntegrity, compactForServer, continueRun, currentBalanceSheet, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, STATE_VERSION,
+  BOOSTS, checkIntegrity, cleanModifiers, compactForServer, continueRun, currentBalanceSheet, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, STATE_VERSION,
   ownership, plSummary, RULES_VERSION, stateChecksum, trailingPL, valuationOf, type Action, type ActiveBoost, type GameState, type PerkLevels,
 } from '@cfx/engine';
 import type { UserRow } from './auth';
@@ -41,6 +41,8 @@ export interface CreateRunBody {
   weekly?: unknown;
   /** A friend challenge code. */
   challenge?: unknown;
+  /** Optional handicaps for a standard company (see OPTIONAL_MODIFIERS). */
+  modifiers?: unknown;
 }
 
 /** Summary shown to holding company members and on leaderboards, computed from verified state. */
@@ -90,11 +92,11 @@ export async function createRun(env: Env, user: UserRow, b: CreateRunBody) {
   const game = newGame({
     companyName: challenge ? challenge.companyName : cleanName(b.companyName, 40) || `${INDUSTRIES[b.industryId as keyof typeof INDUSTRIES].name.split(' ')[0]} Co Ltd`,
     industryId: b.industryId as never, seed: b.seed, difficulty, equipmentFinance: challenge ? 'buy' : b.equipmentFinance, perks, boosts,
-    prestigeLevel: challenge ? 0 : user.prestige_count, icon: cleanIcon(b.icon), scenarioId: challenge ? challenge.scenarioId : undefined,
+    prestigeLevel: challenge ? 0 : user.prestige_count, modifiers: challenge ? [] : cleanModifiers(b.modifiers), icon: cleanIcon(b.icon), scenarioId: challenge ? challenge.scenarioId : undefined,
   });
   const id = newId();
   const now = nowIso();
-  const start = { seed: game.seedLabel, industryId: game.industryId, difficulty, equipmentFinance: game.start.equipmentFinance, perks, boosts: game.start.boosts, prestigeLevel: game.prestigeLevel, companyName: game.companyName, icon: game.icon, ...(challenge ? { scenarioId: challenge.scenarioId, [challenge.kind]: challenge.key } : {}) };
+  const start = { seed: game.seedLabel, industryId: game.industryId, difficulty, equipmentFinance: game.start.equipmentFinance, perks, boosts: game.start.boosts, prestigeLevel: game.prestigeLevel, modifiers: game.modifiers ?? [], companyName: game.companyName, icon: game.icon, ...(challenge ? { scenarioId: challenge.scenarioId, [challenge.kind]: challenge.key } : {}) };
   await env.DB.batch([
     // The latest company icon becomes the player's icon on leaderboards and in holding companies.
     env.DB.prepare('UPDATE users SET icon = ?, updated_at = ? WHERE id = ?').bind(game.icon, now, user.id),
