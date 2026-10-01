@@ -10,9 +10,9 @@ export const BOSS_EVERY = 36;
 export const BOSS_MONTHS = 4;
 export interface BossDef { id: string; name: string; story: string; demandMult: number; unitCostMult: number; lendingAppetite: number }
 export const BOSSES: BossDef[] = [
-  { id: 'credit', name: 'The credit crunch', story: 'Banks are pulling back and customers are cutting spending.', demandMult: 0.93, unitCostMult: 1, lendingAppetite: 0.5 },
-  { id: 'war', name: 'The price war', story: 'A giant is slashing prices to bleed the little players dry.', demandMult: 0.88, unitCostMult: 1, lendingAppetite: 1 },
-  { id: 'shock', name: 'The supply shock', story: 'Everything you buy suddenly costs more, and deliveries are late.', demandMult: 0.97, unitCostMult: 1.12, lendingAppetite: 1 },
+  { id: 'credit', name: 'The credit crunch', story: 'Banks are pulling back and customers are cutting spending.', demandMult: 0.95, unitCostMult: 1, lendingAppetite: 0.6 },
+  { id: 'war', name: 'The price war', story: 'A giant is slashing prices to bleed the little players dry.', demandMult: 0.92, unitCostMult: 1, lendingAppetite: 1 },
+  { id: 'shock', name: 'The supply shock', story: 'Everything you buy suddenly costs more, and deliveries are late.', demandMult: 0.98, unitCostMult: 1.08, lendingAppetite: 1 },
 ];
 export const bossFor = (round: number): BossDef => BOSSES[round % BOSSES.length];
 export const bossActive = (s: GameState): boolean => !!s.boss;

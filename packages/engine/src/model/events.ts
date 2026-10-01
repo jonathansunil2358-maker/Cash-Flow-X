@@ -581,7 +581,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
   },
   // ---- Batch: story and tension (takeover, culture events, trade fair, lawsuits, spies, pranks) ----
   {
-    id: 'takeover', title: 'A takeover approach', polarity: 'bad', weight: 1, icon: 'shield',
+    id: 'takeover', title: 'A takeover approach', polarity: 'bad', weight: 0.7, icon: 'shield',
     when: (s) => s.month >= 24 && lastRevenue(s) > 0 && !doneOnce(s, `takeover${Math.floor(s.month / 24)}`),
     setup: (s) => {
       const fee = sized(s, 0.04, 1_500_00);
@@ -693,8 +693,8 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
   {
-    id: 'lawsuit', title: 'A legal letter arrives', polarity: 'bad', weight: 1, icon: 'shield',
-    weightOf: (s) => (s.insurance === 'full' ? 0.5 : 1),
+    id: 'lawsuit', title: 'A legal letter arrives', polarity: 'bad', weight: 0.7, icon: 'shield',
+    weightOf: (s) => (s.insurance === 'full' ? 0.4 : 0.8),
     when: (s) => s.month >= 18 && lastRevenue(s) > 0,
     setup: (s, rng) => {
       const settle = sized(s, 0.05, 1_000_00) * (s.insurance === 'full' ? 0.3 : 1);
