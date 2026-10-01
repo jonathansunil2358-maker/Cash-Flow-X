@@ -8,6 +8,7 @@ import { boostActive, perkEffects } from './perks';
 import { claimPayout, outageDemand } from './insurance';
 import { PERSONALITIES, rosterOf } from './roster';
 import { mentorOf } from './story';
+import { cultureOf, eventChanceMult } from './modifiers-opt';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
 import { scheduleIntoQueue } from './workingCapital';
@@ -206,6 +207,16 @@ interface ChoiceEventDef {
   setup: (s: GameState, rng: Rng) => { story: string; params: Record<string, number>; choices: ChoiceDef[] };
 }
 
+/**
+ * "Once a year" memory for choice events. It lives in the state (not the news log, which the server's
+ * compact checkpoints leave empty), so the client and the server always agree on what has happened.
+ */
+const doneOnce = (s: GameState, key: string): boolean => (s.done ?? []).includes(key);
+const markOnce = (s: GameState, key: string): void => { s.done = [...(s.done ?? []), key].slice(-40); };
+
+/** A rounded-to-pound cost shown in a label (keeps labels tidy). */
+const p0 = (v: Pence): Pence => v;
+const p0txt = (sue: boolean): string => (sue ? 'A good chance of winning, but court is never certain.' : 'Most likely thrown out, but you could lose.');
 const roleName = (s: GameState, r: RoleId) => industryOf(s).roles[r].title.toLowerCase();
 
 const CUSTOMERS = ['Mrs Okonkwo', 'Dr Fielding', 'The Harbour Cafe', 'Mr Lindqvist', 'Ms Abara', 'Ridgeway School', 'Councillor Pike', 'Little Jo'];
@@ -213,7 +224,7 @@ const CUSTOMERS = ['Mrs Okonkwo', 'Dr Fielding', 'The Harbour Cafe', 'Mr Lindqvi
 export const CHOICE_EVENTS: ChoiceEventDef[] = [
   {
     id: 'mentor', title: 'Your mentor is in town', polarity: 'good', weight: 1.5, icon: 'key',
-    when: (s) => s.month >= 8 && s.month % 12 >= 4 && s.month % 12 <= 7 && !s.log.some((l) => l.title === `Mentor visit ${Math.floor(s.month / 12)}`),
+    when: (s) => s.month >= 8 && s.month % 12 >= 4 && s.month % 12 <= 7 && !doneOnce(s, `mentor${Math.floor(s.month / 12)}`),
     setup: (s) => {
       const m = mentorOf(Math.floor(s.month / 12));
       const fee = sized(s, 0.02, 300_00);
@@ -222,11 +233,11 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { fee },
         choices: [
           { id: 'costs', label: `Cost clinic (${formatGBP(fee)})`, hint: 'Supplies cost 3% less for six months.', impact: [{ label: 'Costs', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); addTemporary(st, 'mentor-costs', 'Mentor: cost clinic', 6, { unitCostMult: 0.97 }, true); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'You found savings in places you had stopped looking.'; } },
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); addTemporary(st, 'mentor-costs', 'Mentor: cost clinic', 6, { unitCostMult: 0.97 }, true); markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'You found savings in places you had stopped looking.'; } },
           { id: 'brand', label: `Story workshop (${formatGBP(fee)})`, hint: 'A lasting lift to your brand.', impact: [{ label: 'Brand', up: true }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.brand *= 1.12; logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'Your story sharpened and word spread.'; } },
+            apply: (st, _rng, P, p) => { P('Mentor lunch', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.brand *= 1.12; markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'Your story sharpened and word spread.'; } },
           { id: 'team', label: 'Team lunch (free)', hint: 'Morale up.', impact: [{ label: 'Morale', up: true }],
-            apply: (st) => { st.morale = Math.min(100, st.morale + 6); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'The team left buzzing.'; } },
+            apply: (st) => { st.morale = Math.min(100, st.morale + 6); markOnce(st, `mentor${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Mentor visit ${Math.floor(st.month / 12)}`, m.lesson); return 'The team left buzzing.'; } },
         ],
       };
     },
@@ -568,9 +579,224 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
       };
     },
   },
+  // ---- Batch: story and tension (takeover, culture events, trade fair, lawsuits, spies, pranks) ----
+  {
+    id: 'takeover', title: 'A takeover approach', polarity: 'bad', weight: 0.7, icon: 'shield',
+    when: (s) => s.month >= 24 && lastRevenue(s) > 0 && !doneOnce(s, `takeover${Math.floor(s.month / 24)}`),
+    setup: (s) => {
+      const fee = sized(s, 0.04, 1_500_00);
+      const small = Math.round(fee / 2 / 10000) * 10000;
+      return {
+        story: 'Harrow & Finch Capital has quietly built a small stake and now says it would like to "take a closer interest" in how you run things. The board room goes quiet. How do you respond?',
+        params: { fee, small },
+        choices: [
+          { id: 'fight', label: `Fight it (${formatGBP(fee)})`, hint: 'Lawyers and a poison pill. Probably works, but it is a gamble.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => {
+              P('Takeover defence: advisers and legal fees', [dr('otherCosts', p.fee), cr('cash', p.fee)]);
+              markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
+              if (chance(rng, 0.6)) { st.brand *= 1.05; st.morale = Math.min(100, st.morale + 4); return 'Harrow & Finch backed off. The team is proud you stood up to them.'; }
+              st.morale = Math.max(0, st.morale - 6); return 'The defence was costly and the fight dragged on. The distraction hurt morale.';
+            } },
+          { id: 'standstill', label: `Agree a standstill (${formatGBP(p0(fee))})`, hint: 'A quiet deal: they leave you alone for a while.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => {
+              P('Standstill agreement with an investor', [dr('otherCosts', p.small), cr('cash', p.small)]);
+              markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.');
+              return 'They signed the standstill and went quiet. A cheap way to get on with your business.';
+            } },
+          { id: 'ignore', label: 'Ignore them', hint: 'Free, but the rumour mill will not.', impact: [{ label: 'Morale', up: false }],
+            apply: (st) => { markOnce(st, `takeover${Math.floor(st.month / 24)}`); logItem(st, 'notice', `Takeover approach ${Math.floor(st.month / 24)}`, 'Harrow & Finch Capital made an approach.'); st.morale = Math.max(0, st.morale - 8); st.brand *= 0.97; return 'Rumours of a sale unsettled the team and a few customers.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'cultureParty', title: 'Time for an office party?', polarity: 'good', weight: 0.8, icon: 'heart',
+    weightOf: (s) => (cultureOf(s.modifiers) === 'culture-people' ? 2 : cultureOf(s.modifiers) === 'culture-frugal' ? 0.3 : 0.8),
+    when: (s) => s.month >= 6 && headcount(s) >= 3 && !doneOnce(s, `party${Math.floor(s.month / 12)}`),
+    setup: (s) => {
+      const big = sized(s, 0.015, 400_00);
+      const small = Math.round(big / 3 / 10000) * 10000 || 10000;
+      return {
+        story: cultureOf(s.modifiers) === 'culture-people' ? 'People first is your motto, and the team is hoping for a proper celebration this year.' : 'The team has been working hard. Someone has suggested an office party.',
+        params: { big, small },
+        choices: [
+          { id: 'big', label: `A proper party (${formatGBP(big)})`, hint: 'Morale up a lot.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Team party', [dr('otherCosts', p.big), cr('cash', p.big)]); st.morale = Math.min(100, st.morale + 10); markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'A good night was had by all.'); return 'Everyone talked about it for weeks.'; } },
+          { id: 'small', label: `Pizza and drinks (${formatGBP(p0(small))})`, hint: 'A smaller boost.', impact: [{ label: 'Morale', up: true }],
+            apply: (st, _rng, P, p) => { P('Team pizza night', [dr('otherCosts', p.small), cr('cash', p.small)]); st.morale = Math.min(100, st.morale + 4); markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Pizza was had.'); return 'A cheerful, cheap evening.'; } },
+          { id: 'skip', label: 'Not this year', hint: 'Save the money.', impact: [], apply: (st) => { markOnce(st, `party${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Office party ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'The team shrugged and carried on.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'strike', title: 'The team is threatening to walk out', polarity: 'bad', weight: 0.4, icon: 'shield',
+    weightOf: (s) => (s.morale < 45 ? 3 : 0.3) * (cultureOf(s.modifiers) === 'culture-people' ? 0.5 : 1),
+    when: (s) => headcount(s) >= 5,
+    setup: (s) => {
+      const raise = sized(s, 0.03, 600_00);
+      return {
+        story: 'A group of staff have signed a letter: they say the workload and pay are not fair and they are prepared to walk out on Friday.',
+        params: { raise },
+        choices: [
+          { id: 'talk', label: `Talk and give a one-off bonus (${formatGBP(raise)})`, hint: 'Costs money, calms things.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Staff bonus to settle a dispute', [dr('wages', p.raise), cr('cash', p.raise)]); st.morale = Math.min(100, st.morale + 6); return 'The letter was withdrawn. A handshake and a bonus did the trick.'; } },
+          { id: 'mediate', label: 'Bring in a mediator', hint: 'A middle way: some lost time, some goodwill.', impact: [{ label: 'Output', up: false }],
+            apply: (st) => { addTemporary(st, 'strike-slow', 'Dispute slows output', 2, { demandMult: 0.95 }, true); st.morale = Math.min(100, st.morale + 2); return 'It took two rocky months, but you reached a deal.'; } },
+          { id: 'hold', label: 'Hold firm', hint: 'Free now, expensive later.', impact: [{ label: 'Output', up: false }, { label: 'Morale', up: false }],
+            apply: (st) => { addTemporary(st, 'strike-walkout', 'Walkout', 3, { demandMult: 0.88 }, true); st.morale = Math.max(0, st.morale - 8); return 'Part of the team walked out for days. Output dipped for three months.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'fireDrill', title: 'A surprise safety inspection', polarity: 'bad', weight: 0.5, icon: 'shield',
+    weightOf: (s) => (cultureOf(s.modifiers) === 'culture-frugal' ? 1.8 : 0.5),
+    when: (s) => s.month >= 10 && headcount(s) >= 2,
+    setup: (s) => {
+      const fix = sized(s, 0.012, 300_00);
+      const fine = sized(s, 0.04, 900_00);
+      return {
+        story: 'An inspector turns up unannounced and finds the fire exits half-blocked and the extinguishers out of date. You can fix it properly or hope for the best.',
+        params: { fix, fine },
+        choices: [
+          { id: 'fix', label: `Fix everything now (${formatGBP(fix)})`, hint: 'Safe and sorted.', impact: [{ label: 'Cash', up: false }],
+            apply: (_st, _rng, P, p) => { P('Safety improvements', [dr('otherCosts', p.fix), cr('cash', p.fix)]); return 'The inspector left satisfied.'; } },
+          { id: 'gamble', label: 'Patch it up and hope', hint: 'Cheap, but a re-inspection may fine you.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => {
+              const cheap = Math.round(p.fix / 3 / 10000) * 10000 || 10000;
+              P('Quick safety patch', [dr('otherCosts', cheap), cr('cash', cheap)]);
+              if (chance(rng, 0.45)) { P('Safety fine', [dr('otherCosts', p.fine), cr('cash', p.fine)]); adjustReputation(st, -2); return `A re-inspection found the patch wanting: a ${formatGBP(p.fine)} fine.`; }
+              return 'The patch passed. This time.';
+            } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'tradeFair', title: 'The big trade fair', polarity: 'good', weight: 1, icon: 'rocket',
+    when: (s) => s.month >= 5 && s.month % 12 >= 1 && s.month % 12 <= 6 && lastRevenue(s) > 0 && !doneOnce(s, `fair${Math.floor(s.month / 12)}`),
+    setup: (s) => {
+      const big = sized(s, 0.06, 1_500_00);
+      const small = Math.round(big / 3 / 10000) * 10000 || 10000;
+      return {
+        story: 'The yearly trade fair is on. A big stand puts you in front of every buyer in your sector; a small one still gets you noticed.',
+        params: { big, small },
+        choices: [
+          { id: 'big', label: `A big stand (${formatGBP(big)})`, hint: 'More demand for three months and a brand lift.', impact: [{ label: 'Demand', up: true }, { label: 'Brand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Trade fair: large stand', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'fair-demand', 'Trade fair leads', 3, { demandMult: 1.07 }, true); st.brand *= 1.06; markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'Your stand was packed. Leads are pouring in.'; } },
+          { id: 'small', label: `A small stand (${formatGBP(p0(small))})`, hint: 'A smaller lift.', impact: [{ label: 'Brand', up: true }],
+            apply: (st, _rng, P, p) => { P('Trade fair: small stand', [dr('marketing', p.small), cr('cash', p.small)]); st.brand *= 1.03; markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'You exhibited at the fair.'); return 'A few good contacts, no big splash.'; } },
+          { id: 'skip', label: 'Skip it', hint: 'Save the fee.', impact: [], apply: (st) => { markOnce(st, `fair${Math.floor(st.month / 12)}`); logItem(st, 'notice', `Trade fair ${Math.floor(st.month / 12)}`, 'Skipped.'); return 'You stayed home and kept the cash.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'lawsuit', title: 'A legal letter arrives', polarity: 'bad', weight: 0.7, icon: 'shield',
+    weightOf: (s) => (s.insurance === 'full' ? 0.4 : 0.8),
+    when: (s) => s.month >= 18 && lastRevenue(s) > 0,
+    setup: (s, rng) => {
+      const settle = sized(s, 0.05, 1_000_00) * (s.insurance === 'full' ? 0.3 : 1);
+      const fight = sized(s, 0.02, 400_00);
+      const loss = sized(s, 0.09, 1_800_00);
+      const sue = rng.next() < 0.4;
+      return {
+        story: sue
+          ? 'A rival has copied your product almost exactly. A lawyer says you have a good case if you want to sue.'
+          : 'A customer claims your product caused them losses and threatens to sue. A lawyer thinks it is weak, but court is a gamble.',
+        params: { settle: Math.round(settle / 10000) * 10000, fight, loss, sue: sue ? 1 : 0 },
+        choices: [
+          { id: 'settle', label: sue ? 'Drop it (free)' : `Settle quietly (${formatGBP(Math.round(settle / 10000) * 10000)})`, hint: sue ? 'Nothing gained, nothing lost.' : 'A known cost.', impact: sue ? [] : [{ label: 'Cash', up: false }],
+            apply: (_st, _rng, P, p) => { if (p.sue) return 'You let it go. The rival carried on.'; P('Legal settlement', [dr('otherCosts', p.settle), cr('cash', p.settle)]); return 'The claim was settled and forgotten.'; } },
+          { id: 'fight', label: `Go to court (${formatGBP(fight)})`, hint: p0txt(sue), impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => {
+              P('Legal fees', [dr('otherCosts', p.fight), cr('cash', p.fight)]);
+              if (chance(rng, p.sue ? 0.55 : 0.6)) {
+                if (p.sue && st.competitors.length) { const c = st.competitors[Math.floor(rng.next() * st.competitors.length)]; c.quality = Math.max(10, c.quality - 3); }
+                adjustReputation(st, 3); return p.sue ? 'You won! The judge ordered the rival to change its product.' : 'The case was thrown out. Your name is cleaner than ever.';
+              }
+              if (!p.sue) { P('Court costs and damages', [dr('otherCosts', p.loss), cr('cash', p.loss)]); }
+              adjustReputation(st, -3); return p.sue ? 'You lost. The bills stand and the rival gloats.' : `You lost, and the damages and costs came to ${formatGBP(p.loss)}.`;
+            } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'spy', title: 'An offer to see a rival\'s plans', polarity: 'good', weight: 0.6, icon: 'key',
+    when: (s) => s.month >= 9 && s.competitors.length > 0,
+    setup: (s) => {
+      const detective = sized(s, 0.03, 700_00);
+      const report = Math.round(detective / 3 / 10000) * 10000 || 10000;
+      const rival = s.competitors[0]?.name ?? 'your rival';
+      return {
+        story: `A contact says someone who used to work at ${rival} will tell you what they are planning, for a fee. It is a little shady. You could also just study them openly.`,
+        params: { detective, report },
+        choices: [
+          { id: 'spy', label: `Pay the informant (${formatGBP(detective)})`, hint: 'A real edge, with a risk of being found out.', impact: [{ label: 'Demand', up: true }, { label: 'Reputation', up: false }],
+            apply: (st, rng, P, p) => {
+              P('Market intelligence', [dr('otherCosts', p.detective), cr('cash', p.detective)]);
+              if (chance(rng, 0.25)) { adjustReputation(st, -4); return 'The informant was a plant. Someone leaked it to the press and you look shady.'; }
+              addTemporary(st, 'spy-edge', 'You read the market', 3, { demandMult: 1.04 }, true); return 'You were one step ahead of them for months.';
+            } },
+          { id: 'report', label: `Buy an industry report (${formatGBP(p0(report))})`, hint: 'Honest and a bit useful.', impact: [{ label: 'Demand', up: true }],
+            apply: (st, _rng, P, p) => { P('Industry report', [dr('otherCosts', p.report), cr('cash', p.report)]); addTemporary(st, 'spy-report', 'Industry insight', 2, { demandMult: 1.02 }, true); return 'The report confirmed some hunches and corrected others.'; } },
+          { id: 'decline', label: 'No thanks', hint: 'Free.', impact: [], apply: () => 'You stuck to your own plans.' },
+        ],
+      };
+    },
+  },
+  {
+    id: 'prank', title: 'Bank holiday mischief', polarity: 'good', weight: 0.7, icon: 'heart',
+    when: (s) => s.month >= 4 && headcount(s) >= 2,
+    setup: (s) => {
+      const treat = sized(s, 0.008, 200_00);
+      return {
+        story: 'It is the day before a bank holiday and the office is in a mood. Someone has wrapped the manager\'s desk in foil.',
+        params: { treat },
+        choices: [
+          { id: 'join', label: 'Join in (free)', hint: 'Good for the mood, but jokes can backfire.', impact: [{ label: 'Morale', up: true }],
+            apply: (st, rng) => { if (chance(rng, 0.2)) { st.morale = Math.max(0, st.morale - 3); return 'The prank went a bit far and someone was upset.'; } st.morale = Math.min(100, st.morale + 5); return 'The whole office laughed for an hour.'; } },
+          { id: 'treat', label: `Treat everyone (${formatGBP(treat)})`, hint: 'A sure boost.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Team treats', [dr('otherCosts', p.treat), cr('cash', p.treat)]); st.morale = Math.min(100, st.morale + 7); return 'Cakes appeared and the mood lifted.'; } },
+          { id: 'work', label: 'Back to work', hint: 'Nothing happens.', impact: [], apply: () => 'You kept your head down. The foil stayed on the desk.' },
+        ],
+      };
+    },
+  },
+  {
+    id: 'ipoDay', title: 'It is IPO day', polarity: 'good', weight: 0, icon: 'diamond',
+    when: () => false,
+    setup: (s) => {
+      const road = sized(s, 0.05, 2_000_00);
+      return {
+        story: 'The bell is about to ring and the market is watching. How do you want to open your first day as a listed company?',
+        params: { road },
+        choices: [
+          { id: 'bell', label: 'Ring the bell and smile (free)', hint: 'A little hype.', impact: [{ label: 'Share price', up: true }],
+            apply: (st) => { st.sentiment *= 1.04; return 'The cameras loved it. The price ticked up.'; } },
+          { id: 'roadshow', label: `A flashy roadshow (${formatGBP(road)})`, hint: 'More hype and a brand lift, at a cost.', impact: [{ label: 'Share price', up: true }, { label: 'Brand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('IPO roadshow and publicity', [dr('marketing', p.road), cr('cash', p.road)]); st.sentiment *= 1.1; st.brand *= 1.05; return 'Investors queued to meet you. The price jumped.'; } },
+          { id: 'quiet', label: 'Keep it low-key', hint: 'No fuss, no hype.', impact: [], apply: () => 'The listing happened quietly, and the price stayed put.' },
+        ],
+      };
+    },
+  },
 ];
 
 const CHOICE_BY_ID = Object.fromEntries(CHOICE_EVENTS.map((e) => [e.id, e])) as Record<string, ChoiceEventDef>;
+
+/** Add a short-lived effect from outside this file (suppliers, franchises). It lasts `months` full months. */
+export function addTemporaryEffect(s: GameState, type: string, title: string, months: number, effects: EventEffects): void {
+  addTemporary(s, type, title, months, effects, false);
+}
+
+/** Start a named choice event now (used for scripted moments such as IPO day). Does nothing if a decision is already waiting. */
+export function startNamedEvent(s: GameState, id: string, rng: Rng): void {
+  const def = CHOICE_BY_ID[id];
+  if (def && !s.pendingEvent) startChoiceEvent(s, def, rng);
+}
 
 /** Move founder reputation (0-100). */
 export function adjustReputation(s: GameState, delta: number): void {
@@ -591,6 +817,11 @@ const REPUTATION: Record<string, number> = {
   'bigDeal.accept': 3, 'bigDeal.decline': -1,
   'trending.boost': 4, 'trending.ride': 1,
   'grantApp.apply': 1, 'grantApp.skip': 0,
+  'takeover.fight': 0, 'takeover.standstill': 0, 'takeover.ignore': -1, 'cultureParty.big': 1, 'cultureParty.small': 0, 'cultureParty.skip': 0,
+  'strike.talk': 0, 'strike.mediate': 0, 'strike.hold': -2, 'fireDrill.fix': 1, 'fireDrill.gamble': 0,
+  'tradeFair.big': 1, 'tradeFair.small': 0, 'tradeFair.skip': 0, 'lawsuit.settle': -1, 'lawsuit.fight': 0,
+  'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
+  'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };
 
 function loseShare(s: GameState, fraction: number): void {
@@ -663,7 +894,7 @@ export function runEvents(s: GameState, rng: Rng, enabled: boolean): void {
 
   // Every company meets a friendly decision early, so players learn choice cards before the bad news.
   const first = s.month === FIRST_EVENT_MONTH;
-  if (enabled && !s.pendingEvent && (first || chance(rng, EVENT_CHANCE))) {
+  if (enabled && !s.pendingEvent && (first || chance(rng, EVENT_CHANCE * eventChanceMult(s.modifiers)))) {
     const polarity: Polarity = first || chance(rng, positiveShare(s)) ? 'good' : 'bad';
     const shielded = polarity === 'bad' && ((boostActive(s.boosts, 'shield') && DIFFICULTIES[s.difficulty].perksApply) || s.away);
     if (!shielded) {

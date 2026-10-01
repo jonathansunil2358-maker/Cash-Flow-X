@@ -34,7 +34,7 @@ export function GameOver({ game }: { game: GameState }) {
       actions={
         insolvent ? (
           <div className="flex flex-wrap gap-2">
-            {rebirth?.allowed && (
+            {rebirth?.allowed && !(game.modifiers ?? []).includes('ironman') && (
               <Button variant="primary" onClick={() => endBankruptRun(true)}>
                 Rebirth{Number.isFinite(rebirth.remaining) ? ` (${rebirth.remaining} left)` : ''}
               </Button>

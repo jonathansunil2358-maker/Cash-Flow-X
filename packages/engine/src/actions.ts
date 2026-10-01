@@ -7,8 +7,10 @@ import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
-import { resolvePendingEvent } from './model/events';
+import { resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
+import { addFranchise, franchiseCheck } from './model/franchise';
+import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
@@ -39,6 +41,8 @@ export type Action =
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
+  | { type: 'setSupplier'; supplier: SupplierId }
+  | { type: 'addFranchise' }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -82,7 +86,8 @@ export const EQUITY_COOLDOWN_MONTHS = 6;
 export const EQUITY_DISCOUNT = 0.85;
 export const EQUITY_FEE = 0.04;
 export const LOAN_ARRANGEMENT_FEE = 0.01;
-export const MAX_HEADS_PER_ROLE = 400;
+/** Most people hired in one action (there is no limit on the size of the team). */
+export const MAX_HIRE_AT_ONCE = 1000;
 export const MAX_BOOSTS_PER_YEAR = 4;
 
 /** Cash plus undrawn overdraft. */
@@ -165,8 +170,7 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
   switch (action.type) {
     case 'hire': {
       if (!ROLE_IDS.includes(action.role)) fail('Unknown role.');
-      if (!isCount(action.count, 50)) fail('Hire between 1 and 50 people at a time.');
-      if (s.staff[action.role] + action.count > MAX_HEADS_PER_ROLE) fail(`Maximum ${MAX_HEADS_PER_ROLE} staff per role.`);
+      if (!isCount(action.count, MAX_HIRE_AT_ONCE)) fail(`Hire between 1 and ${MAX_HIRE_AT_ONCE} people at a time.`);
       const role = ind.roles[action.role];
       const recruitment = recruitmentFee(s, action.role) * action.count;
       const equipment = ind.equipmentPerHire * action.count;
@@ -217,6 +221,19 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         action.level === 'above' ? 'The wage bill is 12% higher. Morale, productivity and loyalty rise.'
           : action.level === 'below' ? 'The wage bill is 10% lower, but morale and productivity will slip and people may leave.'
             : 'Standard pay. Morale settles at its normal level.');
+      break;
+    }
+    case 'setSupplier': {
+      const check = supplierCheck(s, action.supplier);
+      if (!check.ok) fail(check.reason!);
+      setSupplier(s, action.supplier);
+      break;
+    }
+    case 'addFranchise': {
+      const check = franchiseCheck(s);
+      if (!check.ok) fail(check.reason!);
+      requireFunds(s, check.fee, 'the franchise set-up');
+      addFranchise(s);
       break;
     }
     case 'startVenture': {
@@ -455,6 +472,7 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       s.sentiment = 1;
       s.priceHistory = [];
       s.guidance = { month: m + 3, target: nextGuidance(s) };
+      if (!s.pendingEvent) startNamedEvent(s, 'ipoDay', createRng(s));
       logItem(s, 'milestone', 'You are listed!', `${formatGBP(check.proceeds)} raised after costs. Your ownership fell from ${(before * 100).toFixed(1)}% to ${(ownership(s) * 100).toFixed(1)}%. Each quarter the market expects a profit: beat it and the price rises.`);
       break;
     }

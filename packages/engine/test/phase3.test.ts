@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ACHIEVEMENTS, applyActionInPlace, applyBankruptcy, applyRetirement, claimDaily, createRng, dailyStatus, levelForXp, migrateProfile, missionStatus, newAchievements,
+  DAILY_REWARDS, ACHIEVEMENTS, applyActionInPlace, applyBankruptcy, applyRetirement, claimDaily, createRng, dailyStatus, levelForXp, migrateProfile, missionStatus, newAchievements,
   newGame, newProfile, offlineMonthsFor, refillMissions, replay, reputationFactor, runEvents, runOffline, toSubmission, xpForLevel,
   type GameState,
 } from '../src/index';
@@ -91,15 +91,15 @@ describe('gamification', () => {
   it('daily rewards: streak continues day to day, resets after a gap, once per day', () => {
     let d = { lastClaim: null as string | null, streak: 0 };
     let r = claimDaily(d, '2026-10-01');
-    expect(r.gems).toBe(10);
+    expect(r.gems).toBe(DAILY_REWARDS[0]);
     d = r.daily;
     expect(dailyStatus(d, '2026-10-01').canClaim).toBe(false);
     expect(() => claimDaily(d, '2026-10-01')).toThrow();
     r = claimDaily(d, '2026-10-02');
-    expect(r.gems).toBe(15);
+    expect(r.gems).toBe(DAILY_REWARDS[1]);
     d = r.daily;
     r = claimDaily(d, '2026-10-05');
-    expect(r.gems).toBe(10);
+    expect(r.gems).toBe(DAILY_REWARDS[0]);
     expect(r.daily.streak).toBe(1);
   });
 

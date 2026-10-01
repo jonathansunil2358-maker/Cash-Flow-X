@@ -26,7 +26,7 @@ export interface Modifiers {
 }
 
 // Modifiers change only when upgrades, perks or boosts change, but are read many times a month.
-const cache = new WeakMap<GameState, { key: string; mods: Modifiers }>();
+const cache = new WeakMap<GameState, { key: string; list: GameState['modifiers']; mods: Modifiers }>();
 
 function cacheKey(s: GameState): string {
   let k = s.difficulty + s.industryId;
@@ -35,16 +35,15 @@ function cacheKey(s: GameState): string {
   for (const b of s.boosts) k += `|${b.id}${b.monthsRemaining > 0 ? 1 : 0}`;
   for (const id of s.projectsDone) k += `|r${id}`;
   k += `|g${s.guildLevel ?? 0}|p${s.prestigeLevel ?? 0}`;
-  k += `|m${(s.modifiers ?? []).join(',')}`;
   return k;
 }
 
 export function modifiersOf(s: GameState): Modifiers {
   const key = cacheKey(s);
   const hit = cache.get(s);
-  if (hit && hit.key === key) return hit.mods;
+  if (hit && hit.key === key && hit.list === s.modifiers) return hit.mods;
   const mods = computeModifiers(s);
-  cache.set(s, { key, mods });
+  cache.set(s, { key, list: s.modifiers, mods });
   return mods;
 }
 

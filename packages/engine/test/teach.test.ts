@@ -128,3 +128,74 @@ describe('learning progress', () => {
     expect(seeTerm(p, 'nonsense')).toBe(p);
   });
 });
+
+describe('accountant\'s desk, mock interview and the tax sprint', () => {
+  it('every transaction posts cleanly in a real ledger, and the daily entry puzzle has one right option', async () => {
+    const { TRANSACTIONS, journalPuzzle } = await import('../src/index');
+    const { ACCOUNTS } = await import('../src/ledger/accounts');
+    const { post, dr, cr } = await import('../src/ledger/journal');
+    for (const t of TRANSACTIONS) {
+      expect(ACCOUNTS[t.entry.debit], t.id).toBeDefined();
+      expect(ACCOUNTS[t.entry.credit], t.id).toBeDefined();
+      expect(t.entry.debit).not.toBe(t.entry.credit);
+      // It balances in a real ledger (the cash-flow tag only depends on which accounts are touched).
+      const g = newGame({ companyName: 'J', industryId: 'ecommerce', seed: 'JRN', difficulty: 'easy' });
+      const ok = (['operating', 'investing', 'financing', 'none'] as const).some((cf) => {
+        try { post(g.ledger, 0, t.id, [dr(t.entry.debit, 100), cr(t.entry.credit, 100)], { cf }); return true; } catch { return false; }
+      });
+      expect(ok, t.id).toBe(true);
+    }
+    const kinds = new Set<string>();
+    for (const d of days) {
+      const p = journalPuzzle(d);
+      expect(journalPuzzle(d)).toEqual(p);
+      kinds.add(p.tx.id);
+      expect(p.options).toHaveLength(4);
+      expect(new Set(p.options.map((o) => o.id)).size).toBe(4);
+      expect(p.options.filter((o) => o.id === p.answer)).toHaveLength(1);
+      expect(p.story).toMatch(/£/);
+    }
+    expect(kinds.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it('the interview asks three questions with one right answer each, from the real ratios', async () => {
+    const { interviewOf } = await import('../src/index');
+    for (const id of ['ecommerce', 'software', 'restaurant'] as const) {
+      const s = play(newGame({ companyName: 'I', industryId: id, seed: `INT-${id}`, difficulty: 'easy' }), 18);
+      const qs = interviewOf(s);
+      expect(qs).toHaveLength(3);
+      for (const q of qs) {
+        expect(q.options.filter((o) => o.id === q.answer)).toHaveLength(1);
+        expect(q.explain.length).toBeGreaterThan(20);
+      }
+      expect(interviewOf(s)).toEqual(qs);
+    }
+  });
+
+  it('the sprint is the same for everyone, scores right and wrong, pays by score, and only once a day', async () => {
+    const { sprintOf, sprintScore, sprintGems, SPRINT_ITEMS, recordSprint, recordInterview, interviewDone, newProfile } = await import('../src/index');
+    const items = sprintOf('2026-10-01');
+    expect(items).toHaveLength(SPRINT_ITEMS);
+    expect(sprintOf('2026-10-01')).toEqual(items);
+    expect(new Set(items.map((i) => i.id)).size).toBe(SPRINT_ITEMS);
+    const perfect = Object.fromEntries(items.map((i) => [i.id, i.bin]));
+    expect(sprintScore(items, perfect)).toEqual({ right: SPRINT_ITEMS, wrong: 0, points: 100 });
+    const allWrong = Object.fromEntries(items.map((i) => [i.id, i.bin === 'income' ? 'allowed' : 'income'])) as never;
+    expect(sprintScore(items, allWrong).points).toBe(0);
+    expect(sprintScore(items, {}).points).toBe(0);
+    expect([100, 70, 40, 10].map(sprintGems)).toEqual([15, 8, 3, 0]);
+    let p = { ...newProfile(), gems: 0 };
+    let r = recordSprint(p, '2026-10-01', 100, sprintGems(100));
+    expect(r.gems).toBe(15);
+    p = r.profile;
+    r = recordSprint(p, '2026-10-01', 100, 15);
+    expect(r.gems).toBe(0);
+    expect(r.profile).toBe(p);
+    const k = 'SEED:1';
+    expect(interviewDone(p, k)).toBe(false);
+    const i1 = recordInterview(p, k, 10);
+    expect(i1.gems).toBe(10);
+    expect(interviewDone(i1.profile, k)).toBe(true);
+    expect(recordInterview(i1.profile, k, 10).gems).toBe(0);
+  });
+});

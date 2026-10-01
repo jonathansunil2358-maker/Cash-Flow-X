@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cr, dr, post } from '../src/ledger/journal';
 import {
   addPassPoints, applyActionInPlace, checkIntegrity, claimPass, cleanModifiers, CULTURES, cultureOf, forecastMonthsOf, learnSkill, masteryOf, modifierBonus, modifiersOf,
   newGame, newProfile, PASS_POINTS_PER_TIER, passOf, passTier, planSlotsOf, replay, reputationTier, skillPoints, stateChecksum, tickInPlace, toSubmission,
@@ -121,5 +122,20 @@ describe('reputation tiers, skills, season pass and mastery', () => {
     expect(masteryOf(p, 'ecommerce')).toMatchObject({ finished: 3, tier: 2, tierName: 'Silver', next: 6 });
     expect(masteryOf(p, 'software')).toMatchObject({ finished: 1, tier: 1, tierName: 'Bronze' });
     expect(masteryOf(p, 'restaurant').tierName).toBeNull();
+  });
+});
+
+describe('team size', () => {
+  it('has no cap: a company can employ far more than 400 people in a role, and the books stay balanced', () => {
+    const s = fresh(undefined, 'software');
+    // Give the company the cash to hire a very large team, booked as a proper share issue.
+    const topUp = 5_000_000_00;
+    post(s.ledger, s.month, 'Test share issue', [dr('cash', topUp), cr('shareCapital', topUp)], { cf: 'financing' });
+    for (let i = 0; i < 6; i++) applyActionInPlace(s, { type: 'hire', role: 'ops', count: 100 });
+    expect(s.staff.ops).toBeGreaterThan(400);
+    expect(() => applyActionInPlace(s, { type: 'hire', role: 'ops', count: 1001 })).toThrow(/at a time/);
+    expect(checkIntegrity(s)).toEqual([]);
+    for (let i = 0; i < 3 && s.status === 'playing'; i++) { answer(s); tickInPlace(s); }
+    expect(checkIntegrity(s)).toEqual([]);
   });
 });

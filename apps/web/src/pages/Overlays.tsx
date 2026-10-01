@@ -63,10 +63,12 @@ export function CelebrationModal() {
       {c.kind === 'milestone' && <Confetti />}
       <h2 id="celebrate-title" className="text-center text-2xl leading-tight">{c.title}</h2>
       <p className="mt-1 text-center text-sm text-ink-2">{c.text}</p>
-      <div className="mt-3 flex items-center justify-center gap-2">
-        <img src={CURRENCY_ICONS.gem} alt="" className="h-9 w-9" />
-        <span className="cfx-coin-pop" style={{ color: 'var(--gem)', fontSize: 30 }}>+{c.gems}</span>
-      </div>
+      {c.gems > 0 && (
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <img src={CURRENCY_ICONS.gem} alt="" className="h-9 w-9" />
+          <span className="cfx-coin-pop" style={{ color: 'var(--gem)', fontSize: 30 }}>+{c.gems}</span>
+        </div>
+      )}
       <button type="button" className="cfx-btn mt-4 w-full" onClick={dismissCelebration} autoFocus>
         {celebrations.length > 1 ? `Nice! (${celebrations.length - 1} more)` : 'Nice!'}
       </button>

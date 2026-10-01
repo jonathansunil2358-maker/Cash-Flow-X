@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ActionError, applyActionInPlace, applyBankruptcy, awardPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
+  STARTER_GEMS, ActionError, applyActionInPlace, applyBankruptcy, awardPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
   createRng, DIFFICULTIES, finalScore, legacyFor, leasesCurrentPortion, modifiersOf, newGame, newProfile, perkEffects,
   prestigeCheck, prestigeThreshold, rebirthCheck, replay, runEvents, startingCash, tickInPlace, toSubmission, upgradeOptions,
   type GameState,
@@ -176,7 +176,8 @@ describe('prestige and rebirth', () => {
     expect(profile.legacyPoints).toBe(check.points);
     expect(profile.prestigeCount).toBe(1);
     expect(profile.rebirthsUsed).toBe(0);
-    expect(profile.gems).toBe(50 + 25 * check.points);
+    // Prestige gems are paid once a day by payPrestigeGems (economy.ts), not per Legacy point.
+    expect(profile.gems).toBe(STARTER_GEMS);
     profile = buyPerk(profile, 'fin_loans');
     expect(profile.perks.fin_loans).toBe(1);
     expect(() => buyPerk(profile, 'ops_capacity')).toThrow(/Talent network/);

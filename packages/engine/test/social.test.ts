@@ -98,7 +98,7 @@ describe('titles', () => {
 });
 
 describe('cosmetics shop', () => {
-  const rich = (): Profile => ({ ...newProfile(), gems: 500 });
+  const rich = (): Profile => ({ ...newProfile(), gems: 5000 });
   it('every skin has a full palette and the default is free', () => {
     expect(SKINS[0].gems).toBe(0);
     for (const s of SKINS) {
@@ -111,7 +111,7 @@ describe('cosmetics shop', () => {
     let p = rich();
     expect(cosmeticsOf(p)).toEqual({ owned: ['default'], skin: 'default' });
     p = buySkin(p, 'autumn');
-    expect(p.gems).toBe(500 - SKINS.find((s) => s.id === 'autumn')!.gems);
+    expect(p.gems).toBe(5000 - SKINS.find((s) => s.id === 'autumn')!.gems);
     expect(cosmeticsOf(p).skin).toBe('autumn');
     expect(() => buySkin(p, 'autumn')).toThrow();
     expect(() => buySkin(p, 'nope')).toThrow();

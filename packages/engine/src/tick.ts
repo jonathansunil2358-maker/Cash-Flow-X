@@ -28,6 +28,9 @@ import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure'
 import { runAutopilot } from './model/autopilot';
 import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
+import { advanceFranchises } from './model/franchise';
+import { advanceSuppliers, supplierMult } from './model/suppliers';
+import { advanceBoss } from './model/boss';
 import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
 import { advanceAwards } from './model/awards';
@@ -112,6 +115,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceBoard(s, !!opts.simulation);
   advanceAwards(s, !!opts.simulation);
   advanceAudit(s, !!opts.simulation);
+  advanceBoss(s, !!opts.simulation);
 
   // 2. Economy
   runEvents(s, rng, !opts.simulation);
@@ -138,7 +142,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   s.brand = s.brand * 0.9 + (s.marketingBudget / ind.marketingPerBrandPoint) * mods.brandGainMult;
   const d = demandFor(s, ind);
   const capacity = capacityOf(s, ind);
-  const costMult = s.economy.unitCostMult * supplierCostMultiplier(s, ind) * mods.unitCostMult;
+  const costMult = s.economy.unitCostMult * supplierCostMultiplier(s, ind) * mods.unitCostMult * supplierMult(s);
 
   // 6. Revenue
   const vol = ind.model === 'subscription'
@@ -260,6 +264,8 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   if (!opts.simulation) maybeOffer(s, rng);
   advanceSurprise(s, rng, !!opts.simulation);
   advanceVentures(s, rng, !!opts.simulation);
+  advanceFranchises(s, rng, !!opts.simulation);
+  advanceSuppliers(s, rng, !!opts.simulation);
 
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);
@@ -520,6 +526,11 @@ function closeMonth(s: GameState, ind: IndustryConfig, d: DemandInfo, capacity: 
   if (s.wonAtMonth === null && record.valuation && record.valuation.equityValue >= WIN_EQUITY_VALUE && s.status === 'playing') {
     s.wonAtMonth = m;
     if (!opts.simulation) logItem(s, 'milestone', 'Target reached: £10m company!', 'Your company is now valued at over £10 million. Keep going to grow your score, or retire and post it to the leaderboard.');
+  }
+
+  if (s.scenarioId === 'speedrun' && s.speedrunMonth === undefined && record.valuation && record.valuation.equityValue >= 1_000_000_00 && s.status === 'playing') {
+    s.speedrunMonth = m + 1;
+    if (!opts.simulation) logItem(s, 'milestone', `A £1m company in ${m + 1} months!`, 'Speedrun goal reached. Keep going to improve your score, or stop here.');
   }
 
   s.month += 1;

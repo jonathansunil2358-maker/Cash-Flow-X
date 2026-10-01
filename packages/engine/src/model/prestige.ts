@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import type { PlayGems } from './economy';
 import type { LearnState } from './learn';
 import type { PassState } from './progress';
 import { modifierBonus } from './modifiers-opt';
@@ -83,11 +84,24 @@ export interface Profile {
   milestones?: string[];
   /** Puzzle answers and glossary terms met (see learn.ts). */
   learn?: LearnState;
+  /** Personality: pet, employee of the month, building names, diary, hats (see personality.ts). */
+  pet?: { kind: string; name: string; adopted: string };
+  eom?: { month: number; id: string; name: string; note: string }[];
+  names?: Record<string, string>;
+  diary?: { year: number; company: string; note: string; facts: string }[];
+  /** Fastest speedrun (months to a £1m company) on this device. */
+  speedBest?: number;
+  /** Extra island land, claimed achievement trails and soundtracks (see collect.ts). */
+  land?: string[];
+  trails?: string[];
+  tracks?: { owned: string[]; selected: string };
+  wardrobe?: { owned: string[]; equipped: string | null };
   pass?: PassState;
+  /** Today's gems and boxes from repeatable play (see economy.ts). */
+  playGems?: PlayGems;
 }
 
-export const STARTER_GEMS = 50;
-export const GEMS_PER_LEGACY_POINT = 25;
+export const STARTER_GEMS = 100;
 export const FIRST_PRESTIGE_THRESHOLD: Pence = 10_000_000_00;
 export const PRESTIGE_THRESHOLD_GROWTH = 2.5;
 
@@ -176,7 +190,6 @@ export function awardPrestige(profile: Profile, points: number, stake: Pence): P
     legacyPoints: profile.legacyPoints + points,
     legacyEarned: profile.legacyEarned + points,
     prestigeCount: profile.prestigeCount + 1,
-    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
     rebirthsUsed: 0,
     lifetime: { ...(profile.lifetime ?? emptyLifetime()), bestStake: Math.max(profile.lifetime?.bestStake ?? 0, stake) },
   };
@@ -192,7 +205,6 @@ export function applyPrestige(profile: Profile, s: GameState): Profile {
     legacyPoints: profile.legacyPoints + points,
     legacyEarned: profile.legacyEarned + points,
     prestigeCount: profile.prestigeCount + 1,
-    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
     boosts: bankBoosts(profile, s),
     rebirthsUsed: 0,
     lifetime: addToLifetime(profile, s, 'prestiged', ownerStakeOf(s)),

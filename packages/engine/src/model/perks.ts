@@ -112,9 +112,9 @@ export interface BoostDef {
 }
 
 export const BOOSTS: Record<BoostId, BoostDef> = {
-  rush: { id: 'rush', name: 'Rush hour', description: '+50% demand for 6 months.', gems: 40, months: 6 },
-  shield: { id: 'shield', name: 'Lucky charm', description: 'No bad-news events for 12 months.', gems: 60, months: 12 },
-  megaphone: { id: 'megaphone', name: 'Megaphone', description: 'Marketing builds twice the brand for 6 months.', gems: 30, months: 6 },
+  rush: { id: 'rush', name: 'Rush hour', description: '+50% demand for 6 months.', gems: 200, months: 6 },
+  shield: { id: 'shield', name: 'Lucky charm', description: 'No bad-news events for 12 months.', gems: 300, months: 12 },
+  megaphone: { id: 'megaphone', name: 'Megaphone', description: 'Marketing builds twice the brand for 6 months.', gems: 150, months: 6 },
 };
 
 export interface ActiveBoost {

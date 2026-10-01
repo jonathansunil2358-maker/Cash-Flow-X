@@ -75,7 +75,9 @@ describe('holding company investments', () => {
   });
 
   it('pays investors their share of dividends', () => {
-    const s = grown();
+    // Play until the company has retained profit to pay out (growth takes years now).
+    const s = playUntil('software', 'INVEST', 240, (g) => distributableReserves(g) >= 10_000_00);
+    answer(s);
     const pre = valuationOf(s).equityValue;
     applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: Math.round(pre * 0.25), preMoney: pre });
     const reserves = Math.min(10_000_00, distributableReserves(s));

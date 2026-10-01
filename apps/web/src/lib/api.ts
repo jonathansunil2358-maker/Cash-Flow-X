@@ -137,6 +137,8 @@ export interface GuildDetail {
 }
 export interface BoardEntry { id: string; name: string; icon: string; title?: string | null; value: number; sub: string | null; hardcore?: boolean; me?: boolean }
 
+export interface LeagueView { week: string; maxPoints: number; mine: { points: number; answered: number }; rows: { rank: number; id: string; name: string; icon: string; points: number; me: boolean }[] }
+
 export const api = {
   health: () => request<{ ok: boolean; googleConfigured: boolean; devAuth: boolean }>('/health'),
   signInGoogle: (credential: string) => request<{ token: string; isNew: boolean }>('/auth/google', { body: { credential } }),
@@ -160,6 +162,8 @@ export const api = {
   publishPlan: (plan: unknown) => request<{ id: string }>('/plans', { body: { plan } }),
   likePlan: (id: string) => request<{ liked: boolean; likes: number }>(`/plans/${id}/like`, { body: {} }),
   deleteSharedPlan: (id: string) => request<{ ok: boolean }>(`/plans/${id}/delete`, { body: {} }),
+  league: () => request<LeagueView>('/league'),
+  answerLeague: (kind: 'spot' | 'detective' | 'journal', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),
   replay: (kind: 'daily' | 'weekly' | 'challenge', key: string, rank = 1) => request<ReplayData>(`/replays/${kind}/${encodeURIComponent(key)}?rank=${rank}`),
   challenge: (code: string) => request<ChallengeView>(`/challenges/${encodeURIComponent(code)}`),
   daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),

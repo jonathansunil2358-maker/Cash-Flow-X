@@ -133,7 +133,7 @@ export async function boardFor(env: Env, viewer: UserRow, kind: FixedKind, key: 
 // ---------------------------------------------------------------------------------------------
 
 export const WEEKLY_REWARD_RANKS = 10;
-export const weeklyGems = (rank: number): number => (rank === 1 ? 100 : rank <= 3 ? 60 : rank <= WEEKLY_REWARD_RANKS ? 30 : 0);
+export const weeklyGems = (rank: number): number => (rank === 1 ? 250 : rank <= 3 ? 150 : rank <= WEEKLY_REWARD_RANKS ? 75 : 0);
 
 const previousWeek = (): string => isoWeek(new Date(Date.now() - 7 * 86_400_000));
 
