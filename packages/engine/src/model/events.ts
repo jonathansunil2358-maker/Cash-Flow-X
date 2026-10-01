@@ -783,6 +783,41 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
       };
     },
   },
+  {
+    id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
+    when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
+    setup: (s) => {
+      const fee = sized(s, 0.015, 400_00);
+      return {
+        story: 'A friend in the trade tells you that one of your suppliers is cutting corners on safety to keep its prices low. You could report it, quietly use that to squeeze a lower price, or look the other way.',
+        params: { fee },
+        choices: [
+          { id: 'report', label: `Report them (${formatGBP(fee)})`, hint: 'The right thing, with a little cost and hassle.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'whistle'); P('Legal advice on reporting a supplier', [dr('otherCosts', p.fee), cr('cash', p.fee)]); return 'The regulator thanked you. Other firms noticed that you play it straight.'; } },
+          { id: 'exploit', label: 'Use it to cut your costs', hint: 'Cheaper supplies for six months. Secrets have a way of coming out.', impact: [{ label: 'Costs', up: true }, { label: 'Risk', up: false }],
+            apply: (st) => { markOnce(st, 'whistle'); markOnce(st, `exploit@${st.month}`); addTemporary(st, 'whistle-deal', 'A very cheap deal', 6, { unitCostMult: 0.95 }, true); return 'The supplier agreed to a bargain price. You do not ask how.'; } },
+          { id: 'ignore', label: 'Look the other way', hint: 'Nothing happens, for now.', impact: [], apply: (st) => { markOnce(st, 'whistle'); return 'You told yourself it was not your business.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'scandal', title: 'The supplier scandal breaks', polarity: 'bad', weight: 6, icon: 'flame',
+    when: (s) => !doneOnce(s, 'scandal') && (s.done ?? []).some((k) => { const m = /^exploit@(\d+)$/.exec(k); return !!m && s.month >= Number(m[1]) + 6; }),
+    setup: (s) => {
+      const fine = sized(s, 0.06, 1_200_00);
+      return {
+        story: 'The newspapers have found out about your supplier, and about the very cheap deal you took from them. Reporters are at the door.',
+        params: { fine },
+        choices: [
+          { id: 'apologise', label: `Apologise and make amends (${formatGBP(fine)})`, hint: 'Costly, but it limits the damage.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'scandal'); P('Compensation and public apology', [dr('otherCosts', p.fine), cr('cash', p.fine)]); adjustReputation(st, -4); return 'You owned up. It hurt, but people respect that.'; } },
+          { id: 'deny', label: 'Deny everything', hint: 'Free, if it works. It rarely does.', impact: [{ label: 'Reputation', up: false }],
+            apply: (st, rng) => { markOnce(st, 'scandal'); if (chance(rng, 0.3)) return 'The story fizzled out. You got away with it.'; adjustReputation(st, -12); st.brand *= 0.9; return 'Documents leaked and you were caught lying. Customers will remember.'; } },
+        ],
+      };
+    },
+  },
 ];
 
 const CHOICE_BY_ID = Object.fromEntries(CHOICE_EVENTS.map((e) => [e.id, e])) as Record<string, ChoiceEventDef>;
@@ -820,6 +855,7 @@ const REPUTATION: Record<string, number> = {
   'takeover.fight': 0, 'takeover.standstill': 0, 'takeover.ignore': -1, 'cultureParty.big': 1, 'cultureParty.small': 0, 'cultureParty.skip': 0,
   'strike.talk': 0, 'strike.mediate': 0, 'strike.hold': -2, 'fireDrill.fix': 1, 'fireDrill.gamble': 0,
   'tradeFair.big': 1, 'tradeFair.small': 0, 'tradeFair.skip': 0, 'lawsuit.settle': -1, 'lawsuit.fight': 0,
+  'whistle.report': 4, 'whistle.exploit': 0, 'whistle.ignore': -1, 'scandal.apologise': 0, 'scandal.deny': 0,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

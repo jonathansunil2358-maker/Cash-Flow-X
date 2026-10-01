@@ -35,6 +35,8 @@ export * from './model/learn';
 export * from './model/personality';
 export * from './model/collect';
 export * from './model/games';
+export * from './model/documentary';
+export * from './model/nemesis';
 export * from './model/prestige';
 export * from './model/gamification';
 export * from './model/cosmetics';

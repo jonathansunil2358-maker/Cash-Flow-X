@@ -1,5 +1,5 @@
 import {
-  buildingNames, canNameEom, diaryOf, diaryShareText, eomOf, formatGBP, headlineOf, HATS, PETS, petMood, petOf, rosterOf, UPGRADES, wardrobeOf, yearOf, type GameState,
+  buildingNames, canNameEom, documentaryOf, nemesisOf, nemesisTaunt, diaryOf, diaryShareText, eomOf, formatGBP, headlineOf, HATS, PETS, petMood, petOf, rosterOf, UPGRADES, wardrobeOf, yearOf, type GameState,
 } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Card, Field, TextInput } from '../components/ui';
@@ -160,6 +160,34 @@ export function ShareSeedCard({ game }: { game: GameState }) {
         <code className="rounded border border-line px-2 py-1 text-sm" aria-label="Seed">{game.seedLabel}</code>
         <Button variant="primary" onClick={share}>Share the seed</Button>
       </div>
+    </Card>
+  );
+}
+
+/** The rival who remembers how you left your last company. */
+export function NemesisCard({ game }: { game: GameState }) {
+  const profile = useGame((s) => s.profile);
+  const n = nemesisOf(profile);
+  if (!n) return null;
+  const current = game.history.at(-1)?.valuation?.equityValue ?? 0;
+  const t = nemesisTaunt(n, current);
+  return (
+    <Card id="card-nemesis" title={`Your nemesis: ${n.name}`} subtitle="The strongest rival of the last company you finished. They have not forgotten.">
+      <p className="text-sm">{t.text}</p>
+      <p className="mt-1 text-xs text-ink-2">{t.beaten ? 'You are ahead of your old self.' : 'Beat your old stake to silence them.'}</p>
+    </Card>
+  );
+}
+
+/** A narrated recap of the company so far, in scenes. */
+export function DocumentaryCard({ game }: { game: GameState }) {
+  const d = documentaryOf(game);
+  const toast = useGame((s) => s.toast);
+  const copy = async () => { try { await navigator.clipboard.writeText(`${d.title}\n\n${d.scenes.map((x) => `${x.heading}: ${x.text}`).join('\n')}`); toast('success', 'Copied. Paste it anywhere.'); } catch { toast('error', 'Could not copy.'); } };
+  return (
+    <Card id="card-documentary" title={d.title} subtitle="Your company's story so far, read from its real history.">
+      <ol className="space-y-2 text-sm">{d.scenes.map((x) => <li key={x.heading}><b>{x.heading}.</b> {x.text}</li>)}</ol>
+      <Button className="mt-3" onClick={copy}>Copy the script</Button>
     </Card>
   );
 }

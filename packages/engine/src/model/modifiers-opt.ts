@@ -32,6 +32,15 @@ export const CULTURES: { id: string; name: string; blurb: string }[] = [
 export const CALM_ID = 'chaos-calm';
 export const IRONMAN_ID = 'ironman';
 export const CALM_PENALTY = 0.1;
+/** Founder backstory: one is picked at the start. A small edge and a small cost, no score bonus. */
+export const ORIGINS: { id: string; name: string; blurb: string }[] = [
+  { id: 'origin-banker', name: 'Ex-banker', blurb: 'Banks lend to you more cheaply (1% less) and give a bigger overdraft, but you start with a smaller brand.' },
+  { id: 'origin-engineer', name: 'Engineer', blurb: 'Your product quality improves a little every month, but selling does not come naturally: reach is 8% lower.' },
+  { id: 'origin-marketer', name: 'Marketer', blurb: 'You start with a stronger brand and it grows 15% faster, but costs run 3% higher.' },
+  { id: 'origin-dropout', name: 'Scrappy dropout', blurb: 'You know how to do more with less: costs 3% lower. Banks are wary: borrowing costs 1% more.' },
+];
+export const ORIGIN_IDS = ORIGINS.map((o) => o.id);
+export const originOf = (ids: readonly string[] | undefined): string | null => (ids ?? []).find((id) => ORIGIN_IDS.includes(id)) ?? null;
 export const CULTURE_IDS = CULTURES.map((c) => c.id);
 export const cultureOf = (ids: readonly string[] | undefined): string | null => (ids ?? []).find((id) => CULTURE_IDS.includes(id)) ?? null;
 
@@ -42,7 +51,8 @@ export const cleanModifiers = (ids: unknown): string[] => {
   const optional = MODIFIER_IDS.filter((id) => ids.includes(id));
   // Calm and Mayhem are two ends of one dial: you can only have one.
   const calm = ids.includes(CALM_ID) && !optional.includes('chaos-mayhem');
-  return [...optional, ...(calm ? [CALM_ID] : []), ...(ids.includes(IRONMAN_ID) ? [IRONMAN_ID] : []), ...(culture ? [culture] : [])];
+  const origin = ORIGIN_IDS.find((id) => ids.includes(id));
+  return [...optional, ...(calm ? [CALM_ID] : []), ...(ids.includes(IRONMAN_ID) ? [IRONMAN_ID] : []), ...(culture ? [culture] : []), ...(origin ? [origin] : [])];
 };
 
 /** Score and Legacy multiplier for a list of modifiers: +10% each (a culture pays nothing). */

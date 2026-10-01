@@ -1219,3 +1219,39 @@ test('V2 Batch F: accountant\'s desk, tax sprint and the mock interview', async 
   expect(learn.sprintDay).toBeTruthy();
   expect(learn.interviews).toHaveLength(1);
 });
+
+test('V3 Batch A: story campaign, founder backstory and the documentary', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Camp');
+  await expect(page.getByRole('button', { name: /Chapter 1: The market stall/ })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /Chapter 2: The first hire \(locked\)/ })).toBeDisabled();
+  // A backstory can be chosen for a normal company.
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('radio', { name: /Ex-banker/ }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['origin-banker']);
+  await skipTour(page);
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  await expect(m.locator('#card-documentary').getByText('The beginning')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});
+
+test('V3 Batch A: chapter one of the campaign starts as its own company', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Camp1');
+  await page.getByRole('button', { name: /Chapter 1: The market stall/ }).click();
+  await page.getByRole('button', { name: 'Take the job' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText('Stall & Co');
+  expect((await savedGame(page)).scenarioId).toBe('campaign-1');
+});

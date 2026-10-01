@@ -59,20 +59,24 @@ function computeModifiers(s: GameState): Modifiers {
   const bold = hasModifier(s, 'culture-bold');
   const people = hasModifier(s, 'culture-people');
   const steady = hasModifier(s, 'culture-steady');
+  const banker = hasModifier(s, 'origin-banker');
+  const engineer = hasModifier(s, 'origin-engineer');
+  const marketer = hasModifier(s, 'origin-marketer');
+  const dropout = hasModifier(s, 'origin-dropout');
   return {
     capacityMult: u.capacityMult * p.capacityMult * (people ? 1.05 : 1),
     marketMult: u.marketMult * p.marketMult * r.marketMult * (bold ? 1.04 : 1),
-    reachMult: u.reachMult * (frugal ? 0.9 : 1),
-    brandGainMult: p.brandGainMult * (megaphone ? 2 : 1) * (steady ? 0.95 : 1),
-    qualityPerMonth: u.qualityPerMonth,
-    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult * rankCostMult(s) * (frugal ? 0.96 : 1) * (bold || people ? 1.03 : 1),
+    reachMult: u.reachMult * (frugal ? 0.9 : 1) * (engineer ? 0.92 : 1),
+    brandGainMult: p.brandGainMult * (megaphone ? 2 : 1) * (steady ? 0.95 : 1) * (marketer ? 1.15 : 1),
+    qualityPerMonth: u.qualityPerMonth + (engineer ? 0.03 : 0),
+    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult * rankCostMult(s) * (frugal ? 0.96 : 1) * (bold || people ? 1.03 : 1) * (marketer ? 1.03 : 1) * (dropout ? 0.97 : 1),
     churnMult: u.churnMult * p.churnMult,
     spoilageMult: u.spoilageMult * p.spoilageMult,
     demandMult: p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1) * (perksOn ? 1 + prestigeBonus(s.prestigeLevel ?? 0) : 1),
     recruitmentMult: p.recruitmentMult,
     upgradeCostMult: p.upgradeCostMult,
-    loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0) + (hasModifier(s, 'tight-credit') ? 0.01 : 0) - (steady ? 0.005 : 0),
-    overdraftMult: p.overdraftMult * (steady ? 1.25 : 1),
+    loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0) + (hasModifier(s, 'tight-credit') ? 0.01 : 0) - (steady ? 0.005 : 0) - (banker ? 0.01 : 0) + (dropout ? 0.01 : 0),
+    overdraftMult: p.overdraftMult * (steady ? 1.25 : 1) * (banker ? 1.15 : 1),
     equityDiscountDelta: p.equityDiscountDelta,
   };
 }
