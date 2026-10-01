@@ -15,7 +15,7 @@ export interface ObjectiveStatus {
 export interface Scenario {
   id: string;
   name: string;
-  kind: 'sandbox' | 'case-study' | 'daily';
+  kind: 'sandbox' | 'case-study' | 'daily' | 'weekly' | 'challenge';
   industryId: IndustryId | null;
   summary: string;
   briefing: string[];
@@ -25,6 +25,10 @@ export interface Scenario {
   setup?: (s: GameState) => void;
   objectives?: (s: GameState) => ObjectiveStatus[];
 }
+
+/** Scenarios where the server picks the company and the field is level (no perks, boosts or prestige). */
+export const isFixedKind = (kind: Scenario['kind']): boolean => kind === 'daily' || kind === 'weekly' || kind === 'challenge';
+export const isFixedScenario = (id: string | undefined): boolean => id === 'daily' || id === 'weekly' || id === 'challenge';
 
 export const SCENARIOS: Record<string, Scenario> = {
   standard: {
@@ -53,6 +57,32 @@ export const SCENARIOS: Record<string, Scenario> = {
       'You have 24 months. Your final owner stake is your score on the daily board.',
       'Perks, gem boosts and prestige bonuses are switched off so the field is level.',
       'One attempt a day for the leaderboard; practise as much as you like offline.',
+    ],
+    months: 24,
+  },
+  weekly: {
+    id: 'weekly',
+    name: 'Weekly event',
+    kind: 'weekly',
+    industryId: null,
+    summary: 'A shared company with a twist in the economy that lasts the whole game. 24 months, level field: your final stake is your score.',
+    briefing: [
+      'Same company and same luck for every player this week, with one big twist in the economy.',
+      'You have 24 months. Perks, gem boosts and prestige bonuses are switched off so the field is level.',
+      'One ranked attempt a week; practise as much as you like offline.',
+    ],
+    months: 24,
+  },
+  challenge: {
+    id: 'challenge',
+    name: 'Friend challenge',
+    kind: 'challenge',
+    industryId: null,
+    summary: 'A company made from a shared code. Everyone with the code plays the same 24 months, and your final stake is your score.',
+    briefing: [
+      'Everyone holding the code gets the same company and the same luck.',
+      'You have 24 months. Perks, boosts and prestige bonuses are switched off.',
+      'One ranked attempt per player; practise as much as you like offline.',
     ],
     months: 24,
   },

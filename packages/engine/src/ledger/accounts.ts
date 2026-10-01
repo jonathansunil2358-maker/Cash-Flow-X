@@ -56,6 +56,7 @@ export const ACCOUNTS = {
   wages: { name: 'Staff costs', type: 'expense', group: 'opex', help: 'Salaries plus employer NI and pension (15% on-cost).' },
   marketing: { name: 'Marketing', type: 'expense', group: 'opex', help: 'Advertising and brand spend.' },
   rent: { name: 'Rent & occupancy', type: 'expense', group: 'opex', help: 'Premises cost, scaling with headcount.' },
+  insurance: { name: 'Insurance', type: 'expense', group: 'opex', help: 'Premiums for your business insurance cover.' },
   research: { name: 'Research & development', type: 'expense', group: 'opex', help: 'Spend on R&D projects (new products, cost savings, quality).' },
   recruitment: { name: 'Recruitment', type: 'expense', group: 'opex', help: 'Agency fees on hiring.' },
   restructuring: { name: 'Redundancy costs', type: 'expense', group: 'opex', help: 'One month of salary per leaver.' },

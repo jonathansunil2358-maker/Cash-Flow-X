@@ -1,4 +1,4 @@
-import { formatGBP, headcount, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { cosmeticsOf, formatGBP, headcount, skinOf, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
 import { Vector3, type Group, type Mesh } from 'three';
@@ -59,6 +59,10 @@ const TREES: { p: Pt; c: string; plot?: number; s?: number }[] = [
   { p: [0.2, 7.2], c: '#4e9e2f', s: 0.8 }, { p: [-7.1, -0.4], c: '#7ccf52', s: 0.9 },
 ];
 
+/** The island's tree colours (green, light green, orange, purple) in the equipped skin. */
+const LEAF_KEYS = ['#4e9e2f', '#7ccf52', '#ff8a1f', '#8e3fe6'];
+const leafColour = (sk: SkinPalette, c: string): string => sk.leaf[LEAF_KEYS.indexOf(c)] ?? c;
+
 /** A flat rectangle lying on the ground (x0…x1 by z0…z1). */
 function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: number; z1: number; y?: number; c: string }) {
   return (
@@ -68,7 +72,7 @@ function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: n
   );
 }
 
-function Island({ night, doorX }: { night: boolean; doorX: number }) {
+function Island({ night, doorX, sk }: { night: boolean; doorX: number; sk: SkinPalette }) {
   const asphalt = night ? '#3f4550' : '#5d6470';
   const paving = night ? '#a9a294' : '#ddd5c4';
   const line = '#fff8ec';
@@ -77,13 +81,13 @@ function Island({ night, doorX }: { night: boolean; doorX: number }) {
   return (
     <group>
       {/* rock and soil underneath, beach, then the grass top */}
-      <Blk w={GRASS + 1.4} h={1.3} d={GRASS + 1.4} y={-1.7} c="#8a5a36" rad={0.5} />
-      <Blk w={GRASS + 1.2} h={0.5} d={GRASS + 1.2} y={-0.62} c="#f3d99a" rad={0.35} />
-      <Blk w={GRASS} h={0.4} d={GRASS} y={-0.4} c={night ? '#5aa33e' : '#7ccf52'} rad={0.3} />
+      <Blk w={GRASS + 1.4} h={1.3} d={GRASS + 1.4} y={-1.7} c={sk.soil} rad={0.5} />
+      <Blk w={GRASS + 1.2} h={0.5} d={GRASS + 1.2} y={-0.62} c={sk.sand} rad={0.35} />
+      <Blk w={GRASS} h={0.4} d={GRASS} y={-0.4} c={night ? sk.grassNight : sk.grass} rad={0.3} />
       {/* checkerboard lawn */}
       {[-6, -2, 2, 6].flatMap((x, i) => [-6, -2, 2, 6].map((z, j) => ((i + j) % 2 === 0 ? (
         <mesh key={`${x}${z}`} position={[x, 0.005, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[3.95, 3.95]} /><meshStandardMaterial color={night ? '#64b046' : '#8fdb63'} />
+          <planeGeometry args={[3.95, 3.95]} /><meshStandardMaterial color={night ? sk.lawnNight : sk.lawn} />
         </mesh>
       ) : null)))}
 
@@ -110,7 +114,7 @@ function Island({ night, doorX }: { night: boolean; doorX: number }) {
       <mesh position={[ROUNDABOUT[0], 0.012, ROUNDABOUT[1]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[1.45, 28]} /><meshStandardMaterial color={asphalt} />
       </mesh>
-      <Cyl r={0.55} h={0.1} x={ROUNDABOUT[0]} z={ROUNDABOUT[1]} c={night ? '#5aa33e' : '#8fdb63'} seg={20} />
+      <Cyl r={0.55} h={0.1} x={ROUNDABOUT[0]} z={ROUNDABOUT[1]} c={night ? sk.grassNight : sk.lawn} seg={20} />
       <Bush x={ROUNDABOUT[0] - 0.15} z={ROUNDABOUT[1] + 0.1} c="#ff9ec4" />
       <Bush x={ROUNDABOUT[0] + 0.2} z={ROUNDABOUT[1] - 0.15} c="#ffc633" />
 
@@ -242,7 +246,7 @@ function CarWithLights({ c, night }: { c: string; night: boolean }) {
   );
 }
 
-function Sea({ night }: { night: boolean }) {
+function Sea({ night, sk }: { night: boolean; sk: SkinPalette }) {
   const foam = useRef<Mesh>(null);
   const ring = useRef<Mesh>(null);
   useFrame(({ clock }) => {
@@ -258,7 +262,7 @@ function Sea({ night }: { night: boolean }) {
     <group position={[0, -0.95, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[160, 160]} />
-        <meshStandardMaterial color={night ? '#1d3f7a' : '#4fb8ef'} />
+        <meshStandardMaterial color={night ? sk.seaNight : sk.sea} />
       </mesh>
       <mesh ref={foam} rotation={[-Math.PI / 2, 0, Math.PI / 4]} position={[0, 0.02, 0]}>
         <ringGeometry args={[12.7, 13.5, 4, 1]} />
@@ -566,6 +570,8 @@ export default function Scene3D({ game }: { game: GameState }) {
   const occupied = new Set(built.map((u) => u.plot));
   const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  const skinId = useGame((s) => cosmeticsOf(s.profile).skin);
+  const sk = skinOf(skinId).palette;
   const setSceneFocus = useGame((s) => s.setSceneFocus);
   const openSheet = useGame((s) => s.openSheet);
   const options = useMemo(() => new Map(upgradeOptions(game).map((o) => [o.def.id, o])), [game]);
@@ -633,13 +639,13 @@ export default function Scene3D({ game }: { game: GameState }) {
       <Zoom />
       <TagProjector els={tagEls} points={tagPoints} />
       <ambientLight intensity={night ? 0.45 : 0.8} />
-      <hemisphereLight args={['#ffffff', '#7ccf52', night ? 0.2 : 0.4]} />
+      <hemisphereLight args={['#ffffff', sk.ground, night ? 0.2 : 0.4]} />
       <directionalLight position={[10, 16, 6]} intensity={night ? 0.75 : 1.35} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={14} shadow-camera-bottom={-14} />
-      <Sea night={night} />
+      <Sea night={night} sk={sk} />
       <Boat night={night} />
       <group position={[0, -0.2, 0]}>
-        <Island night={night} doorX={doorX} />
+        <Island night={night} doorX={doorX} sk={sk} />
         <group position={[HQ_POS[0], 0, HQ_POS[1]]}>
           <Headquarters industry={game.industryId} floors={floors} />
         </group>
@@ -649,7 +655,7 @@ export default function Scene3D({ game }: { game: GameState }) {
           </group>
         ))}
 
-        {TREES.filter((t) => t.plot === undefined || !occupied.has(t.plot)).map((t, i) => <Tree key={i} x={t.p[0]} z={t.p[1]} c={t.c} s={t.s} />)}
+        {TREES.filter((t) => t.plot === undefined || !occupied.has(t.plot)).map((t, i) => <Tree key={i} x={t.p[0]} z={t.p[1]} c={leafColour(sk, t.c)} s={t.s} />)}
 
         {[0, 2].slice(0, parked).map((b, i) => (
           <Car key={b} x={BAYS[b]} y={0.02} z={BAY_Z} ry={-Math.PI / 2} c={CAR_COLOURS[(i + 3) % CAR_COLOURS.length]} />

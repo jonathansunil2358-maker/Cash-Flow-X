@@ -1,5 +1,5 @@
 import {
-  cashFlowStatement, formatGBP, formatInt, formatPct, INDUSTRIES, plSummary, upgradeOptions, type GameState, type IndustryConfig, type Pence,
+  cashFlowStatement, formatGBP, formatInt, formatPct, INDUSTRIES, listCheck, openSiteCheck, plSummary, upgradeOptions, type GameState, type IndustryConfig, type Pence,
 } from '@cfx/engine';
 
 /**
@@ -130,6 +130,31 @@ export function adviserTip(game: GameState): Tip | null {
     return {
       text: 'Your R&D team has no project. A project costs a little each month but can lift your market, cut your costs or sharpen your product for good.',
       action: 'R&D projects', target: { sheet: 'team', scrollTo: 'card-projects' },
+    };
+  }
+  const offer = game.contractOffers.find((o) => o.expiresMonth >= game.month);
+  if (offer) {
+    return {
+      text: `${offer.client} has made you an offer: ${formatInt(offer.units)} a month for ${offer.months} months. Guaranteed sales, but check you can deliver: shortfalls cost a penalty.`,
+      action: 'Contracts', target: { sheet: 'team', scrollTo: 'card-contracts' },
+    };
+  }
+  if (game.insurance === 'none' && game.month >= 8 && profit > 0) {
+    return {
+      text: 'You are running with no insurance. Thefts, breakdowns, fires and cyber attacks happen to businesses like yours: cover pays most of the bill for a small monthly premium.',
+      action: 'Insurance', target: { sheet: 'team', scrollTo: 'card-insurance' },
+    };
+  }
+  if (!game.listed && listCheck(game).allowed) {
+    return {
+      text: 'You are big and profitable enough to float on the stock market: a lot of cash in return for a fifth of the company, and a market that watches your results every quarter.',
+      action: 'Stock market', target: { sheet: 'finance', scrollTo: 'card-listing' },
+    };
+  }
+  if (game.sites === 1 && game.pendingSites.length === 0 && profit > 0 && k.utilisation >= 0.95 && game.ledger.balances.cash > openSiteCheck(game).cost * 2 && openSiteCheck(game).allowed) {
+    return {
+      text: 'You are full and making money. A second location adds capacity and reach, for a fit-out and some extra rent.',
+      action: 'Locations', target: { sheet: 'team', scrollTo: 'card-sites' },
     };
   }
   const cash = game.ledger.balances.cash;

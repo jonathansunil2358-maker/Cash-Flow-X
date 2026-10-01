@@ -1,9 +1,9 @@
 import { dailyChallenge, DAILY_MONTHS, formatGBP, INDUSTRIES, msUntilNextDaily, utcDay, type GameState } from '@cfx/engine';
 import { useEffect, useState } from 'react';
+import { EntryList } from '../components/FixedBits';
 import { Button, Card, KeyValue, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api, ONLINE, type DailyBoard } from '../lib/api';
-import { iconUrl } from '../lib/icons';
 import { useGame } from '../store';
 
 function countdown(ms: number): string {
@@ -96,16 +96,7 @@ export function DailyChallengeCard({ game }: { game: GameState }) {
           <div>
             <h3 className="mb-1 text-sm font-bold">Today's board</h3>
             {board.entries.length === 0 ? <p className="text-xs text-ink-2">Nobody has finished yet. Be first.</p> : (
-              <ol className="space-y-1 text-sm">
-                {board.entries.slice(0, 5).map((e) => (
-                  <li key={e.id} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${e.me ? 'bg-surface-2 font-bold' : ''}`}>
-                    <span className="tnum w-6 text-ink-2">#{e.rank}</span>
-                    <img src={iconUrl(e.icon)} alt="" className="h-6 w-6" />
-                    <span className="min-w-0 flex-1 truncate">{e.name}{e.me ? ' (you)' : ''}</span>
-                    <span className="tnum">{formatGBP(e.score, { compact: true })}</span>
-                  </li>
-                ))}
-              </ol>
+              <EntryList entries={board.entries} />
             )}
             {me && !me.finished && <div className="mt-1"><StatusPill kind="warn" label="Your run is not finished" /></div>}
           </div>

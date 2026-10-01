@@ -5,7 +5,7 @@ import type { DifficultyId } from './difficulty';
 import type { IndustryId, RoleId } from './industries';
 import type { ActiveBoost, PerkLevels } from './perks';
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 export const GAME_MONTHS = 120;
 /** Months of statement history kept in the save (older months drop off; the ledger itself is complete). */
 export const MAX_HISTORY = 360;
@@ -29,6 +29,41 @@ export interface Competitor {
 }
 
 export type PayLevel = 'below' | 'market' | 'above';
+export type InsuranceTier = 'none' | 'basic' | 'full';
+
+/** A big contract on the table: a client wants a fixed volume at a fixed price. */
+export interface ContractOffer {
+  id: string;
+  client: string;
+  /** Units (or seats) a month. */
+  units: number;
+  /** Price per unit, fixed for the whole contract. */
+  price: Pence;
+  months: number;
+  paymentDays: number;
+  /** Penalty for each unit you cannot deliver, as a share of the price. */
+  penaltyPct: number;
+  expiresMonth: number;
+}
+
+/** A contract you have signed. */
+export interface Contract {
+  id: string;
+  client: string;
+  units: number;
+  price: Pence;
+  months: number;
+  monthsLeft: number;
+  paymentDays: number;
+  penaltyPct: number;
+}
+
+/** What the market expects from a listed company next quarter. */
+export interface Guidance {
+  /** The month the quarter closes. */
+  month: number;
+  target: Pence;
+}
 
 /** A promotion the player is running: a temporary price discount. */
 export interface Promo {
@@ -267,6 +302,20 @@ export interface GameState {
   staff: Record<RoleId, number>;
   salaryIndex: number;
   /** Pay relative to the market: scales the wage bill and moves morale. */
+  /** Open sites, including the first (1 to MAX_SITES), and the opening months of those still being built. */
+  sites: number;
+  pendingSites: number[];
+  insurance: InsuranceTier;
+  contracts: Contract[];
+  contractOffers: ContractOffer[];
+  /** Stock market listing: whether listed, when, the market's mood, recent share prices and what it expects next. */
+  listed: boolean;
+  listedMonth: number | null;
+  sentiment: number;
+  priceHistory: Pence[];
+  guidance: Guidance | null;
+  /** The weekly event twist this company is playing under (display only; its effects are in `economy.active`). */
+  twist: string | null;
   pay: PayLevel;
   /** Monthly training budget. */
   trainingSpend: Pence;

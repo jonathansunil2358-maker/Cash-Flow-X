@@ -2,7 +2,9 @@ import type { Pence } from '../money';
 import { DIFFICULTIES, type DifficultyId } from './difficulty';
 import type { DailyState, Mission } from './gamification';
 import type { IndustryId } from './industries';
+import type { Cosmetics } from './cosmetics';
 import { BOOSTS, perkPurchase, type ActiveBoost, type BoostId, type PerkLevels } from './perks';
+import { isFixedScenario } from '../scenarios';
 import { ownership, type GameState } from './state';
 import { valuationOf } from './valuation';
 
@@ -52,6 +54,10 @@ export interface Profile {
   rebirthsUsed: number;
   runs: RunSummary[];
   lifetime: Lifetime;
+  /** Founder title shown on leaderboards (an achievement id with a title), cosmetic only. */
+  title?: string | null;
+  /** Skins bought and equipped. Optional so older saves load unchanged. */
+  cosmetics?: Cosmetics;
 }
 
 export const STARTER_GEMS = 50;
@@ -109,7 +115,7 @@ export function prestigeCheck(s: GameState): PrestigeCheck {
   const threshold = prestigeThreshold(s.prestigeLevel);
   const stake = ownerStakeOf(s);
   const points = legacyFor(stake);
-  if (s.scenarioId === 'daily') return { eligible: false, threshold, stake, points: 0, reason: 'Daily challenge companies cannot prestige.' };
+  if (isFixedScenario(s.scenarioId)) return { eligible: false, threshold, stake, points: 0, reason: 'Challenge companies cannot prestige.' };
   if (!DIFFICULTIES[s.difficulty].canPrestige) return { eligible: false, threshold, stake, points: 0, reason: 'Hard mode runs cannot prestige.' };
   if (s.status !== 'playing') return { eligible: false, threshold, stake, points, reason: 'This run has ended.' };
   if (stake < threshold) return { eligible: false, threshold, stake, points, reason: `Your stake must be worth at least £${(threshold / 100_000_000).toFixed(1)}m.` };
@@ -135,6 +141,20 @@ const summarise = (s: GameState, outcome: RunSummary['outcome'], legacy: number)
 /** Bank the boosts still running in this run (Hard runs never used the profile's boosts). */
 const bankBoosts = (profile: Profile, s: GameState): ActiveBoost[] =>
   DIFFICULTIES[s.difficulty].perksApply ? s.boosts.filter((b) => b.monthsRemaining > 0).map((b) => ({ ...b })) : profile.boosts;
+
+/** Bank one prestige of a company that carries on: Legacy points, gems, XP and one more rank. */
+export function awardPrestige(profile: Profile, points: number, stake: Pence): Profile {
+  return {
+    ...profile,
+    xp: profile.xp + points * 100,
+    legacyPoints: profile.legacyPoints + points,
+    legacyEarned: profile.legacyEarned + points,
+    prestigeCount: profile.prestigeCount + 1,
+    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
+    rebirthsUsed: 0,
+    lifetime: { ...(profile.lifetime ?? emptyLifetime()), bestStake: Math.max(profile.lifetime?.bestStake ?? 0, stake) },
+  };
+}
 
 /** Update the profile after a run was prestiged (the run's `prestigeAward` holds the points). */
 export function applyPrestige(profile: Profile, s: GameState): Profile {

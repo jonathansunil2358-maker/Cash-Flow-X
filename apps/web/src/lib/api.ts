@@ -52,7 +52,7 @@ async function request<T>(path: string, init: { method?: string; body?: unknown 
 
 export interface Me {
   user: {
-    id: string; name: string; icon: string; visibility: Visibility; legacyPoints: number; legacyEarned: number; prestigeCount: number;
+    id: string; name: string; icon: string; title: string | null; visibility: Visibility; legacyPoints: number; legacyEarned: number; prestigeCount: number;
     perks: PerkLevels; personalCash: number; client: Record<string, unknown>;
   };
   guild: { id: string; name: string; icon: string; role: string; level: number } | null;
@@ -74,8 +74,28 @@ export interface DailyBoard {
   isToday: boolean;
   challenge: { seed: string; industryId: IndustryId; companyName: string; months: number };
   endsInMs: number;
-  entries: { rank: number; id: string; name: string; icon: string; score: number; months: number; me: boolean }[];
-  me: { status: string; score: number; months: number; finished: boolean; rank: number | null } | null;
+  entries: FixedEntry[];
+  me: FixedMe | null;
+}
+export interface FixedEntry { rank: number; id: string; name: string; icon: string; title: string | null; score: number; months: number; me: boolean }
+export interface FixedMe { status: string; score: number; months: number; finished: boolean; rank: number | null }
+export interface WeeklyBoard {
+  week: string;
+  isCurrent: boolean;
+  challenge: { seed: string; industryId: IndustryId; companyName: string; months: number; twist: { id: string; name: string; blurb: string } };
+  endsInMs: number;
+  entries: FixedEntry[];
+  me: FixedMe | null;
+  reward: { week: string; rank: number; gems: number; claimed: boolean } | null;
+}
+export interface ChallengeView {
+  code: string;
+  creator: string;
+  expiresAt: string;
+  expired: boolean;
+  challenge: { seed: string; industryId: IndustryId; companyName: string; months: number };
+  entries: FixedEntry[];
+  me: FixedMe | null;
 }
 
 export interface RunStart {
@@ -103,7 +123,7 @@ export interface GuildDetail {
   nextLevel: { level: number; combinedValuation: number; label: string } | null; members: GuildMember[];
   weekly: { week: string; profit: number; target: number; gems: number; done: boolean; claimed: boolean };
 }
-export interface BoardEntry { id: string; name: string; icon: string; value: number; sub: string | null; hardcore?: boolean; me?: boolean }
+export interface BoardEntry { id: string; name: string; icon: string; title?: string | null; value: number; sub: string | null; hardcore?: boolean; me?: boolean }
 
 export const api = {
   health: () => request<{ ok: boolean; googleConfigured: boolean; devAuth: boolean }>('/health'),
@@ -111,12 +131,16 @@ export const api = {
   signInDev: (name: string) => request<{ token: string; isNew: boolean }>('/auth/dev', { body: { name } }),
   signOut: () => request('/auth/logout', { body: {} }),
   me: () => request<Me>('/me'),
-  updateMe: (patch: { name?: string; icon?: string; visibility?: Visibility; client?: unknown }) => request('/me', { method: 'PUT', body: patch }),
+  updateMe: (patch: { name?: string; icon?: string; title?: string | null; visibility?: Visibility; client?: unknown }) => request('/me', { method: 'PUT', body: patch }),
   buyPerk: (perkId: string) => request<{ perks: PerkLevels; legacyPoints: number }>('/me/perks', { body: { perkId } }),
-  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean }) =>
+  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean; weekly?: boolean; challenge?: string }) =>
     request<RunStart>('/runs', { body: b }),
   carryOver: (runId: string, b: { state: unknown; actions: number }) =>
     request<{ actionsVerified: number; month: number; status: string }>(`/runs/${runId}/carryover`, { body: b }),
+  weekly: (week?: string) => request<WeeklyBoard>(`/weekly${week ? `?week=${encodeURIComponent(week)}` : ''}`),
+  claimWeeklyEvent: () => request<{ gems: number; week: string; rank: number }>('/rewards/weekly', { body: {} }),
+  createChallenge: () => request<{ code: string; expiresAt: string; challenge: ChallengeView['challenge'] }>('/challenges', { body: {} }),
+  challenge: (code: string) => request<ChallengeView>(`/challenges/${encodeURIComponent(code)}`),
   daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),
   syncRun: (runId: string, b: { fromAction: number; actions: { month: number; action: Action }[]; month: number; checksum: string }) =>
     request<{ actionsVerified: number; status: string; netWorth?: number }>(`/runs/${runId}/sync`, { body: b }),

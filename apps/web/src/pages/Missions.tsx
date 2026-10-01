@@ -4,7 +4,10 @@ import {
 import { Button, Card, Meter, PageTitle, StatusPill } from '../components/ui';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
+import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
+import { TitlesCard } from './Titles';
+import { WeeklyEventCard } from './Weekly';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -35,6 +38,8 @@ export function Missions({ game }: { game: GameState }) {
       <PageTitle title="Missions" subtitle="Earn XP and gems by running your business well. Missions change as you complete them, and each one teaches a bit of finance." />
 
       <DailyChallengeCard game={game} />
+      <WeeklyEventCard game={game} />
+      <ChallengeCard game={game} />
 
       <Card title={`Founder level ${level}`} subtitle={next ? `Level ${next.level} unlocks ${next.label}.` : 'Every feature unlocked.'}>
         <Meter value={profile.xp - from} max={to - from} label="XP to next level" text={`${(profile.xp - from).toLocaleString('en-GB')} / ${(to - from).toLocaleString('en-GB')} XP`} />
@@ -78,6 +83,8 @@ export function Missions({ game }: { game: GameState }) {
           <p className="text-xs text-ink-2">{profile.missionsCompleted} missions completed so far.</p>
         </div>
       </Card>
+
+      <TitlesCard />
 
       <Card title={`Achievements (${earned}/${ACHIEVEMENTS.length})`}>
         <div className="grid gap-2 sm:grid-cols-2">

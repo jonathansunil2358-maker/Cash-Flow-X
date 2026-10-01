@@ -49,6 +49,8 @@ export interface AchievementDef {
   description: string;
   icon: string;
   gems: number;
+  /** A founder title this achievement lets you wear on the leaderboards. */
+  title?: string;
   check: (s: GameState) => boolean;
 }
 
@@ -90,6 +92,27 @@ export const ACHIEVEMENTS: AchievementDef[] = [
       const ccc = ratios(s).find((r) => r.id === 'ccc')?.value;
       return ccc !== null && ccc !== undefined && ccc < 30;
     } },
+  { id: 'first_site', name: 'Branching out', description: 'Open a second location.', icon: 'globe', gems: 20, title: 'the Expander', check: (s) => s.sites >= 2 },
+  { id: 'three_sites', name: 'Local chain', description: 'Run three locations at once.', icon: 'crown', gems: 40, title: 'Chain Boss', check: (s) => s.sites >= 3 },
+  { id: 'insured', name: 'Safe pair of hands', description: 'Take out business insurance.', icon: 'shield', gems: 10, title: 'the Careful', check: (s) => s.insurance !== 'none' },
+  { id: 'full_cover', name: 'Belt and braces', description: 'Hold full cover for a year.', icon: 'key', gems: 20, check: (s) => s.insurance === 'full' && s.log.some((l) => l.title === 'Insurance: Full cover' && s.month - l.month >= 12) },
+  { id: 'claim_paid', name: 'Worth the premium', description: 'Have an insurance claim paid out.', icon: 'heart', gems: 20, title: 'the Covered', check: (s) => s.log.some((l) => /insurer paid/.test(l.text)) },
+  { id: 'contract_signed', name: 'Signed and sealed', description: 'Sign a big contract.', icon: 'parcel', gems: 20, title: 'Deal Maker', check: (s) => s.contracts.length > 0 || s.log.some((l) => /^Contract signed/.test(l.title)) },
+  { id: 'contract_done', name: 'Delivered in full', description: 'See a contract through to the end.', icon: 'rocket', gems: 30, title: 'Reliable Supplier', check: (s) => s.log.some((l) => /^Contract with .* complete$/.test(l.title)) },
+  { id: 'three_contracts', name: 'Full order book', description: 'Hold three contracts at once.', icon: 'star', gems: 30, check: (s) => s.contracts.length >= 3 },
+  { id: 'listed', name: 'Ringing the bell', description: 'List the company on the stock market.', icon: 'diamond', gems: 60, title: 'Public Figure', check: (s) => s.listed },
+  { id: 'listed_year', name: 'A year in the market', description: 'Stay listed for twelve months.', icon: 'chart', gems: 40, check: (s) => s.listed && s.listedMonth !== null && s.month - s.listedMonth >= 12 },
+  { id: 'beat_market', name: 'Analysts\' darling', description: 'Beat the market\'s profit expectations.', icon: 'bolt', gems: 30, title: 'Market Darling', check: (s) => s.log.some((l) => l.title.startsWith('Beat the market')) },
+  { id: 'buyback', name: 'Vote of confidence', description: 'Buy back your own shares.', icon: 'coin', gems: 20, check: (s) => s.log.some((l) => l.title === 'Shares bought back') },
+  { id: 'eureka', name: 'Eureka', description: 'Complete an R&D project.', icon: 'gear', gems: 20, title: 'the Inventor', check: (s) => s.projectsDone.length > 0 },
+  { id: 'dream_team', name: 'Dream team', description: 'Get team morale to 80 or more.', icon: 'heart', gems: 20, title: 'Beloved Boss', check: (s) => s.morale >= 80 },
+  { id: 'big_team', name: 'Fifty strong', description: 'Employ 50 people.', icon: 'flame', gems: 30, title: 'Big Employer', check: (s) => headcount(s) >= 50 },
+  { id: 'cash_pile', name: 'Rainy day fund', description: 'Hold £1m in cash.', icon: 'coin', gems: 25, check: (s) => s.ledger.balances.cash >= 1_000_000_00 },
+  { id: 'half_million_profit', name: 'Profit machine', description: '£500k profit over 12 months.', icon: 'chart', gems: 40, title: 'Profit Machine', check: (s) => { const t = trailingPL(s, 12); return t.months === 12 && t.summary.profit >= 500_000_00; } },
+  { id: 'daily_done', name: 'Daily grind', description: 'Finish a daily challenge.', icon: 'coffee', gems: 20, title: 'Daily Driver', check: (s) => s.scenarioId === 'daily' && s.status === 'finished' },
+  { id: 'weekly_done', name: 'Weekly warrior', description: 'Finish a weekly event.', icon: 'flame', gems: 30, title: 'Event Veteran', check: (s) => s.scenarioId === 'weekly' && s.status === 'finished' },
+  { id: 'challenge_done', name: 'Friendly rivalry', description: 'Finish a challenge set by a friend.', icon: 'heart', gems: 30, title: 'Good Sport', check: (s) => s.scenarioId === 'challenge' && s.status === 'finished' },
+  { id: 'hard_win', name: 'Against the odds', description: 'Reach the £10m target on Hard.', icon: 'mountain', gems: 60, title: 'Against All Odds', check: (s) => s.difficulty === 'hard' && s.wonAtMonth !== null },
 ];
 
 /** Achievements newly earned by this state (not in `unlocked`). */
@@ -240,3 +263,14 @@ export function claimDaily(d: DailyState, todayIso: string): { daily: DailyState
   const continues = d.lastClaim !== null && dayNumber(todayIso) - dayNumber(d.lastClaim) === 1;
   return { daily: { lastClaim: todayIso, streak: continues ? d.streak + 1 : 1 }, gems: st.gems };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Founder titles: worn on the leaderboards, earned by achievements
+// ---------------------------------------------------------------------------------------------
+
+export interface TitleDef { id: string; title: string; name: string; description: string }
+export const TITLES: TitleDef[] = ACHIEVEMENTS.filter((a) => a.title).map((a) => ({ id: a.id, title: a.title!, name: a.name, description: a.description }));
+/** The only values the server accepts for a title (it is cosmetic, so it is not checked against unlocked achievements). */
+export const TITLE_IDS: readonly string[] = TITLES.map((t) => t.id);
+export const titleText = (id: string | null | undefined): string | null => TITLES.find((t) => t.id === id)?.title ?? null;
+export const isTitleId = (id: unknown): id is string => typeof id === 'string' && TITLE_IDS.includes(id);

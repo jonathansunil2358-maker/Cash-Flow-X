@@ -121,3 +121,66 @@ describe('upgrading saved games', () => {
     for (const bad of [null, undefined, 'x', 7, [], {}, { version: 99 }, { version: 2 }, { version: 1 }]) expect(migrateState(bad)).toBeNull();
   });
 });
+
+describe('upgrading version 4 games (before sites, insurance, contracts and listing)', () => {
+  const V4 = ['state-v4-software', 'state-v4-restaurant'];
+
+  it('starts from genuine version 4 games', () => {
+    for (const f of V4) {
+      const raw = fixture(f);
+      expect(raw.version).toBe(4);
+      expect(raw.sites).toBeUndefined();
+      expect(raw.ledger.balances.insurance).toBeUndefined();
+    }
+  });
+
+  it('adds neutral defaults, keeps everything owned, and stays balanced', () => {
+    for (const f of V4) {
+      const before = fixture(f);
+      const s = migrateState(fixture(f))!;
+      expect(s.version).toBe(STATE_VERSION);
+      expect(s.sites).toBe(1);
+      expect(s.pendingSites).toEqual([]);
+      expect(s.insurance).toBe('none');
+      expect(s.contracts).toEqual([]);
+      expect(s.contractOffers).toEqual([]);
+      expect(s.listed).toBe(false);
+      expect(s.sentiment).toBe(1);
+      expect(s.priceHistory).toEqual([]);
+      expect(s.guidance).toBeNull();
+      expect(s.twist).toBeNull();
+      expect(s.ledger.balances.insurance).toBe(0);
+      for (const h of s.history) expect(h.closing.insurance).toBe(0);
+      expect(s.month).toBe(before.month);
+      expect(s.ledger.balances.cash).toBe(before.ledger.balances.cash);
+      expect(s.morale).toBe(before.morale);
+      expect(checkIntegrity(s)).toEqual([]);
+    }
+  });
+
+  it('chains from version 3 to the same place and plays on', () => {
+    for (const f of FIXTURES) {
+      const s = migrateState(fixture(f))!;
+      expect(s.sites).toBe(1);
+      expect(s.ledger.balances.insurance).toBe(0);
+    }
+    for (const f of V4) {
+      const s = migrateState(fixture(f))!;
+      for (let i = 0; i < 24 && s.status === 'playing'; i++) { answer(s); applyPolicy(s); answer(s); tickInPlace(s); }
+      expect(checkIntegrity(s)).toEqual([]);
+    }
+  });
+
+  it('gives the same result for the full and compact copies and verifies in step', () => {
+    for (const f of V4) {
+      const client = migrateState(fixture(f))!;
+      const server = migrateState(fixture(`${f}.compact`))!;
+      expect(stateChecksum(client)).toBe(stateChecksum(server));
+      const synced = client.actionLog.length;
+      for (let i = 0; i < 8 && client.status === 'playing'; i++) { answer(client); applyPolicy(client); answer(client); tickInPlace(client); }
+      answer(client);
+      continueRun(server, client.actionLog.slice(synced) as { month: number; action: Action }[], client.month);
+      expect(stateChecksum(server)).toBe(stateChecksum(client));
+    }
+  });
+});

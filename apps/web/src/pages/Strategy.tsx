@@ -8,7 +8,7 @@ import { Button, Card, Field, KeyValue, Meter, MoneyInput, StatusPill } from '..
 import { useGame } from '../store';
 
 /** A card that stays folded until opened, so the Business panel stays short on a phone. */
-function Fold({ id, title, subtitle, summary, children }: { id: string; title: string; subtitle: ReactNode; summary?: ReactNode; children: ReactNode }) {
+export function Fold({ id, title, subtitle, summary, children }: { id: string; title: string; subtitle: ReactNode; summary?: ReactNode; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <Card id={id} title={title} subtitle={open ? subtitle : summary ?? subtitle}
