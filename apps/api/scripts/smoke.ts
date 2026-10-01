@@ -5,7 +5,7 @@
  * investments, leaderboards and tamper detection.
  */
 import {
-  applyActionInPlace, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, valuationOf, type Action, type GameState, type IndustryId,
+  applyActionInPlace, dailyChallenge, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -177,6 +177,29 @@ check('claiming a holding company level you do not have is refused', fake.status
 
 // Leaving a holding company.
 check('member can leave', (await call('/guild/leave', { token: bob.token, body: {} })).status === 200);
+
+// Daily challenge: the server picks the company, one attempt a day, scored when finished.
+const today = dailyChallenge(utcDay());
+const eve = await signUp('Eve');
+const wrong = await call('/runs', { token: eve.token, body: { seed: 'NOT-TODAY', industryId: today.industryId, difficulty: 'medium', equipmentFinance: 'buy', companyName: 'x', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, daily: true } });
+check('daily: a made-up company is refused', wrong.status === 409, wrong);
+const startDaily = async (token: string) => call<{ runId: string; seed: string; industryId: IndustryId; scenarioId: string; prestigeLevel: number; perks: Record<string, number> }>('/runs', {
+  token, body: { seed: today.seed, industryId: today.industryId, difficulty: 'hard', equipmentFinance: 'lease', companyName: 'Cheater Ltd', icon: 'rocket', boosts: [{ id: 'rush', monthsRemaining: 24 }], rulesVersion: RULES_VERSION, daily: true },
+});
+const dr1 = await startDaily(eve.token);
+check('daily: starts with the shared company and level rules', dr1.status === 201 && dr1.json.seed === today.seed && dr1.json.industryId === today.industryId && dr1.json.prestigeLevel === 0 && Object.keys(dr1.json.perks).length === 0, dr1);
+check('daily: only one attempt a day', (await startDaily(eve.token)).status === 409);
+const eveGame = newGame({ companyName: today.companyName, industryId: today.industryId, seed: today.seed, scenarioId: 'daily' });
+const eveP: Player = { name: 'Eve', token: eve.token, runId: dr1.json.runId, game: eveGame, synced: 0 };
+const mid = await play(eveP, 12);
+const board1 = await call<{ me: { finished: boolean; status: string } | null; entries: unknown[]; challenge: { seed: string } }>('/daily', { token: eve.token });
+check('daily: an unfinished run is not on the board yet', mid.status === 200 && board1.json.me?.finished === false && board1.json.entries.length === 0, board1.json);
+const fin = await play(eveP, 24);
+const board2 = await call<{ me: { finished: boolean; score: number; rank: number | null }; entries: { me: boolean; score: number }[] }>('/daily', { token: eve.token });
+check('daily: the finished run is scored from the verified accounts', fin.status === 200 && eveP.game.status !== 'playing' && board2.json.me?.finished === true && board2.json.me.rank === 1
+  && board2.json.entries.some((e) => e.me), { fin, board: board2.json, month: eveP.game.month, status: eveP.game.status });
+check('daily: a past day cannot be queried in the future', (await call('/daily?day=2999-01-01', { token: eve.token })).status === 400);
+check('daily: bad days are refused', (await call('/daily?day=nope', { token: eve.token })).status === 400);
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;

@@ -5,7 +5,7 @@ import type { DifficultyId } from './difficulty';
 import type { IndustryId, RoleId } from './industries';
 import type { ActiveBoost, PerkLevels } from './perks';
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 export const GAME_MONTHS = 120;
 /** Months of statement history kept in the save (older months drop off; the ledger itself is complete). */
 export const MAX_HISTORY = 360;
@@ -20,6 +20,28 @@ export interface Competitor {
   quality: number;
   price: Pence;
   strength: number;
+  /** Months left on a price cut aimed at winning share back from the player. */
+  cutMonths: number;
+  /** The price this rival drifts back to once a cut ends. */
+  normalPrice: Pence;
+  /** Calendar year of the last product launch (a rival launches at most once a year). */
+  lastLaunchYear: number;
+}
+
+export type PayLevel = 'below' | 'market' | 'above';
+
+/** A promotion the player is running: a temporary price discount. */
+export interface Promo {
+  discountPct: number;
+  /** Length it was booked for, and how many months remain. */
+  months: number;
+  monthsLeft: number;
+}
+
+/** An R&D project in progress. */
+export interface RdProject {
+  id: string;
+  monthsLeft: number;
 }
 
 export interface Loan {
@@ -244,6 +266,19 @@ export interface GameState {
 
   staff: Record<RoleId, number>;
   salaryIndex: number;
+  /** Pay relative to the market: scales the wage bill and moves morale. */
+  pay: PayLevel;
+  /** Monthly training budget. */
+  trainingSpend: Pence;
+  /** Team morale 0-100: drives productivity and turnover. */
+  morale: number;
+  /** The running promotion (if any), the demand dip that follows one, and the cooldown before the next. */
+  promo: Promo | null;
+  promoDipMonths: number;
+  promoCooldown: number;
+  /** R&D projects in progress, and the ids of those that succeeded. */
+  projects: RdProject[];
+  projectsDone: string[];
   price: Pence;
   marketingBudget: Pence;
   stockCoverMonths: number;

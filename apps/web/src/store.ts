@@ -1,3 +1,4 @@
+import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
@@ -65,7 +66,8 @@ interface Store {
   /** The sector walkthrough is showing (the clock stops while it is open). */
   tourOpen: boolean;
   setTourOpen: (open: boolean) => void;
-  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'>) => Promise<void>;
+  /** `practice` plays the daily challenge without registering it for the board. */
+  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'> & { practice?: boolean }) => Promise<void>;
   /** Send new decisions to the server for verification (online runs). */
   syncNow: () => Promise<void>;
   /** Reload the account and merge server-owned progress into the profile. */
@@ -209,6 +211,8 @@ export const useGame = create<Store>((set, get) => {
       game: after, profile, celebrations: [...get().celebrations, ...celebrations].slice(-6),
       pops: [...get().pops, ...popsFor(before, after)].slice(-6), ...extra,
     });
+    if (celebrations.length) playSound('fanfare');
+    else if (after.pendingEvent && !before.pendingEvent) playSound('event');
     const ev = after.lastEvent;
     if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) {
       get().toast(ev.polarity === 'good' ? 'good' : 'bad', `${ev.title}: ${ev.text}`);
@@ -236,13 +240,14 @@ export const useGame = create<Store>((set, get) => {
     async start(opts) {
       const { profile } = get();
       let game: GameState;
-      const ranked = ONLINE && (opts.scenarioId ?? 'standard') === 'standard';
+      const daily = opts.scenarioId === 'daily';
+      const ranked = ONLINE && ((opts.scenarioId ?? 'standard') === 'standard' || (daily && !opts.practice));
       if (ranked) {
         // Register the company first: the server fixes its perks and prestige level.
         try {
           const r = await api.createRun({
             seed: opts.seed, industryId: opts.industryId, difficulty: opts.difficulty ?? 'medium', equipmentFinance: opts.equipmentFinance ?? 'buy',
-            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION,
+            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION, ...(daily ? { daily: true } : {}),
           });
           game = newGame({ ...opts, companyName: r.companyName, perks: r.perks, boosts: r.boosts, prestigeLevel: r.prestigeLevel });
           game.server = { runId: r.runId, synced: 0, syncedMonth: 0 };
@@ -253,7 +258,7 @@ export const useGame = create<Store>((set, get) => {
       } else {
         game = newGame({ ...opts, perks: profile.perks, boosts: profile.boosts, prestigeLevel: profile.prestigeCount });
       }
-      if (game.marketingBudget === 0 && (opts.scenarioId ?? 'standard') === 'standard') {
+      if (game.marketingBudget === 0 && ((opts.scenarioId ?? 'standard') === 'standard' || daily)) {
         game = applyAction(game, { type: 'setMarketing', amount: startingMarketing(INDUSTRIES[game.industryId]) });
       }
       saveGame('autosave', game);
@@ -525,6 +530,7 @@ export const useGame = create<Store>((set, get) => {
     },
 
     toast(kind, text, icon) {
+      playSound(kind === 'success' ? 'success' : kind === 'good' ? 'coin' : kind === 'info' ? 'click' : 'warn');
       const id = nextId++;
       set({ toasts: [...get().toasts.slice(-2), { id, kind, text, icon }] });
       setTimeout(() => get().dismissToast(id), kind === 'error' ? 7000 : 4500);

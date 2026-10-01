@@ -40,6 +40,8 @@ export interface IndustryConfig {
   /** Potential new customers (subscription) or units (unit) per month at 100% share and reach. */
   marketSize: number;
   marketGrowth: number;
+  /** Demand multiplier for each calendar month (Jan first); averages 1.0 over the year. */
+  seasonality: number[];
   roles: Record<RoleId, RoleDef>;
   founderCapacity: number;
   capacityPerOps: number;
@@ -89,6 +91,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 30,
     marketSize: 800,
     marketGrowth: 0.006,
+    seasonality: [1.02, 1.01, 1.02, 1.0, 0.99, 0.97, 0.97, 0.97, 1.01, 1.02, 1.01, 1.01],
     roles: {
       ops: { title: 'Customer success', salary: gbp(32000), effect: '+300 customers of service capacity each' },
       rnd: { title: 'Developers', salary: gbp(55000), effect: 'Improve product quality (raises share, cuts churn)' },
@@ -142,6 +145,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 45,
     marketSize: 12000,
     marketGrowth: 0.005,
+    seasonality: [0.92, 0.94, 1.0, 1.03, 1.0, 0.97, 0.94, 0.97, 1.03, 1.03, 1.08, 1.1],
     roles: {
       ops: { title: 'Warehouse & production', salary: gbp(26000), effect: '+450 items/month of capacity each' },
       rnd: { title: 'Designers', salary: gbp(34000), effect: 'Improve collection quality' },
@@ -195,6 +199,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 30,
     marketSize: 14000,
     marketGrowth: 0.006,
+    seasonality: [0.9, 0.94, 0.97, 1.0, 1.03, 1.03, 1.03, 1.0, 0.97, 0.97, 1.0, 1.16],
     roles: {
       ops: { title: 'Kitchen & floor staff', salary: gbp(24000), effect: '+380 covers/month of capacity each' },
       rnd: { title: 'Chefs (menu development)', salary: gbp(36000), effect: 'Improve food quality and reviews' },
@@ -248,6 +253,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 30,
     marketSize: 1100,
     marketGrowth: 0.005,
+    seasonality: [1.2, 1.1, 1.03, 1.0, 0.97, 0.94, 0.92, 0.94, 1.0, 1.0, 0.98, 0.94],
     roles: {
       ops: { title: 'Trainers & front desk', salary: gbp(24000), effect: '+160 members of capacity each' },
       rnd: { title: 'Class programme leads', salary: gbp(30000), effect: 'Improve the member experience' },
@@ -301,6 +307,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 30,
     marketSize: 25000,
     marketGrowth: 0.006,
+    seasonality: [0.92, 0.9, 0.94, 0.95, 0.97, 0.95, 0.94, 0.97, 1.0, 1.06, 1.23, 1.18],
     roles: {
       ops: { title: 'Fulfilment staff', salary: gbp(24000), effect: '+900 orders/month of capacity each' },
       rnd: { title: 'Product & UX', salary: gbp(42000), effect: 'Improve range and site conversion' },
@@ -354,6 +361,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     payableDays: 60,
     marketSize: 70,
     marketGrowth: 0.006,
+    seasonality: [0.94, 0.95, 1.13, 1.03, 1.0, 0.99, 0.97, 0.98, 1.1, 1.0, 0.97, 0.95],
     roles: {
       ops: { title: 'Technicians', salary: gbp(40000), effect: '+1.6 vehicles/month of capacity each' },
       rnd: { title: 'Engineers', salary: gbp(52000), effect: 'Improve conversion quality and range' },

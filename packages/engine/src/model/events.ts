@@ -158,6 +158,8 @@ interface ChoiceEventDef {
   title: string;
   polarity: Polarity;
   weight: number;
+  /** Weight that depends on the state (overrides `weight`). */
+  weightOf?: (s: GameState) => number;
   icon: string;
   when: (s: GameState) => boolean;
   setup: (s: GameState, rng: Rng) => { story: string; params: Record<string, number>; choices: ChoiceDef[] };
@@ -188,6 +190,8 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
   },
   {
     id: 'poached', title: 'A rival tries to poach your best person', polarity: 'bad', weight: 3, icon: 'key',
+    // Unhappy teams are easier to poach from; paying above market makes it harder.
+    weightOf: (s) => (3 + Math.max(0, (60 - s.morale) / 10)) * (s.pay === 'above' ? 0.5 : 1),
     when: (s) => headcount(s) >= 2,
     setup: (s, rng) => {
       const staffed = ROLE_IDS.filter((r) => s.staff[r] > 0);
@@ -199,7 +203,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
         params: { role: ROLE_IDS.indexOf(role), equity },
         choices: [
           { id: 'match', label: 'Match the offer', hint: 'Keeps them, but raises pay expectations: salaries +2% across the team.', impact: [{ label: 'Staff costs', up: false }],
-            apply: (st) => { st.salaryIndex *= 1.02; return 'You matched the offer. Team salaries rose 2%.'; } },
+            apply: (st) => { st.salaryIndex *= 1.02; st.morale = Math.min(100, st.morale + 5); return 'You matched the offer. Team salaries rose 2% and the team noticed you look after people.'; } },
           { id: 'shares', label: `Offer ${formatGBP(equity)} in shares`, hint: 'No cash, but a share-based payment expense (IFRS 2) and a little dilution.', impact: [{ label: 'Ownership', up: false }],
             apply: (st, _rng, P, p) => issueSharesToStaff(st, P, p.equity) },
           { id: 'let', label: 'Let them go', hint: 'Lose one person in that role and some quality.', impact: [{ label: 'Quality', up: false }],
@@ -207,6 +211,7 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
               const r = ROLE_IDS[p.role];
               st.staff[r] = Math.max(0, st.staff[r] - 1);
               st.quality = Math.max(1, st.quality - 4);
+              st.morale = Math.max(0, st.morale - 5);
               return `They left. You have ${st.staff[r]} ${roleName(st, r)} now, and quality fell 4 points.`;
             } },
         ],
@@ -495,7 +500,8 @@ export function runEvents(s: GameState, rng: Rng, enabled: boolean): void {
       const autos = AUTO_EVENTS.filter(
         (e) => e.polarity === polarity && !activeTypes.has(e.type) && !e.excludes?.some((t) => activeTypes.has(t)) && (e.when?.(s) ?? true),
       );
-      const choice = !s.away && (wantChoice || autos.length === 0) ? weightedPick(rng, choices) : null;
+      const picked = !s.away && (wantChoice || autos.length === 0) ? weightedPick(rng, choices.map((def) => ({ def, weight: def.weightOf?.(s) ?? def.weight }))) : null;
+      const choice = picked?.def ?? null;
       if (choice) startChoiceEvent(s, choice, rng);
       else {
         const auto = weightedPick(rng, autos);

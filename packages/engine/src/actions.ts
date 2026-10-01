@@ -11,7 +11,10 @@ import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck } from './model/prestige';
-import { logItem, newId, ownership, type GameState } from './model/state';
+import { MAX_TRAINING_SPEND, PAY_LEVELS } from './model/morale';
+import { monthlyProjectCost, projectCheck, projectDef } from './model/rnd';
+import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
+import { logItem, newId, ownership, type GameState, type PayLevel } from './model/state';
 import { UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
 import { valuationOf } from './model/valuation';
 import { createRng } from './rng';
@@ -22,6 +25,11 @@ export type Action =
   | { type: 'hire'; role: RoleId; count: number }
   | { type: 'fire'; role: RoleId; count: number }
   | { type: 'setPrice'; price: Pence }
+  | { type: 'startPromo'; discountPct: number; months: number }
+  | { type: 'setPay'; level: PayLevel }
+  | { type: 'startProject'; projectId: string }
+  | { type: 'cancelProject'; projectId: string }
+  | { type: 'setTraining'; amount: Pence }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -155,6 +163,49 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       post(L, m, `Redundancy: ${action.count} × ${role.title}`, [dr('restructuring', cost), cr('cash', cost)], { cf: 'operating' });
       s.staff[action.role] -= action.count;
       logItem(s, 'action', `Made ${action.count} × ${role.title} redundant`, `Redundancy cost ${formatGBP(cost)}.`);
+      break;
+    }
+    case 'startProject': {
+      const check = projectCheck(s, action.projectId);
+      if (!check.allowed) fail(check.reason!);
+      const def = projectDef(action.projectId)!;
+      requireFunds(s, monthlyProjectCost(def), `the first month of ${def.name}`);
+      s.projects.push({ id: def.id, monthsLeft: def.months });
+      logItem(s, 'action', `Started: ${def.name}`, `${def.months} months, ${formatGBP(def.cost)} in total (${formatGBP(monthlyProjectCost(def))} a month). It can fail, and the money is spent either way.`);
+      break;
+    }
+    case 'cancelProject': {
+      const i = s.projects.findIndex((p) => p.id === action.projectId);
+      if (i < 0) fail('That project is not running.');
+      const def = projectDef(action.projectId)!;
+      s.projects.splice(i, 1);
+      logItem(s, 'action', `Cancelled: ${def.name}`, 'Nothing is refunded. Your R&D team is free for something else.');
+      break;
+    }
+    case 'setPay': {
+      if (!PAY_LEVELS.includes(action.level)) fail('Choose below-market, market or above-market pay.');
+      s.pay = action.level;
+      logItem(s, 'action', `Pay set to ${action.level === 'market' ? 'market rate' : `${action.level} market`}`,
+        action.level === 'above' ? 'The wage bill is 12% higher. Morale, productivity and loyalty rise.'
+          : action.level === 'below' ? 'The wage bill is 10% lower, but morale and productivity will slip and people may leave.'
+            : 'Standard pay. Morale settles at its normal level.');
+      break;
+    }
+    case 'setTraining': {
+      if (!isWholePence(action.amount) || action.amount < 0 || action.amount > MAX_TRAINING_SPEND) fail(`Training budget must be between £0 and ${formatGBP(MAX_TRAINING_SPEND)} a month.`);
+      s.trainingSpend = action.amount;
+      logItem(s, 'action', action.amount > 0 ? `Training budget ${formatGBP(action.amount)} a month` : 'Training stopped', 'Training lifts morale (up to a cap) but costs money every month you have staff.');
+      break;
+    }
+    case 'startPromo': {
+      if (!(PROMO_DISCOUNTS as readonly number[]).includes(action.discountPct)) fail('Choose a 10%, 20% or 30% discount.');
+      if (!isCount(action.months, PROMO_MAX_MONTHS)) fail(`A promotion runs for 1 to ${PROMO_MAX_MONTHS} months.`);
+      const check = promoCheck(s);
+      if (!check.allowed) fail(check.reason!);
+      requireFunds(s, check.fee, 'the promotion');
+      post(L, m, `Promotion set-up: ${action.discountPct}% off for ${action.months} month${action.months === 1 ? '' : 's'}`, [dr('marketing', check.fee), cr('cash', check.fee)], { cf: 'operating' });
+      s.promo = { discountPct: action.discountPct, months: action.months, monthsLeft: action.months };
+      logItem(s, 'action', `Promotion: ${action.discountPct}% off`, `Running for ${action.months} month${action.months === 1 ? '' : 's'}. Set-up cost ${formatGBP(check.fee)}; expect a quiet month afterwards as customers have already bought.`);
       break;
     }
     case 'setPrice': {

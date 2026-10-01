@@ -1,15 +1,31 @@
-import { finalScore, formatGBP, formatInt, formatPct, monthLabel, rebirthCheck, scenarioOf, type GameState } from '@cfx/engine';
+import { DIFFICULTIES, finalScore, formatGBP, formatInt, formatPct, INDUSTRIES, monthLabel, prestigeBonus, prestigeTitle, rebirthCheck, scenarioOf, type GameState } from '@cfx/engine';
 import { useMemo } from 'react';
 import { Button, Card, KeyValue, StatusPill } from '../components/ui';
+import { shareResultCard } from '../lib/shareCard';
 import { useGame } from '../store';
 
 export function GameOver({ game }: { game: GameState }) {
-  const { endBankruptRun, nextRun, profile } = useGame();
+  const { endBankruptRun, nextRun, profile, toast } = useGame();
   const rebirth = game.status === 'insolvent' ? rebirthCheck(profile, game) : null;
   const score = useMemo(() => finalScore(game), [game]);
   const scenario = scenarioOf(game.scenarioId);
   const objectives = scenario.objectives?.(game);
   const insolvent = game.status === 'insolvent';
+  const share = async () => {
+    const res = await shareResultCard({
+      heading: game.companyName,
+      sub: `${INDUSTRIES[game.industryId].name} · ${DIFFICULTIES[game.difficulty].name} · ${(game.month / 12).toFixed(1)} years`,
+      badge: insolvent ? 'Went bust' : game.status === 'prestiged' ? `Prestiged: +${game.prestigeAward} Legacy` : 'Game complete',
+      tone: insolvent ? 'bad' : 'good',
+      stats: [
+        ['Final score', formatInt(score.score)], ['Equity value', formatGBP(score.equityValue, { compact: true })],
+        ['Owner wealth', formatGBP(score.ownerWealth, { compact: true })], ['Your ownership', formatPct(score.ownership)],
+        ['Months in business', formatInt(game.month)],
+      ],
+    });
+    if (res === 'downloaded') toast('success', 'Picture saved. Share it anywhere.');
+    else if (res === 'failed') toast('error', 'Could not make the picture on this device.');
+  };
 
   return (
     <Card className={`mb-5 ${insolvent ? 'border-critical/60' : 'border-good/50'}`}
@@ -29,10 +45,16 @@ export function GameOver({ game }: { game: GameState }) {
           <Button variant="primary" onClick={nextRun}>{game.status === 'prestiged' ? 'Start your next company' : 'New game'}</Button>
         )
       }>
+      {game.status === 'prestiged' && (
+        <p className="mb-4 rounded-lg border border-line p-3 text-sm" role="status">
+          <strong>★ Rank {game.prestigeLevel + 1}: {prestigeTitle(game.prestigeLevel + 1)}.</strong> Every new company you start now gets +{Math.round(prestigeBonus(game.prestigeLevel + 1) * 100)}% demand for good, and your Legacy points are waiting in the perk tree.
+        </p>
+      )}
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <div className="text-xs text-muted">Final score</div>
           <div className="tnum text-4xl font-bold">{formatInt(score.score)}</div>
+          <div className="mt-2"><Button onClick={() => void share()}>Share result</Button></div>
           <p className="mt-1 text-sm text-ink-2">Your wealth ({formatGBP(score.ownerWealth)}) × health multiplier ({insolvent ? '0.50, insolvent' : (0.75 + 0.5 * score.health.score).toFixed(2)}).</p>
           <div className="mt-3">
             <KeyValue rows={[

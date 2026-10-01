@@ -47,11 +47,13 @@ export function newGame(opts: NewGameOptions): GameState {
   const industryId = scenario.industryId ?? opts.industryId;
   const ind = INDUSTRIES[industryId];
   if (!ind) throw new Error(`Unknown industry ${industryId}`);
-  const difficulty: DifficultyId = scenario.kind === 'case-study' ? 'medium' : (opts.difficulty ?? 'medium');
+  // The daily challenge is a level playing field: fixed difficulty, and no perks, boosts or prestige bonus.
+  const daily = scenario.kind === 'daily';
+  const difficulty: DifficultyId = scenario.kind === 'case-study' || daily ? 'medium' : (opts.difficulty ?? 'medium');
   const diff = DIFFICULTIES[difficulty];
   if (!diff) throw new Error(`Unknown difficulty ${difficulty}`);
-  const perks = diff.perksApply ? { ...(opts.perks ?? {}) } : {};
-  const boosts = diff.perksApply ? (opts.boosts ?? []).map((b) => ({ ...b })) : [];
+  const perks = diff.perksApply && !daily ? { ...(opts.perks ?? {}) } : {};
+  const boosts = diff.perksApply && !daily ? (opts.boosts ?? []).map((b) => ({ ...b })) : [];
   const effects = perkEffects(perks);
   const seed = hashSeed(opts.seed);
 
@@ -76,6 +78,14 @@ export function newGame(opts: NewGameOptions): GameState {
     integrityErrors: [],
     staff: { ops: 0, rnd: 0, sales: 0 },
     salaryIndex: 1,
+    pay: 'market',
+    trainingSpend: 0,
+    morale: 60,
+    promo: null,
+    promoDipMonths: 0,
+    promoCooldown: 0,
+    projects: [],
+    projectsDone: [],
     price: ind.basePrice,
     marketingBudget: 0,
     stockCoverMonths: ind.stockCoverDefault,
@@ -107,7 +117,7 @@ export function newGame(opts: NewGameOptions): GameState {
     guildLevel: 0,
     outsideHolders: [],
     boostActivations: {},
-    prestigeLevel: opts.prestigeLevel ?? 0,
+    prestigeLevel: daily ? 0 : opts.prestigeLevel ?? 0,
     prestigeAward: 0,
     start: { equipmentFinance: opts.equipmentFinance ?? 'buy', boosts: boosts.map((b) => ({ ...b })) },
     boosts,
@@ -115,7 +125,10 @@ export function newGame(opts: NewGameOptions): GameState {
     lastEvent: null,
     economy: { baseRate: 0.04, demandMult: 1, unitCostMult: 1, lendingAppetite: 1, badDebtRate: 0, active: [] },
     marketSize: ind.marketSize,
-    competitors: ind.competitors.map((c) => ({ name: c.name, quality: c.quality, price: Math.round(ind.basePrice * c.priceFactor), strength: c.strength })),
+    competitors: ind.competitors.map((c) => {
+      const price = Math.round(ind.basePrice * c.priceFactor);
+      return { name: c.name, quality: c.quality, price, strength: c.strength, cutMonths: 0, normalPrice: price, lastLaunchYear: -1 };
+    }),
     targets: [],
     acquisitions: [],
     log: [],

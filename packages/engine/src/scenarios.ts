@@ -15,7 +15,7 @@ export interface ObjectiveStatus {
 export interface Scenario {
   id: string;
   name: string;
-  kind: 'sandbox' | 'case-study';
+  kind: 'sandbox' | 'case-study' | 'daily';
   industryId: IndustryId | null;
   summary: string;
   briefing: string[];
@@ -41,6 +41,20 @@ export const SCENARIOS: Record<string, Scenario> = {
       'Prestige at £10m to earn Legacy points, spend them on perks, and start again stronger.',
     ],
     months: null,
+  },
+  daily: {
+    id: 'daily',
+    name: 'Daily challenge',
+    kind: 'daily',
+    industryId: null,
+    summary: 'Everyone plays the same company for 24 months. No perks, no boosts, no prestige: just you against the day. Your stake at the end is your score.',
+    briefing: [
+      'Same company, same seed, same luck for every player today.',
+      'You have 24 months. Your final owner stake is your score on the daily board.',
+      'Perks, gem boosts and prestige bonuses are switched off so the field is level.',
+      'One attempt a day for the leaderboard; practise as much as you like offline.',
+    ],
+    months: 24,
   },
   'profitable-but-broke': {
     id: 'profitable-but-broke',
