@@ -69,7 +69,7 @@ export function SignIn() {
         </div>
         {!GOOGLE_CLIENT_ID && !DEV_AUTH && <p className="mt-2 text-center text-sm font-bold text-critical-text">Google sign-in isn't configured for this build (VITE_GOOGLE_CLIENT_ID).</p>}
         {(error || gisError) && <p role="alert" className="mt-3 text-center text-sm font-bold text-critical-text">{error ?? gisError}</p>}
-        <p className="mt-3 text-center text-xs text-ink-2">We only store your Google account ID and first name. No email, no contacts.</p>
+        <p className="mt-3 text-center text-xs text-ink-2">We only store your Google account ID and first name. No email, no contacts. <a className="underline" href="/privacy">Privacy Policy</a> · <a className="underline" href="/terms">Terms of Service</a></p>
       </section>
       {DEV_AUTH && (
         <form className="cfx-panel !p-3.5" onSubmit={(e) => { e.preventDefault(); if (devName.trim()) void signInDev(devName.trim()); }}>
