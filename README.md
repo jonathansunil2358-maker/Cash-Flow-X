@@ -33,6 +33,7 @@ construction, and an integrity check proves it every month.
 | Stats, sharing & sound | Lifetime stats and company history, a shareable picture of any finished company, and synthesized sound effects and haptics (switchable in Settings) |
 | Boosts | Gem-bought timed boosts (Rush hour, Lucky charm, Megaphone) that carry over between runs |
 | Online | Google sign-in; runs verified in chunks by the Worker (same engine, compact checkpoints, checksums); server-owned Legacy points, perks and prestiges |
+| Updates | Games saved on an older version are upgraded in place (`migrateState` in the engine) and carry on with the new rules, so an update never wipes a company. An online company that was being verified is carried over to the server once (`POST /runs/:id/carryover`): the server accepts it only for runs from before the update, and only if it is the same company, its books balance and its growth is plausible. After that, every month is verified by replay again |
 | Holding companies | Open join, 30 members, visibility (full / summary / hidden), level perks from combined valuation, weekly goals, members investing in each other (new shares, 49% cap, dividends, buy-outs) |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 

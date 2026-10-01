@@ -1,5 +1,5 @@
 import {
-  BOOSTS, compactForServer, continueRun, currentBalanceSheet, dailyChallenge, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, utcDay,
+  BOOSTS, checkIntegrity, compactForServer, continueRun, currentBalanceSheet, dailyChallenge, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, STATE_VERSION, utcDay,
   ownership, plSummary, RULES_VERSION, stateChecksum, trailingPL, valuationOf, type Action, type ActiveBoost, type GameState, type PerkLevels,
 } from '@cfx/engine';
 import type { UserRow } from './auth';
@@ -147,6 +147,8 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
   }
 
   const state = await gunzipJson<GameState>(run.checkpoint);
+  // A company from before the update has to be carried over to the new rules first.
+  if (state.version !== STATE_VERSION) throw new HttpError(409, JSON.stringify({ code: 'CARRYOVER_REQUIRED' }));
   const monthBefore = state.month;
   try {
     continueRun(state, actions, b.month as number);
@@ -218,6 +220,68 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
   }
   await env.DB.batch(peaks);
   return { actionsVerified: run.actions_verified + actions.length, status: state.status, verified: true, netWorth: nw };
+}
+
+/** How much a carried-over company may have grown since its last verified checkpoint (the old months could not be replayed). */
+const CARRYOVER_MAX_GROWTH = 6;
+const CARRYOVER_EQUITY_FLOOR = 100_000_000; // £1m in pence
+
+export interface CarryOverBody {
+  /** The player's company, already upgraded to the current rules. */
+  state: unknown;
+  /** How many decisions the player has made so far (later syncs continue from here). */
+  actions: unknown;
+}
+
+/**
+ * One-time bridge for companies started before the rules changed. The months since the last
+ * verified checkpoint were played under the old rules and can never replay, so the server takes
+ * the player's company as it stands, provided it is plausible: it must be the same company, its
+ * books must balance, and it cannot have grown beyond what real play could produce. This works
+ * once per run and only for runs whose stored checkpoint is from the old version; everything
+ * after it is verified by replay as normal.
+ */
+export async function carryOverRun(env: Env, user: UserRow, runId: string, b: CarryOverBody) {
+  const run = await env.DB.prepare(
+    `SELECT id, is_active, status, checkpoint, actions_verified, month, equity_value, owner_dividends FROM game_runs WHERE id = ? AND user_id = ?`,
+  ).bind(runId, user.id).first<{ id: string; is_active: number; status: string; checkpoint: ArrayBuffer; actions_verified: number; month: number; equity_value: number; owner_dividends: number }>();
+  if (!run) throw new HttpError(404, 'That company is not registered to your account.');
+  if (run.status !== 'playing' || !run.is_active) throw new HttpError(409, 'This company is not running.');
+  const old = await gunzipJson<Record<string, any>>(run.checkpoint);
+  if (old.version === STATE_VERSION) throw new HttpError(409, 'This company is already on the current version.');
+  if (old.version !== 3) throw new HttpError(409, 'This company is too old to carry over.');
+
+  const st = b.state as GameState | null;
+  const refuse = (why: string): never => { throw new HttpError(422, `This company cannot be carried over: ${why}`); };
+  if (!st || typeof st !== 'object' || st.version !== STATE_VERSION) return refuse('it has not been upgraded to the current version.');
+  if (st.seedLabel !== old.seedLabel || st.industryId !== old.industryId || st.difficulty !== old.difficulty || (st.scenarioId ?? 'standard') !== (old.scenarioId ?? 'standard')) {
+    return refuse('it is not the company the server has on record.');
+  }
+  if (st.status !== 'playing') return refuse('it has already ended.');
+  if (!Number.isInteger(st.month) || st.month < old.month || st.month > old.month + MAX_SYNC_MONTHS) return refuse('its month is out of range.');
+  if (!Number.isInteger(b.actions) || (b.actions as number) < run.actions_verified || (b.actions as number) > run.actions_verified + MAX_SYNC_ACTIONS) return refuse('its decision count is out of range.');
+  if (!st.ledger?.balances || !Object.values(st.ledger.balances).every((v) => Number.isInteger(v))) return refuse('its accounts are malformed.');
+  if (!Array.isArray(st.history) || !Array.isArray(st.competitors) || !Array.isArray(st.outsideHolders)) return refuse('it is malformed.');
+  const errors = checkIntegrity(st);
+  if (errors.length) return refuse('its accounts do not balance.');
+
+  // Shareholders can only be ones the server already knows about.
+  const known = new Set<string>((old.outsideHolders ?? []).map((h: { id: string }) => h.id));
+  const rows = await env.DB.prepare('SELECT id FROM investments WHERE run_id = ?').bind(run.id).all<{ id: string }>();
+  for (const r of rows.results) known.add(r.id);
+  if (st.outsideHolders.some((h) => !known.has(h.id))) return refuse('it lists shareholders the server does not know.');
+
+  const clean = compactForServer(st);
+  let equity: number;
+  try { equity = valuationOf(clean).equityValue; } catch { return refuse('its value could not be worked out.'); }
+  if (!Number.isFinite(equity) || equity > Math.max(run.equity_value * CARRYOVER_MAX_GROWTH, CARRYOVER_EQUITY_FLOOR)) return refuse('it has grown more than real play could explain.');
+
+  const now = nowIso();
+  await env.DB.prepare(
+    `UPDATE game_runs SET checkpoint = ?, actions_verified = ?, month = ?, stats_json = ?, equity_value = ?, owner_stake = ?,
+       owner_dividends = ?, shares_total = ?, updated_at = ? WHERE id = ? AND status = 'playing'`,
+  ).bind(await gzipJson(clean), b.actions as number, clean.month, JSON.stringify(statsOf(clean)), equity, ownerStakeOf(clean), clean.ownerDividends, clean.shares.total, now, run.id).run();
+  return { actionsVerified: b.actions as number, month: clean.month, status: 'playing' };
 }
 
 async function flag(env: Env, run: RunRow, reason: string) {
