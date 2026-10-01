@@ -368,7 +368,7 @@ test('a game saved on the old version carries on, with the new features', async 
   await expect(page.locator('.cfx-hud__name')).toHaveText(old.companyName);
   await expect(page.getByText(/Your company was upgraded/)).toBeVisible();
   const saved = await savedGame(page);
-  expect(saved.version).toBe(4);
+  expect(saved.version).toBe(5);
   expect(saved.month).toBe(old.month);
   expect(saved.ledger.balances.cash).toBe(old.ledger.balances.cash);
 
@@ -397,7 +397,7 @@ test('an online company from the old version is carried over to the server', asy
   await openWithOldGame(page, old);
   await expect(page.locator('.cfx-hud__name')).toHaveText(old.companyName);
   await expect.poll(async () => (await savedGame(page)).server.carry, { timeout: 15_000 }).toBe('done');
-  expect(seen.state.version).toBe(4);
+  expect(seen.state.version).toBe(5);
   expect(seen.state.actionLog).toEqual([]); // the server only needs the compact copy
   expect(seen.actions).toBe(old.actionLog.length);
   const saved = await savedGame(page);
@@ -424,3 +424,128 @@ test('if the server refuses a carry-over, the company still plays but is unranke
   await openDock(page, 'Business');
   await expect(page.getByRole('dialog', { name: 'Run the business' })).toBeVisible();
 });
+
+test('the growth cards open: locations, contracts, insurance, and the stock market in Finance', async ({ page }) => {
+  await freshCompany(page, 'Growth');
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Run the business' });
+
+  const sites = sheet.locator('#card-sites');
+  await sites.getByRole('button', { name: 'Open' }).click();
+  await expect(sites.getByText(/Fit-out \(capitalised\)/)).toBeVisible();
+  await expect(sites.getByRole('button', { name: 'Open a new site' })).toBeDisabled();
+  await expect(sites.getByText(/Prove the first site works/)).toBeVisible();
+
+  const contracts = sheet.locator('#card-contracts');
+  await contracts.getByRole('button', { name: 'Open' }).click();
+  await expect(contracts.getByText(/No offers right now/)).toBeVisible();
+
+  const insurance = sheet.locator('#card-insurance');
+  await insurance.getByRole('button', { name: 'Open' }).click();
+  await insurance.getByRole('button', { name: /Basic cover/ }).click();
+  await expect(insurance.getByRole('button', { name: /Basic cover/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#card-insurance').getByText(/excess of/)).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await openDock(page, 'Finance');
+  const fin = page.getByRole('dialog', { name: 'Finance' });
+  const listing = fin.locator('#card-listing');
+  await listing.getByRole('button', { name: 'Open' }).click();
+  await expect(listing.getByRole('button', { name: 'List the company' })).toBeDisabled();
+  await expect(listing.getByText(/Listing needs a company worth at least/)).toBeVisible();
+});
+
+test('a game saved by the version before this one (state 4) carries on with the new features', async ({ page }) => {
+  const v4 = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  expect(v4.version).toBe(4);
+  await openWithOldGame(page, v4);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(v4.companyName);
+  const saved = await savedGame(page);
+  expect(saved.version).toBe(5);
+  expect(saved.sites).toBe(1);
+  expect(saved.insurance).toBe('none');
+  expect(saved.month).toBe(v4.month);
+  expect(saved.ledger.balances.cash).toBe(v4.ledger.balances.cash);
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Run the business' });
+  const insurance = sheet.locator('#card-insurance');
+  await insurance.getByRole('button', { name: 'Open' }).click();
+  await insurance.getByRole('button', { name: /Full cover/ }).click();
+  await expect(insurance.getByRole('button', { name: /Full cover/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('the weekly event shows its twist, and a friend challenge can be made, joined and played', async ({ page }) => {
+  await freshCompany(page, 'Social');
+  await openDock(page, 'Missions');
+  const sheet = page.getByRole('dialog', { name: 'Missions' });
+
+  const weekly = sheet.locator('#card-weekly');
+  await expect(weekly.getByText(/^Twist: /)).toBeVisible();
+  await expect(weekly.getByLabel('Time left this week')).toHaveText(/\d\d:\d\d:\d\d$/);
+
+  // A challenge: the server makes the code, and the company comes from the code alone.
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => { (navigator as any).share = undefined; });
+  const challenge = sheet.locator('#card-challenge');
+  await challenge.getByRole('button', { name: 'Make a challenge and share it' }).click();
+  await expect(challenge.getByText(/code [A-Z2-9]{6}/)).toBeVisible();
+  const code = (await challenge.getByText(/code [A-Z2-9]{6}/).innerText()).match(/code ([A-Z2-9]{6})/)![1];
+  const name = await challenge.locator('.font-display').first().innerText();
+  expect(name).toMatch(/^Challenge \w+ Ltd$/);
+  await challenge.getByRole('button', { name: 'Play this challenge' }).click();
+  await challenge.getByRole('button', { name: 'Play without saving' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText(name);
+  await skipTour(page);
+  expect(code).toMatch(/^[A-Z2-9]{6}$/);
+});
+
+test('a challenge link is remembered through sign-in and offered on the menu', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/?challenge=abc234');
+  await expect(page).toHaveURL(/localhost:5173\/$/);
+  await page.evaluate(() => localStorage.setItem('cfx:pref:scene3d', 'false'));
+  expect(await page.evaluate(() => localStorage.getItem('cfx:pref:challenge'))).toBe('ABC234');
+  await signIn(page, 'Link');
+  await expect(page.getByText('A friend challenged you')).toBeVisible();
+  await expect(page.getByText(/Code ABC234/)).toBeVisible();
+  await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(page.getByText('A friend challenged you')).toHaveCount(0);
+});
+
+test('titles are earned, and the island shop sells skins for gems', async ({ page }) => {
+  await freshCompany(page, 'Shop');
+  // Give the player some gems and an achievement title to wear.
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.gems = 500;
+    p.achievements = { ...p.achievements, insured: new Date().toISOString() };
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await skipTourIfShown(page);
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const titles = missions.locator('#card-titles');
+  await expect(titles.getByText('the Careful')).toBeVisible();
+  await titles.getByRole('button', { name: 'Wear' }).first().click();
+  await expect(titles.getByText('You are "the Careful".')).toBeVisible();
+  await expect(titles.getByRole('button', { name: 'Wear' }).first()).toBeDisabled(); // the rest are locked
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: /^(Menu|Settings)/ }).first().click();
+  const shop = page.locator('#card-shop');
+  await expect(shop.getByText('Autumn')).toBeVisible();
+  await shop.getByRole('button', { name: /Buy for 60/ }).click();
+  await expect(shop.getByRole('button', { name: 'Equipped' })).toHaveCount(1);
+  await expect(shop.getByText(/You have 440 gems/)).toBeVisible();
+  await shop.getByRole('button', { name: 'Equip' }).first().click();
+  const profile = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!));
+  expect(profile.cosmetics.owned).toEqual(['default', 'autumn']);
+  expect(profile.cosmetics.skin).toBe('default');
+  expect(profile.title).toBe('insured');
+});
+
+async function skipTourIfShown(page: Page) {
+  const skip = page.getByRole('button', { name: 'Skip tutorial' });
+  if (await skip.isVisible().catch(() => false)) await skip.click();
+}
