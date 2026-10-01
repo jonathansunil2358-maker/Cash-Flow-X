@@ -319,3 +319,15 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   body::before { animation: none; }
 }
+
+/* ---- Accessibility: set by lib/access.ts ---- */
+html[data-font='readable'] body, html[data-font='readable'] button, html[data-font='readable'] input, html[data-font='readable'] select, html[data-font='readable'] textarea {
+  font-family: Verdana, Tahoma, 'Trebuchet MS', sans-serif; letter-spacing: 0.02em; word-spacing: 0.08em; line-height: 1.6;
+}
+html[data-size='115'] { font-size: 115%; }
+html[data-size='130'] { font-size: 130%; }
+/* A palette that does not rely on red and green: blue for good, orange for bad. */
+html[data-colours='safe'] { --go: #0072b2; --go-edge: #004f7d; --danger: #d55e00; --danger-edge: #9a4300; --good: #0072b2; --critical: #d55e00; }
+html[data-colours='safe'] .text-good-text { color: #004f7d; }
+html[data-colours='safe'] .text-critical-text { color: #9a4300; }
+html[data-calm='on'] *, html[data-calm='on'] *::before, html[data-calm='on'] *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }

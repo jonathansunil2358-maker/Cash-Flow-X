@@ -1350,3 +1350,40 @@ test('V3 Batch D: co-op links, trading cards, season theme and the holding-compa
   await coop.getByRole('button', { name: 'Remove' }).click();
   await expect(coop.getByText(/advice · 0 friends/)).toHaveCount(0);
 });
+
+test('V3 Batch E: accessibility settings, sound packs, keyboard shortcuts, the guide and the replay theatre', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  // Penny the guide speaks, and goes away when tapped.
+  const penny = page.getByRole('button', { name: /Penny the guide says/ });
+  await expect(penny).toBeVisible();
+  await penny.click();
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).tips)).length).toBeGreaterThan(0);
+
+  // Keyboard shortcut: M opens Missions.
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions).toBeVisible();
+  const theatre = missions.locator('#card-theatre');
+  await expect(theatre.getByText('What you did:')).toBeVisible();
+  await theatre.getByRole('button', { name: 'Back' }).click();
+  await expect(theatre.getByText('MONTH:')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  await clearOverlays(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const st = page.getByRole('dialog', { name: 'Settings' });
+  await st.getByLabel('Font').selectOption('readable');
+  await st.getByLabel('Text size').selectOption('130');
+  await st.getByLabel('Colours').selectOption('safe');
+  await st.getByLabel('Calm mode').check();
+  await st.getByLabel('Sound pack').selectOption('retro');
+  expect(await page.evaluate(() => { const d = document.documentElement.dataset; return [d.font, d.size, d.colours, d.calm, localStorage.getItem('cfx:pref:sfxpack')]; })).toEqual(['readable', '130', 'safe', 'on', 'retro']);
+  await st.getByLabel('Keyboard shortcuts').uncheck();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await page.keyboard.press('m');
+  await expect(page.getByRole('dialog', { name: 'Missions' })).toHaveCount(0);
+});

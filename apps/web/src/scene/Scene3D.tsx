@@ -1,8 +1,9 @@
-import { buildingNames, LAND, landOf, cosmeticsOf, decorDef, HATS, wardrobeOf, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { buildingNames, lookOf, LOOK_LEAF, LAND, landOf, cosmeticsOf, decorDef, HATS, wardrobeOf, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
 import { Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from 'three';
 import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
+import { isSeasonLookOn } from '../pages/Feel';
 import { isDayNightOn, isEveningNow, isWeatherOn } from '../lib/weather';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
@@ -63,6 +64,8 @@ const TREES: { p: Pt; c: string; plot?: number; s?: number }[] = [
 /** The island's tree colours (green, light green, orange, purple) in the equipped skin. */
 const LEAF_KEYS = ['#4e9e2f', '#7ccf52', '#ff8a1f', '#8e3fe6'];
 const leafColour = (sk: SkinPalette, c: string): string => sk.leaf[LEAF_KEYS.indexOf(c)] ?? c;
+/** Spring, autumn and winter recolour the leafy trees; summer keeps the skin's own greens. */
+const seasonLeaf = (base: string, look: ReturnType<typeof lookOf>): string => (look === 'summer' ? base : LOOK_LEAF[look]);
 
 /** A flat rectangle lying on the ground (x0…x1 by z0…z1). */
 function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: number; z1: number; y?: number; c: string }) {
@@ -612,6 +615,8 @@ export default function Scene3D({ game }: { game: GameState }) {
   const hatColour = HATS.find((h) => h.id === hatId)?.colour ?? null;
   // The team jumps for joy for a month after the board is pleased.
   const cheering = game.board?.last === 'hit' && game.month - (game.board.due - 3) <= 1;
+  const seasonLook = isSeasonLookOn();
+  const look = lookOf(game.month);
   const weatherOn = isWeatherOn();
   const weather = weatherOn ? weatherFor(game) : 'clear';
   const decor = useGame((s) => s.profile.decor);
@@ -711,7 +716,7 @@ export default function Scene3D({ game }: { game: GameState }) {
           </group>
         ))}
 
-        {TREES.filter((t) => t.plot === undefined || !occupied.has(t.plot)).map((t, i) => <Tree key={i} x={t.p[0]} z={t.p[1]} c={leafColour(sk, t.c)} s={t.s} />)}
+        {TREES.filter((t) => t.plot === undefined || !occupied.has(t.plot)).map((t, i) => <Tree key={i} x={t.p[0]} z={t.p[1]} c={seasonLook ? seasonLeaf(leafColour(sk, t.c), look) : leafColour(sk, t.c)} s={t.s} />)}
 
         {[0, 2].slice(0, parked).map((b, i) => (
           <Car key={b} x={BAYS[b]} y={0.02} z={BAY_Z} ry={-Math.PI / 2} c={CAR_COLOURS[(i + 3) % CAR_COLOURS.length]} />

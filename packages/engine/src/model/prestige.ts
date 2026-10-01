@@ -90,6 +90,8 @@ export interface Profile {
   diary?: { year: number; company: string; note: string; facts: string }[];
   /** Fastest speedrun (months to a £1m company) on this device. */
   speedBest?: number;
+  /** Tips Penny the guide has already given (see feel.ts). */
+  tips?: string[];
   /** Trading cards: how many of each you own, and which company-card pairs were already given (see social3.ts). */
   cards?: Record<string, number>;
   cardsSeen?: string[];

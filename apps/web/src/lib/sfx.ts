@@ -10,6 +10,20 @@ import { readPref, writePref } from './save';
 export type Sound = 'click' | 'coin' | 'success' | 'warn' | 'event' | 'fanfare' | 'good' | 'bad' | 'rival' | 'award' | 'board' | 'confetti';
 type Pref = 'sfx' | 'haptics';
 
+/** Sound packs bend every effect: the oscillator shape, the pitch and the loudness. */
+export interface SoundPack { id: string; name: string; type?: OscillatorType; pitch: number; gain: number }
+export const SOUND_PACKS: SoundPack[] = [
+  { id: 'classic', name: 'Classic', pitch: 1, gain: 1 },
+  { id: 'retro', name: 'Retro arcade', type: 'square', pitch: 1, gain: 0.55 },
+  { id: 'orchestral', name: 'Orchestral', type: 'triangle', pitch: 0.75, gain: 1.15 },
+  { id: 'cosy', name: 'Cosy', type: 'sine', pitch: 1.2, gain: 0.9 },
+];
+export const getSoundPack = (): string => { const v = readPref('sfxpack'); return SOUND_PACKS.some((p) => p.id === v) ? (v as string) : 'classic'; };
+export const setSoundPack = (id: string): void => writePref('sfxpack', SOUND_PACKS.some((p) => p.id === id) ? id : 'classic');
+export type HapticStrength = 'gentle' | 'normal' | 'strong';
+export const getHapticStrength = (): HapticStrength => { const v = readPref('hapstrength'); return v === 'gentle' || v === 'strong' ? v : 'normal'; };
+export const setHapticStrength = (v: HapticStrength): void => writePref('hapstrength', v);
+
 const NOTES: Record<Sound, { freqs: number[]; step: number; len: number; type: OscillatorType; gain: number }> = {
   click: { freqs: [660], step: 0, len: 0.06, type: 'sine', gain: 0.08 },
   coin: { freqs: [880, 1320], step: 0.07, len: 0.14, type: 'square', gain: 0.05 },
@@ -83,10 +97,11 @@ export function playSound(sound: Sound): void {
       const c = audio();
       if (c) {
         const n = NOTES[sound];
-        n.freqs.forEach((f, i) => tone(c, f, c.currentTime + i * n.step, n.len, n.type, n.gain));
+        const pack = SOUND_PACKS.find((x) => x.id === getSoundPack()) ?? SOUND_PACKS[0];
+        n.freqs.forEach((f, i) => tone(c, f * pack.pitch, c.currentTime + i * n.step, n.len, pack.type ?? n.type, n.gain * pack.gain));
       }
     }
-    if (isHapticsOn() && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(BUZZ[sound]);
+    if (isHapticsOn() && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(BUZZ[sound].map((ms) => Math.max(1, Math.round(ms * (getHapticStrength() === 'gentle' ? 0.5 : getHapticStrength() === 'strong' ? 1.8 : 1)))));
   } catch {
     /* sound is a nicety: never break the game over it */
   }
