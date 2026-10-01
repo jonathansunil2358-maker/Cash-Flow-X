@@ -57,9 +57,14 @@ export async function resolveFixed(env: Env, user: UserRow, b: { daily?: unknown
   else if (typeof b.challenge === 'string') {
     const code = b.challenge.toUpperCase();
     if (!isValidChallengeCode(code)) throw new HttpError(400, 'That challenge code is not valid.');
-    const row = await env.DB.prepare('SELECT expires_at FROM challenges WHERE code = ?').bind(code).first<{ expires_at: string }>();
+    const row = await env.DB.prepare('SELECT expires_at, max_players FROM challenges WHERE code = ?').bind(code).first<{ expires_at: string; max_players: number }>();
     if (!row) throw new HttpError(404, 'No challenge has that code.');
     if (row.expires_at < nowIso()) throw new HttpError(409, 'That challenge has expired.');
+    if (row.max_players > 0) {
+      const inIt = await env.DB.prepare('SELECT 1 FROM challenge_scores WHERE code = ? AND user_id = ?').bind(code, user.id).first();
+      const n = (await env.DB.prepare('SELECT COUNT(*) AS n FROM challenge_scores WHERE code = ?').bind(code).first<{ n: number }>())?.n ?? 0;
+      if (!inIt && n >= row.max_players) throw new HttpError(409, 'This duel is full.');
+    }
     spec = specFor('challenge', code);
   } else return null;
   if (seed !== spec.seed || industryId !== spec.industryId) throw new HttpError(409, 'This challenge has changed. Reload the page to get the new one.');
@@ -175,17 +180,17 @@ function newCode(): string {
   return Array.from(bytes, (b) => CHALLENGE_CODE_ALPHABET[b % CHALLENGE_CODE_ALPHABET.length]).join('');
 }
 
-export async function createChallenge(env: Env, user: UserRow) {
+export async function createChallenge(env: Env, user: UserRow, duel = false) {
   const now = nowIso();
   const active = await env.DB.prepare('SELECT COUNT(*) AS n FROM challenges WHERE creator_id = ? AND expires_at > ?').bind(user.id, now).first<{ n: number }>();
   if ((active?.n ?? 0) >= MAX_ACTIVE_CHALLENGES) throw new HttpError(429, 'You have plenty of open challenges already. Wait for one to expire.');
   const expires = new Date(Date.now() + CHALLENGE_DAYS * 86_400_000).toISOString();
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = newCode();
-    const res = await env.DB.prepare('INSERT OR IGNORE INTO challenges (code, creator_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(code, user.id, now, expires).run();
+    const res = await env.DB.prepare('INSERT OR IGNORE INTO challenges (code, creator_id, created_at, expires_at, max_players) VALUES (?, ?, ?, ?, ?)').bind(code, user.id, now, expires, duel ? 2 : 0).run();
     if (res.meta.changes) {
       const c = challengeField(code);
-      return { code, expiresAt: expires, challenge: { seed: c.seed, industryId: c.industryId, companyName: c.companyName, months: FIXED_MONTHS } };
+      return { code, expiresAt: expires, maxPlayers: duel ? 2 : 0, challenge: { seed: c.seed, industryId: c.industryId, companyName: c.companyName, months: FIXED_MONTHS } };
     }
   }
   throw new HttpError(409, 'Could not make a challenge code. Try again.');
@@ -195,13 +200,13 @@ export async function challengeView(env: Env, viewer: UserRow, codeParam: string
   const code = codeParam.toUpperCase();
   if (!isValidChallengeCode(code)) throw new HttpError(400, 'That challenge code is not valid.');
   const row = await env.DB.prepare(
-    `SELECT c.expires_at, u.name AS creator FROM challenges c JOIN users u ON u.id = c.creator_id WHERE c.code = ?`,
-  ).bind(code).first<{ expires_at: string; creator: string }>();
+    `SELECT c.expires_at, c.max_players, u.name AS creator FROM challenges c JOIN users u ON u.id = c.creator_id WHERE c.code = ?`,
+  ).bind(code).first<{ expires_at: string; max_players: number; creator: string }>();
   if (!row) throw new HttpError(404, 'No challenge has that code.');
   const c = challengeField(code);
   const board = await boardFor(env, viewer, 'challenge', code, 50);
   return {
-    code, creator: row.creator, expiresAt: row.expires_at, expired: row.expires_at < nowIso(),
+    code, creator: row.creator, maxPlayers: row.max_players, expiresAt: row.expires_at, expired: row.expires_at < nowIso(),
     challenge: { seed: c.seed, industryId: c.industryId, companyName: c.companyName, months: FIXED_MONTHS },
     ...board,
   };

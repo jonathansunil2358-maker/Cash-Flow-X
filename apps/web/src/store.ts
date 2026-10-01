@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  addBoxes, awardPrestige, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  addBoxes, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -97,6 +97,13 @@ interface Store {
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
   /** Cosmetics and founder titles (never affect a score). */
+  review: YearReview | null;
+  dismissReview: () => void;
+  buyDecor: (id: string) => void;
+  toggleDecor: (id: string) => void;
+  setLogo: (logo: Partial<Logo>) => void;
+  savePlanAction: (plan: unknown) => void;
+  deletePlanAction: (id: string) => void;
   claimQuest: (id: string) => void;
   openBox: () => BoxOpening<Profile> | null;
   claimAlbumPage: (pageId: string) => void;
@@ -258,6 +265,7 @@ export const useGame = create<Store>((set, get) => {
     pauseOnPanels: readPref('pauseOnPanels') !== 'false',
     scene3d: readPref('scene3d') !== 'false',
     toasts: [],
+    review: null,
     celebrations: [],
     pops: [],
     offline: null,
@@ -343,6 +351,7 @@ export const useGame = create<Store>((set, get) => {
       if (!game || game.status !== 'playing' || game.pendingEvent) return;
       const next = advanceMonth(game);
       commit(game, next, 0, { undoStack: [], monthProgress: 0 });
+      if (next.status === 'playing' && next.month % 12 === 0 && next.month > game.month) set({ review: yearReview(next) });
       // Daily quests: a month closed, a profitable month, a board target beaten.
       let q = recordQuest(get().profile, utcDay(), 'month');
       const last = next.history.at(-1);
@@ -597,6 +606,49 @@ export const useGame = create<Store>((set, get) => {
         // Recompute from the latest profile (act may have awarded progress) minus the gems.
         set({ profile: persistProfile({ ...get().profile, gems: get().profile.gems - (profile.gems - spent.gems) }), undoStack: [] });
       }
+    },
+
+    dismissReview() {
+      set({ review: null });
+    },
+
+    buyDecor(id) {
+      try {
+        set({ profile: persistProfile(buyDecorItem(get().profile, id)) });
+        get().toast('good', 'Decoration bought and placed on your island.');
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    toggleDecor(id) {
+      try {
+        set({ profile: persistProfile(toggleDecorItem(get().profile, id)) });
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    setLogo(logo) {
+      try {
+        set({ profile: persistProfile(setLogoOnProfile(get().profile, logo)) });
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    savePlanAction(plan) {
+      try {
+        set({ profile: persistProfile(savePlan(get().profile, plan)) });
+        get().toast('success', 'Plan saved.');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
+      }
+    },
+
+    deletePlanAction(id) {
+      set({ profile: persistProfile(deletePlan(get().profile, id)) });
     },
 
     claimQuest(id) {

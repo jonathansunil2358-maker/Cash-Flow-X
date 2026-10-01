@@ -4,7 +4,7 @@ import { useAccount } from '../lib/account';
 import { api, ONLINE } from '../lib/api';
 import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
-import { ShopCard } from './Shop';
+import { DecorCard, LogoCard, ShopCard } from './Shop';
 
 export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () => void }) {
   const { save, quit, undo, undoStack, pauseOnPanels, setPauseOnPanels, scene3d, setScene3d, setTourOpen, openSheet, game, refreshAccount, toast } = useGame();
@@ -61,6 +61,8 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
         </div>
       </Card>
       <ShopCard />
+      <DecorCard />
+      {game && <LogoCard icon={game.icon} />}
       {me && (
         <Card title="Account" subtitle={game?.server ? (game.server.flagged ? `This company failed verification: ${game.server.flagged}` : `This company is verified up to ${game.server.syncedMonth} months in.`) : undefined}>
           <label className="block text-xs font-black tracking-wider text-ink-2" htmlFor="player-name">PLAYER NAME (SHOWN ON LEADERBOARDS)</label>

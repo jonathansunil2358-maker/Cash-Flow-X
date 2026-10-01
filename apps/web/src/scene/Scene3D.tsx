@@ -1,4 +1,4 @@
-import { cosmeticsOf, formatGBP, headcount, skinOf, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { cosmeticsOf, decorDef, decorOf, formatGBP, headcount, skinOf, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
 import { Vector3, type Group, type Mesh } from 'three';
@@ -6,7 +6,7 @@ import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
-import { Billboard, Ferry, Fisher, Gull, Helipad, Lighthouse, PhoneBox, Pond } from './extras';
+import { Billboard, DecorItem, Ferry, Fisher, Gull, Helipad, Lighthouse, PhoneBox, Pond, TrophyHall } from './extras';
 import { Ball, Blk, Bush, C, Car, Cyl, Lamp, Tree } from './parts';
 
 /**
@@ -72,7 +72,7 @@ function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: n
   );
 }
 
-function Island({ night, doorX, sk, rich }: { night: boolean; doorX: number; sk: SkinPalette; rich: boolean }) {
+function Island({ night, doorX, sk, rich, cups, placed }: { night: boolean; doorX: number; sk: SkinPalette; rich: boolean; cups: number; placed: string[] }) {
   const asphalt = night ? '#3f4550' : '#5d6470';
   const paving = night ? '#a9a294' : '#ddd5c4';
   const line = '#fff8ec';
@@ -185,7 +185,9 @@ function Island({ night, doorX, sk, rich }: { night: boolean; doorX: number; sk:
 
       {/* landmarks and wildlife */}
       <Lighthouse x={-7.4} z={7.4} night={night} />
-      {rich && <Helipad x={-1.4} z={6.6} night={night} />}
+      {rich && <Helipad x={-2.2} z={7.3} night={night} />}
+      {cups > 0 && <TrophyHall x={-7.1} z={-0.2} cups={cups} night={night} />}
+      {placed.map((id) => { const d = decorDef(id); return d ? <DecorItem key={id} id={id} x={d.at[0]} z={d.at[1]} night={night} /> : null; })}
       <Pond x={5.6} z={-5.0} night={night} />
       <PhoneBox x={-4.9} z={1.05} />
       <Fisher x={JETTY_X - 0.3} z={GRASS / 2 + 1.7} />
@@ -571,6 +573,9 @@ export default function Scene3D({ game }: { game: GameState }) {
   const occupied = new Set(built.map((u) => u.plot));
   const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  const decor = useGame((s) => s.profile.decor);
+  const placed = useMemo(() => decorOf({ decor }).placed, [decor]);
+  const cups = useGame((s) => (game.awards?.length ?? 0) + Math.floor(Object.keys(s.profile.achievements).length / 3));
   const rich = (game.history.at(-1)?.valuation?.equityValue ?? 0) >= 5_000_000_00;
   const skinId = useGame((s) => cosmeticsOf(s.profile).skin);
   const sk = skinOf(skinId).palette;
@@ -636,7 +641,7 @@ export default function Scene3D({ game }: { game: GameState }) {
 
   return (
     <div className="relative h-full w-full">
-    <Canvas orthographic shadows dpr={[1, 2]} camera={{ position: [14.3, 14.4, 14.3], zoom: 24, near: -80, far: 200 }} gl={{ alpha: true, antialias: true }}
+    <Canvas orthographic shadows dpr={[1, 2]} camera={{ position: [14.3, 14.4, 14.3], zoom: 24, near: -80, far: 200 }} gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
       aria-label={`3D view of ${game.companyName}: headquarters with ${floors} floor${floors > 1 ? 's' : ''}, ${built.length} upgrade buildings, ${staff} staff, and customers arriving by car, bus and boat`}>
       <Zoom />
       <TagProjector els={tagEls} points={tagPoints} />
@@ -647,7 +652,7 @@ export default function Scene3D({ game }: { game: GameState }) {
       <Sea night={night} sk={sk} />
       <Boat night={night} />
       <group position={[0, -0.2, 0]}>
-        <Island night={night} doorX={doorX} sk={sk} rich={rich} />
+        <Island night={night} doorX={doorX} sk={sk} rich={rich} cups={cups} placed={placed} />
         <group position={[HQ_POS[0], 0, HQ_POS[1]]}>
           <Headquarters industry={game.industryId} floors={floors} />
         </group>

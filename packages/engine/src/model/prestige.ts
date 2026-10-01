@@ -5,6 +5,9 @@ import type { DailyState, Mission } from './gamification';
 import type { IndustryId } from './industries';
 import type { Cosmetics } from './cosmetics';
 import type { QuestState } from './quests';
+import type { DecorState } from './decor';
+import type { Logo } from './logo';
+import type { Plan } from './plans';
 import { BOOSTS, perkPurchase, type ActiveBoost, type BoostId, type PerkLevels } from './perks';
 import { isFixedScenario } from '../scenarios';
 import { ownership, type GameState } from './state';
@@ -67,6 +70,11 @@ export interface Profile {
   boxesOpened?: number;
   stickers?: string[];
   albumClaimed?: string[];
+  /** Island decorations bought and switched on, and the company logo. */
+  decor?: DecorState;
+  logo?: Logo;
+  /** Saved scenario plans (see plans.ts). */
+  plans?: Plan[];
 }
 
 export const STARTER_GEMS = 50;

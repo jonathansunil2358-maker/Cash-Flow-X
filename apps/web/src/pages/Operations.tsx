@@ -9,6 +9,7 @@ import { useDerived } from '../lib/derived';
 import { useGame } from '../store';
 import { BoardCard, TeamCard } from './Fun';
 import { RumourCard } from './Surprise';
+import { AdvisorsCard, AutopilotCard, BreakEvenCard, RiskCard } from './Smart';
 import { ContractsCard, InsuranceCard, PressuresCard, SitesCard } from './Growth';
 import { MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
 
@@ -50,6 +51,10 @@ export function Operations({ game }: { game: GameState }) {
         <PromotionsCard game={game} />
         <MoraleCard game={game} />
         <ProjectsCard game={game} />
+        <AdvisorsCard game={game} />
+        <RiskCard game={game} />
+        <BreakEvenCard game={game} />
+        <AutopilotCard game={game} />
         <BoardCard game={game} />
         <RumourCard game={game} />
         <TeamCard game={game} />

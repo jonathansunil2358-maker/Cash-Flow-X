@@ -1,5 +1,5 @@
 import {
-  cosmeticsOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
@@ -21,6 +21,9 @@ import { Onboarding } from './pages/Onboarding';
 import { Operations, UpgradesPanel } from './pages/Operations';
 import { Coach } from './pages/Coach';
 import { CelebrationModal, OfflineModal } from './pages/Overlays';
+import { PhotoButton } from './pages/Photo';
+import { YearReviewModal } from './pages/Review';
+import { LogoBadge } from './components/LogoBadge';
 import { Settings } from './pages/Settings';
 import { Tutorial } from './pages/Tutorial';
 import { useGame, type Sheet, type Speed } from './store';
@@ -149,6 +152,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
       <EventModal game={game} />
       <OfflineModal />
       <CelebrationModal />
+      <YearReviewModal />
       <Tutorial game={game} />
     </div>
   );
@@ -162,7 +166,7 @@ function Hud({ game }: { game: GameState }) {
   return (
     <header className="cfx-hud flex-col !flex-nowrap !items-stretch !gap-2 !p-2.5">
       <div className="flex items-center gap-2.5">
-        <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />
+        {profile.logo ? <LogoBadge logo={logoOf(profile)} icon={game.icon} /> : <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />}
         <div className="min-w-0 flex-1">
           <div className="cfx-hud__name">{game.companyName}</div>
           <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}{profile.prestigeCount > 0 && game.difficulty !== 'hard' ? ` · ★ ${prestigeTitle(profile.prestigeCount)}` : ''}</div>
@@ -279,6 +283,7 @@ function SceneArea({ game }: { game: GameState }) {
         ))}
       </div>
       <BuildingCard game={game} />
+      {scene3d && <PhotoButton game={game} />}
     </section>
   );
 }

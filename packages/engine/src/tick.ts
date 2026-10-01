@@ -25,6 +25,7 @@ import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './m
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
+import { runAutopilot } from './model/autopilot';
 import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
 import { advanceAwards } from './model/awards';
@@ -89,6 +90,9 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   const P: Poster = (memo, lines, cf = 'operating', cfLabel) => {
     post(L, m, memo, lines, { cf, cfLabel });
   };
+
+  // 0. Standing orders from the player's autopilot rules.
+  if (!opts.simulation) runAutopilot(s);
 
   // 1. Year start
   if (m > 0 && m % 12 === 0) {

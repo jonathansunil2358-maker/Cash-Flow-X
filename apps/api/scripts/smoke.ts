@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, challengeField, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
+  applyActionInPlace, bracketFor, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -212,6 +212,57 @@ const modRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, 
 check('modifiers: known ones are kept, unknown ones dropped', modRun.status === 201 && JSON.stringify(modRun.json.modifiers) === JSON.stringify(['slow-market', 'inflation']), modRun);
 const hardRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, body: { seed: `MODS2-${tag}`, industryId: 'software', difficulty: 'hard', equipmentFinance: 'buy', companyName: 'Hard Ltd', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, modifiers: ['slow-market'] } });
 check('modifiers: Hard ignores them (the server reports what the company really has)', hardRun.status === 201 && JSON.stringify(hardRun.json.modifiers) === '[]', hardRun);
+
+// Replays: the winner's decisions are kept, and re-running them reproduces the board score exactly.
+const rp = await call<{ name: string; score: number; months: number; game: { seed: string; industryId: IndustryId; companyName: string; scenarioId: string }; actions: { month: number; action: Action }[] }>(`/replays/daily/${today.day}?rank=1`, { token: eve.token });
+check('replay: the top daily run has its decisions saved', rp.status === 200 && rp.json.actions.length > 0 && rp.json.game.scenarioId === 'daily', rp);
+if (rp.status === 200) {
+  const rr = replay({ seed: rp.json.game.seed, industryId: rp.json.game.industryId, scenarioId: 'daily', companyName: rp.json.game.companyName, difficulty: 'medium', equipmentFinance: 'buy', actions: rp.json.actions, months: rp.json.months });
+  check('replay: re-running the saved decisions reproduces the board score', ownerStakeOf(rr) === rp.json.score || rr.status === 'insolvent', { got: ownerStakeOf(rr), want: rp.json.score });
+}
+check('replay: a rank nobody holds is 404', (await call(`/replays/daily/${today.day}?rank=10`, { token: eve.token })).status === 404);
+check('replay: bad kinds and ranks are refused', (await call('/replays/nope/x', { token: eve.token })).status === 400 && (await call(`/replays/daily/${today.day}?rank=0`, { token: eve.token })).status === 400);
+
+// Duels: a challenge for two players, the third is turned away.
+const dz = await signUp('Duelist');
+const dy = await signUp('Opponent');
+const dx = await signUp('Spectator');
+const duel = await call<{ code: string; maxPlayers: number; challenge: { seed: string; industryId: IndustryId } }>('/challenges', { token: dz.token, body: { duel: true } });
+check('duel: a duel code allows two players', duel.status === 201 && duel.json.maxPlayers === 2, duel);
+const dField = challengeField(duel.json.code);
+const startDuel = (token: string) => call('/runs', { token, body: { seed: dField.seed, industryId: dField.industryId, difficulty: 'medium', equipmentFinance: 'buy', companyName: 'x', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, challenge: duel.json.code } });
+check('duel: the first player joins', (await startDuel(dz.token)).status === 201);
+check('duel: the second player joins', (await startDuel(dy.token)).status === 201);
+const third = await startDuel(dx.token);
+check('duel: a third player is turned away', third.status === 409 && /full/.test(String((third.json as { error?: string }).error)), third);
+check('duel: the board still shows who is in it', (await call<{ maxPlayers: number }>(`/challenges/${duel.json.code}`, { token: dx.token })).json.maxPlayers === 2);
+
+// Community goal, tournament and rival of the week.
+const comm = await call<{ week: string; months: number; target: number; reached: boolean; contributed: boolean; claimed: boolean }>('/community', { token: eve.token });
+check('community: verified months add up and the viewer is counted', comm.status === 200 && comm.json.months > 0 && comm.json.contributed === true && comm.json.target > 0, comm);
+if (!comm.json.reached) check('community: no reward before the goal is reached', (await call('/rewards/community', { token: eve.token, body: {} })).status === 409);
+check('community: someone who has not played is not counted', (await call<{ contributed: boolean }>('/community', { token: dx.token })).json.contributed === false);
+const tour = await call<{ week: string; entrants: unknown[]; bracket: unknown }>('/tournament', { token: eve.token });
+check('tournament: the bracket for last week can be fetched', tour.status === 200 && Array.isArray(tour.json.entrants), tour);
+void bracketFor;
+const riv = await call<{ week: string; you: number; rival: { name: string } | null }>('/rival', { token: eve.token });
+check('rival: a rival of the week is picked from the neighbours (or none if alone)', riv.status === 200 && (riv.json.rival === null || typeof riv.json.rival.name === 'string'), riv);
+
+// The plan marketplace.
+const pubA = await signUp('PlanA');
+const pubB = await signUp('PlanB');
+const okPlan = await call<{ id: string }>('/plans', { token: pubA.token, body: { plan: { name: 'Premium push', price: 10, marketing: 150, hires: 1 } } });
+check('plans: a valid plan is published', okPlan.status === 201 && !!okPlan.json.id, okPlan);
+for (const bad of [{ name: '', price: 0, marketing: 100, hires: 0 }, { name: 'x', price: 99, marketing: 100, hires: 0 }, { name: 'x', price: 0, marketing: 100, hires: 99 }, 'nope', null]) {
+  check(`plans: invalid plan refused (${JSON.stringify(bad).slice(0, 40)})`, (await call('/plans', { token: pubA.token, body: { plan: bad } })).status === 400);
+}
+const listA = await call<{ plans: { id: string; name: string; likes: number; liked: boolean; mine: boolean }[] }>('/plans?sort=new', { token: pubB.token });
+check('plans: others can see it, with its author', listA.status === 200 && listA.json.plans.some((p) => p.id === okPlan.json.id && p.name === 'Premium push' && !p.mine), listA);
+const lk = await call<{ liked: boolean; likes: number }>(`/plans/${okPlan.json.id}/like`, { token: pubB.token, body: {} });
+check('plans: a like counts once, and un-likes on the second tap', lk.json.liked === true && lk.json.likes === 1 && (await call<{ likes: number }>(`/plans/${okPlan.json.id}/like`, { token: pubB.token, body: {} })).json.likes === 0);
+check('plans: you cannot like your own', (await call(`/plans/${okPlan.json.id}/like`, { token: pubA.token, body: {} })).status === 409);
+check('plans: only the author can remove it', (await call(`/plans/${okPlan.json.id}/delete`, { token: pubB.token, body: {} })).status === 404 && (await call(`/plans/${okPlan.json.id}/delete`, { token: pubA.token, body: {} })).status === 200);
+check('plans: sign-in is required', (await call('/plans')).status === 401);
 
 // Weekly event: same rules as the daily, with a twist, and a podium reward the week after.
 const week = weeklyChallenge(isoWeek());

@@ -3,7 +3,8 @@ import {
   ownership, plSummary, RULES_VERSION, stateChecksum, trailingPL, valuationOf, type Action, type ActiveBoost, type GameState, type PerkLevels,
 } from '@cfx/engine';
 import type { UserRow } from './auth';
-import { claimInsert, flagStatements, resolveFixed, scoreStatement } from './fixed';
+import { communityStatements, recordActionStatements } from './community';
+import { claimInsert, fixedOfRun, flagStatements, resolveFixed, scoreStatement } from './fixed';
 import { guildLevelOfUser, guildValuation, netWorthOf } from './social';
 import { cleanIcon, cleanName, gunzipJson, gzipJson, HttpError, newId, nowIso, seasonOf, weekOf, type Env } from './util';
 
@@ -208,6 +209,9 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
   }
   const score = scoreStatement(env, run, state, user.id, now);
   if (score) stmts.push(score);
+  // Replays of daily, weekly and challenge runs, and the community goal.
+  if (fixedOfRun(run)) stmts.push(...recordActionStatements(env, run.id, run.actions_verified, actions as { month: number; action: unknown }[]));
+  stmts.push(...communityStatements(env, user.id, Math.max(0, state.month - monthBefore)));
   if (user.guild_id && profitDelta !== 0) {
     stmts.push(env.DB.prepare(`INSERT INTO guild_weekly (guild_id, week, profit) VALUES (?, ?, ?)
       ON CONFLICT (guild_id, week) DO UPDATE SET profit = profit + excluded.profit`).bind(user.guild_id, weekOf(), profitDelta));

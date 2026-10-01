@@ -1,5 +1,6 @@
 import type { Balances } from '../ledger/accounts';
 import type { AwardWon } from './awards';
+import type { AutoRule } from './autopilotRules';
 import type { BoardState } from './board';
 import type { Rumour } from './surprise';
 import type { Ledger, PeriodAccumulator } from '../ledger/journal';
@@ -323,6 +324,8 @@ export interface GameState {
   modifiers?: string[];
   /** Quarterly board meetings (see board.ts) and annual awards won (see awards.ts). Missing on older saves. */
   board?: BoardState;
+  /** Standing orders the company follows each month (see autopilot.ts). */
+  rules?: AutoRule[];
   /** A rumour waiting to come true (or not): see surprise.ts. */
   rumour?: Rumour;
   awards?: AwardWon[];

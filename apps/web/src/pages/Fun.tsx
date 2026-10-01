@@ -1,9 +1,9 @@
 import {
   ActionError, applyAction, AWARDS, boardTarget, DIFFICULTIES, forecast, formatGBP, formatPct, INDUSTRIES, moodOf, PERSONALITIES,
-  mentorOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
+  MAX_PLANS, mentorOf, planActions, plansOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
-import { Button, Card, Field, KeyValue, Meter, StatusPill } from '../components/ui';
+import { Button, Card, Field, KeyValue, Meter, StatusPill, TextInput } from '../components/ui';
 import { CURRENCY_ICONS } from '../lib/icons';
 import { shareResultCard } from '../lib/shareCard';
 import { useGame } from '../store';
@@ -136,6 +136,9 @@ export function TrophyCard({ game }: { game: GameState }) {
 
 /** Drag a few levers and see what the next twelve months would look like, without committing. */
 export function WhatIfCard({ game }: { game: GameState }) {
+  const { profile, savePlanAction, deletePlanAction, act } = useGame();
+  const plans = plansOf(profile);
+  const [planName, setPlanName] = useState('');
   const [price, setPrice] = useState(0);
   const [marketing, setMarketing] = useState(100);
   const [hires, setHires] = useState(0);
@@ -181,6 +184,30 @@ export function WhatIfCard({ game }: { game: GameState }) {
           ]} />
           {result.f.insolventInMonths && <p className="mt-2 text-sm font-bold text-critical-text">Careful: this runs out of money in {result.f.insolventInMonths} months.</p>}
           {changed && <Button className="mt-2" onClick={() => { setPrice(0); setMarketing(100); setHires(0); }}>Reset sliders</Button>}
+          {changed && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <TextInput value={planName} maxLength={30} placeholder="Name this plan" aria-label="Plan name" onChange={(e) => setPlanName(e.target.value)} className="w-44" />
+              <Button disabled={!planName.trim() || plans.length >= MAX_PLANS} onClick={() => { savePlanAction({ name: planName.trim(), price, marketing, hires }); setPlanName(''); }}>Save plan</Button>
+              {plans.length >= MAX_PLANS && <span className="text-xs text-muted">Delete a plan to save another.</span>}
+            </div>
+          )}
+        </div>
+      )}
+      {plans.length > 0 && (
+        <div className="mt-3">
+          <h3 className="mb-1 text-sm font-bold">Saved plans</h3>
+          <ul className="space-y-1.5">
+            {plans.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2 text-sm">
+                <span className="min-w-0"><b>{p.name}</b> <span className="text-xs text-ink-2">price {p.price > 0 ? '+' : ''}{p.price}% · marketing {p.marketing}% · hire {p.hires}</span></span>
+                <span className="flex gap-1.5">
+                  <Button onClick={() => { setPrice(p.price); setMarketing(p.marketing); setHires(p.hires); }}>Preview</Button>
+                  <Button variant="primary" disabled={game.status !== 'playing'} onClick={() => { for (const a of planActions(game, p)) if (!act(a)) break; }}>Do it</Button>
+                  <Button variant="danger" onClick={() => deletePlanAction(p.id)} aria-label={`Delete ${p.name}`}>×</Button>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       <p className="mt-2 text-xs text-muted">Forecasts use expected values, so real months will wobble around them. {formatPct(0.05, 0)} either way is normal.</p>
