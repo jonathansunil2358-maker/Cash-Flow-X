@@ -15,7 +15,8 @@ export function auditOf(s: GameState): Finding[] {
   const out: Finding[] = [];
   const b = s.ledger.balances;
   const ind = industryOf(s);
-  const r = (id: string): number | null => ratios(s).find((x) => x.id === id)?.value ?? null;
+  const all = ratios(s);
+  const r = (id: string): number | null => all.find((x) => x.id === id)?.value ?? null;
 
   if (checkIntegrity(s).length) out.push({ id: 'books', title: 'The books do not agree with each other', detail: 'A register and the ledger disagree.', fix: 'This should never happen. Please report it.' });
   if (s.tax.due > 0 && s.tax.dueMonth !== null && s.month > s.tax.dueMonth) {
