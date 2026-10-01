@@ -47,6 +47,12 @@ construction, and an integrity check proves it every month.
 | Challenge modes | Boss rounds every three years, a speedrun to a £1m company, the Ironman badge, a chaos dial (Calm or Mayhem), a gym turnaround case study, a weekly puzzle league checked by the server, and seed sharing |
 | Collecting | Extra island land with new decorations, achievement trails with bigger prizes, unlockable soundtracks and a museum of your past companies |
 | More learning | Accountant's desk (which journal entry?), a tax season sprint, and a mock interview where an investor quizzes you on your own ratios |
+| Story campaign | A ten-chapter campaign of case-study companies, a nemesis who returns from your last company, backstory origins (banker, engineer, marketer, dropout), a whistleblower and recall crisis, and a documentary of your run |
+| Business depth v3 | A product designer slider, a star hiring market, buying your own building, a collaboration, export markets with currency swings, and customer reviews you can answer |
+| Mini-games | Negotiation, pitch day, stock-take and cash-flow tetris. They pay gems on your device only; only the puzzle league is checked by the server |
+| Together | Co-op links where a friend advises or watches your live company (only you can act), trading cards you can gift, a holding-company rivalry, a monthly season theme and a hall-of-fame skyline |
+| Feel | Penny the guide, a seasonal island, sound packs, accessibility settings (font, text size, colour-safe, calm mode), keyboard shortcuts and a replay theatre |
+| Long term | A dynasty family tree with inheritance gems, mastery challenges, and a £100m empire venture |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout
