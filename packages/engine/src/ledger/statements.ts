@@ -22,6 +22,7 @@ export interface PLSummary {
   marketing: Pence;
   rent: Pence;
   recruitment: Pence;
+  research: Pence;
   restructuring: Pence;
   badDebts: Pence;
   dealCosts: Pence;
@@ -52,11 +53,12 @@ export function plSummary(pl: Partial<Record<AccountId, Pence>>): PLSummary {
   const marketing = v(pl, 'marketing');
   const rent = v(pl, 'rent');
   const recruitment = v(pl, 'recruitment');
+  const research = v(pl, 'research');
   const restructuring = v(pl, 'restructuring');
   const badDebts = v(pl, 'badDebts');
   const dealCosts = v(pl, 'dealCosts');
   const otherCosts = v(pl, 'otherCosts');
-  const otherOpex = recruitment + restructuring + badDebts + dealCosts + otherCosts;
+  const otherOpex = recruitment + research + restructuring + badDebts + dealCosts + otherCosts;
   const opex = staff + marketing + rent + otherOpex;
   const ebitda = grossProfit + otherIncome - opex;
   const depreciation = v(pl, 'depreciation');
@@ -70,7 +72,7 @@ export function plSummary(pl: Partial<Record<AccountId, Pence>>): PLSummary {
   const tax = v(pl, 'taxExpense');
   const profit = pbt - tax;
   return {
-    revenue, cogs, inventoryWriteOff, costOfSales, grossProfit, otherIncome, staff, marketing, rent, recruitment,
+    revenue, cogs, inventoryWriteOff, costOfSales, grossProfit, otherIncome, staff, marketing, rent, recruitment, research,
     restructuring, badDebts, dealCosts, otherCosts, otherOpex, opex, ebitda, depreciation, impairment, ebit,
     interestIncome, fairValueGains, financeIncome, financeCosts, pbt, tax, profit,
   };
@@ -105,6 +107,7 @@ export function incomeStatementLines(s: PLSummary): StatementLine[] {
     L('rent', 'Rent & occupancy', s.rent, 'line', true),
   );
   if (s.recruitment) lines.push(L('recruitment', 'Recruitment', s.recruitment, 'line', true));
+  if (s.research) lines.push(L('research', 'Research & development', s.research, 'line', true, ACCOUNTS.research.help));
   if (s.restructuring) lines.push(L('restructuring', 'Redundancy costs', s.restructuring, 'line', true));
   if (s.badDebts) lines.push(L('badDebts', 'Bad debts', s.badDebts, 'line', true));
   if (s.dealCosts) lines.push(L('dealCosts', 'Deal & integration costs', s.dealCosts, 'line', true));

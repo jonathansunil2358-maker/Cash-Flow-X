@@ -76,6 +76,14 @@ export function newGame(opts: NewGameOptions): GameState {
     integrityErrors: [],
     staff: { ops: 0, rnd: 0, sales: 0 },
     salaryIndex: 1,
+    pay: 'market',
+    trainingSpend: 0,
+    morale: 60,
+    promo: null,
+    promoDipMonths: 0,
+    promoCooldown: 0,
+    projects: [],
+    projectsDone: [],
     price: ind.basePrice,
     marketingBudget: 0,
     stockCoverMonths: ind.stockCoverDefault,
@@ -115,7 +123,10 @@ export function newGame(opts: NewGameOptions): GameState {
     lastEvent: null,
     economy: { baseRate: 0.04, demandMult: 1, unitCostMult: 1, lendingAppetite: 1, badDebtRate: 0, active: [] },
     marketSize: ind.marketSize,
-    competitors: ind.competitors.map((c) => ({ name: c.name, quality: c.quality, price: Math.round(ind.basePrice * c.priceFactor), strength: c.strength })),
+    competitors: ind.competitors.map((c) => {
+      const price = Math.round(ind.basePrice * c.priceFactor);
+      return { name: c.name, quality: c.quality, price, strength: c.strength, cutMonths: 0, normalPrice: price, lastLaunchYear: -1 };
+    }),
     targets: [],
     acquisitions: [],
     log: [],
