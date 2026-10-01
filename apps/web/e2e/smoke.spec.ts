@@ -1255,3 +1255,36 @@ test('V3 Batch A: chapter one of the campaign starts as its own company', async 
   await expect(page.locator('.cfx-hud__name')).toHaveText('Stall & Co');
   expect((await savedGame(page)).scenarioId).toBe('campaign-1');
 });
+
+test('V3 Batch B: product designer, hiring market, reviews, export markets and real estate', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+
+  const design = biz.locator('#card-design');
+  await design.getByRole('button', { name: 'Open' }).click();
+  await design.getByLabel('Features').fill('70');
+  await design.getByRole('button', { name: 'Redesign' }).click();
+  await expect.poll(async () => (await savedGame(page)).design).toBe(70);
+
+  const hire = biz.locator('#card-market-hire');
+  await hire.getByRole('button', { name: 'Open' }).click();
+  await hire.getByRole('button', { name: /^Hire/ }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).stars ?? []).length).toBe(1);
+
+  const reviews = biz.locator('#card-reviews');
+  await reviews.getByRole('button', { name: 'Open' }).click();
+  await reviews.getByRole('button', { name: /^Reply to/ }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).replied ?? []).length).toBe(1);
+
+  const ex = biz.locator('#card-export');
+  await ex.getByRole('button', { name: 'Open' }).first().click();
+  await expect(ex.getByText('Europe').first()).toBeVisible();
+  const prop = biz.locator('#card-property');
+  await prop.getByRole('button', { name: 'Open' }).click();
+  await expect(prop.getByRole('button', { name: 'Buy the building' })).toBeVisible();
+});

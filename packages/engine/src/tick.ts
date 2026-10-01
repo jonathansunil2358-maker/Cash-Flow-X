@@ -30,6 +30,8 @@ import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
 import { advanceFranchises } from './model/franchise';
 import { advanceSuppliers, supplierMult } from './model/suppliers';
+import { buildingUpkeep, monthlyRent } from './model/property';
+import { exportUpkeep } from './model/export';
 import { advanceBoss } from './model/boss';
 import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
@@ -172,10 +174,15 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
 
   advanceProjects(s, rng, P, !!opts.simulation);
 
-  const rent = Math.round((ind.rentBase * (1 + rentedExtraSites(s)) + ind.rentPerHead * headcount(s)) * s.rentIndex);
+  const rent = monthlyRent(s);
   if (m % 3 === 0) P('Quarterly rent paid in advance', [dr('prepayments', rent * 3), cr('cash', rent * 3)]);
   const fromPrepaid = Math.min(rent, Math.max(0, L.balances.prepayments));
   P('Rent for the month', [dr('rent', rent), cr('prepayments', fromPrepaid), cr('cash', rent - fromPrepaid)]);
+
+  const upkeepBuilding = m % 12 === 0 && m > 0 ? buildingUpkeep(s) : 0;
+  if (upkeepBuilding > 0) P('Building upkeep for the year', [dr('otherCosts', upkeepBuilding), cr('cash', upkeepBuilding)]);
+  const exportCost = exportUpkeep(s);
+  if (exportCost > 0) P('Export market upkeep', [dr('marketing', exportCost), cr('cash', exportCost)]);
 
   const compliance = complianceCost(s);
   if (compliance > 0) P('Compliance, audit and legal', [dr('otherCosts', compliance), cr('cash', compliance)]);

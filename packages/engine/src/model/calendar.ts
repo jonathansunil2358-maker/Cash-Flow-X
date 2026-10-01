@@ -1,5 +1,6 @@
 import type { Pence } from '../money';
 import { industryOf } from './industries';
+import { monthlyRent } from './property';
 import { loanRate, scheduledRepayment } from './loans';
 import { grossPayroll } from './morale';
 import { premiumFor } from './insurance';
@@ -21,7 +22,7 @@ export interface CalendarItem {
 export function cashCalendar(s: GameState, months = 6): CalendarItem[] {
   const ind = industryOf(s);
   const out: CalendarItem[] = [];
-  const rent = Math.round((ind.rentBase * (1 + rentedExtraSites(s)) + ind.rentPerHead * headcount(s)) * s.rentIndex);
+  const rent = monthlyRent(s);
   const payroll = Math.round(grossPayroll(s) * 1.15);
   const premium = premiumFor(s);
   for (let i = 0; i < months; i++) {
