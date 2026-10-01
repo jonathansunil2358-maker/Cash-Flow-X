@@ -3,6 +3,7 @@ import type { AwardWon } from './awards';
 import type { AutoRule } from './autopilotRules';
 import type { BoardState } from './board';
 import type { Rumour } from './surprise';
+import type { Venture } from './venture';
 import type { Ledger, PeriodAccumulator } from '../ledger/journal';
 import type { Pence } from '../money';
 import type { DifficultyId } from './difficulty';
@@ -328,6 +329,8 @@ export interface GameState {
   rules?: AutoRule[];
   /** A rumour waiting to come true (or not): see surprise.ts. */
   rumour?: Rumour;
+  /** Side ventures waiting to settle: see venture.ts. */
+  ventures?: Venture[];
   awards?: AwardWon[];
   pay: PayLevel;
   /** Monthly training budget. */

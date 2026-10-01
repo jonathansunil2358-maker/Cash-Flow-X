@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  addBoxes, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  addBoxes, addPassPoints, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -105,6 +105,8 @@ interface Store {
   savePlanAction: (plan: unknown) => void;
   deletePlanAction: (id: string) => void;
   claimQuest: (id: string) => void;
+  learnSkill: (id: string) => void;
+  claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;
   claimAlbumPage: (pageId: string) => void;
   buySkin: (id: string) => void;
@@ -195,6 +197,7 @@ function progressAfter(
   // Every award won is a mystery box.
   const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
   if (newAwards > 0) p = addBoxes(p, newAwards);
+  if (closed > 0) p = addPassPoints(p, closed);
   if (closed > 0 || extraXp > 0) {
     for (const a of newAchievements(after, p.achievements)) {
       p = { ...p, achievements: { ...p.achievements, [a.id]: today() }, gems: p.gems + a.gems };
@@ -208,7 +211,7 @@ function progressAfter(
     for (const m of missions) {
       const st = missionStatus(m, after);
       if (st.done) {
-        p = { ...p, gems: p.gems + m.rewardGems, missionsCompleted: p.missionsCompleted + 1 };
+        p = addPassPoints({ ...p, gems: p.gems + m.rewardGems, missionsCompleted: p.missionsCompleted + 1 }, 5);
         xp += m.rewardXp;
         celebrations.push({ id: nextId++, kind: 'mission', title: 'Mission complete', text: st.title, gems: m.rewardGems });
       } else remaining.push(m);
@@ -640,7 +643,7 @@ export const useGame = create<Store>((set, get) => {
 
     savePlanAction(plan) {
       try {
-        set({ profile: persistProfile(savePlan(get().profile, plan)) });
+        set({ profile: persistProfile(savePlan(get().profile, plan, planSlotsOf(get().profile))) });
         get().toast('success', 'Plan saved.');
       } catch (e) {
         get().toast('error', (e as Error).message);
@@ -672,6 +675,25 @@ export const useGame = create<Store>((set, get) => {
         get().toast('error', (e as Error).message);
         return null;
       }
+    },
+
+    learnSkill(id) {
+      const next = learnSkillOn(get().profile, id);
+      if (next === get().profile) { get().toast('error', 'You need a free skill point for that.'); return; }
+      set({ profile: persistProfile(next) });
+      get().toast('good', 'Skill learned.');
+      playSound('success');
+    },
+
+    claimPass() {
+      const r = claimPassTier(get().profile);
+      if (!r) { get().toast('error', 'No reward to claim yet. Keep playing.'); return; }
+      let p = r.profile;
+      if (r.reward.kind === 'gems') p = { ...p, gems: p.gems + r.reward.amount };
+      else p = addBoxes(p, 1);
+      set({ profile: persistProfile(p) });
+      get().toast('good', r.reward.kind === 'gems' ? `Season pass tier ${r.tier}: ${r.reward.amount} gems.` : `Season pass tier ${r.tier}: a mystery box.`);
+      playSound('success');
     },
 
     claimAlbumPage(pageId) {

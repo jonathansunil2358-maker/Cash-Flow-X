@@ -9,6 +9,7 @@ import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
 import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
+import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
 import { prestigeBonus, prestigeTitle } from './model/rank';
@@ -37,6 +38,7 @@ export type Action =
   | { type: 'startProject'; projectId: string }
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
+  | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -215,6 +217,12 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         action.level === 'above' ? 'The wage bill is 12% higher. Morale, productivity and loyalty rise.'
           : action.level === 'below' ? 'The wage bill is 10% lower, but morale and productivity will slip and people may leave.'
             : 'Standard pay. Morale settles at its normal level.');
+      break;
+    }
+    case 'startVenture': {
+      const check = ventureCheck(s, action.kind, action.amount);
+      if (!check.ok) fail(check.reason!);
+      startVenture(s, action.kind, action.amount);
       break;
     }
     case 'setTraining': {

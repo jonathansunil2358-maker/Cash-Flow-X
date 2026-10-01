@@ -10,6 +10,12 @@ export const PHOTO_FILTERS: PhotoFilter[] = [
   { id: 'noir', name: 'Noir', css: 'grayscale(1) contrast(1.2)' },
   { id: 'sunset', name: 'Sunset', css: 'sepia(0.35) saturate(1.6) hue-rotate(-18deg) brightness(1.05)' },
 ];
+/** Unlocked by the "Photo studio extras" founder skill. */
+export const EXTRA_FILTERS: PhotoFilter[] = [
+  { id: 'dream', name: 'Dream', css: 'saturate(1.2) brightness(1.1) contrast(0.9) blur(0.6px)' },
+  { id: 'frost', name: 'Frost', css: 'hue-rotate(160deg) saturate(0.9) brightness(1.1)' },
+  { id: 'pop', name: 'Pop', css: 'saturate(2) contrast(1.25)' },
+];
 
 export interface PhotoOptions {
   caption: string;

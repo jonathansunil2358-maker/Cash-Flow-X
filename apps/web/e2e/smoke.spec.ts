@@ -866,3 +866,49 @@ test('Batch E: community goal, rival of the week, tournament, plan market and du
   await expect(page.locator('#card-tournament')).toBeVisible();
   await expect(page.locator('#card-market')).toBeVisible();
 });
+
+test('Batch F: culture, side ventures, reputation tier, season pass, skills and mastery', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Finance: back a venture.
+  await openDock(page, 'Finance');
+  const venture = page.locator('#card-venture');
+  await venture.getByLabel('Venture').selectOption('safe');
+  await venture.getByRole('button', { name: 'Back it' }).click();
+  await expect.poll(async () => ((await savedGame(page)).ventures ?? []).length).toBe(1);
+  await expect(venture.getByText(/until month/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  // Dashboard shows the reputation tier.
+  await clearOverlays(page);
+  await openDock(page, 'Books');
+  await expect(page.getByRole('dialog', { name: /Books/ }).getByText(/^Reputation/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+
+  // Missions: season pass, skills (none yet at level 1) and mastery.
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.locator('#card-pass')).toBeVisible();
+  await expect(missions.locator('#card-skills').getByRole('button', { name: /Learn/ }).first()).toBeVisible();
+  await expect(missions.locator('#card-mastery')).toBeVisible();
+});
+
+test('Batch F: a new company can pick a culture, and it shows in the pressures card', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Cult');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('radio', { name: /Frugal/ }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['culture-frugal']);
+});

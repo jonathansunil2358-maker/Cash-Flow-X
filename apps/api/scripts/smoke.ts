@@ -212,6 +212,8 @@ const modRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, 
 check('modifiers: known ones are kept, unknown ones dropped', modRun.status === 201 && JSON.stringify(modRun.json.modifiers) === JSON.stringify(['slow-market', 'inflation']), modRun);
 const hardRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, body: { seed: `MODS2-${tag}`, industryId: 'software', difficulty: 'hard', equipmentFinance: 'buy', companyName: 'Hard Ltd', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, modifiers: ['slow-market'] } });
 check('modifiers: Hard ignores them (the server reports what the company really has)', hardRun.status === 201 && JSON.stringify(hardRun.json.modifiers) === '[]', hardRun);
+const cultRun = await call<{ modifiers: string[] }>('/runs', { token: mia.token, body: { seed: `CULT-${tag}`, industryId: 'software', difficulty: 'easy', equipmentFinance: 'buy', companyName: 'Culture Ltd', icon: 'rocket', boosts: [], rulesVersion: RULES_VERSION, modifiers: ['culture-bold', 'culture-frugal', 'inflation'] } });
+check('culture: only one is kept, after the extra challenges', cultRun.status === 201 && JSON.stringify(cultRun.json.modifiers) === JSON.stringify(['inflation', 'culture-frugal']), cultRun);
 
 // Replays: the winner's decisions are kept, and re-running them reproduces the board score exactly.
 const rp = await call<{ name: string; score: number; months: number; game: { seed: string; industryId: IndustryId; companyName: string; scenarioId: string }; actions: { month: number; action: Action }[] }>(`/replays/daily/${today.day}?rank=1`, { token: eve.token });

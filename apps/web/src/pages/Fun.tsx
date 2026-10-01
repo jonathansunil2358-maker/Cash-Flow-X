@@ -1,6 +1,6 @@
 import {
   ActionError, applyAction, AWARDS, boardTarget, DIFFICULTIES, forecast, formatGBP, formatPct, INDUSTRIES, moodOf, PERSONALITIES,
-  MAX_PLANS, mentorOf, planActions, plansOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
+  forecastMonthsOf, planSlotsOf, mentorOf, planActions, plansOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
 import { Button, Card, Field, KeyValue, Meter, StatusPill, TextInput } from '../components/ui';
@@ -137,12 +137,14 @@ export function TrophyCard({ game }: { game: GameState }) {
 /** Drag a few levers and see what the next twelve months would look like, without committing. */
 export function WhatIfCard({ game }: { game: GameState }) {
   const { profile, savePlanAction, deletePlanAction, act } = useGame();
-  const plans = plansOf(profile);
+  const plans = plansOf(profile, 99);
+  const slots = planSlotsOf(profile);
+  const horizon = forecastMonthsOf(profile);
   const [planName, setPlanName] = useState('');
   const [price, setPrice] = useState(0);
   const [marketing, setMarketing] = useState(100);
   const [hires, setHires] = useState(0);
-  const base = useMemo(() => forecast(game, 12), [game]);
+  const base = useMemo(() => forecast(game, horizon), [game, horizon]);
   const result = useMemo(() => {
     const actions: Action[] = [];
     if (price !== 0) actions.push({ type: 'setPrice', price: Math.max(100, Math.round((game.price * (100 + price)) / 100 / 100) * 100) });
@@ -154,9 +156,9 @@ export function WhatIfCard({ game }: { game: GameState }) {
     } catch (e) {
       return { error: e instanceof ActionError ? e.message : 'Could not try that.' } as const;
     }
-    const f = forecast(s, 12);
+    const f = forecast(s, horizon);
     return { f, error: null } as const;
-  }, [game, price, marketing, hires]);
+  }, [game, price, marketing, hires, horizon]);
   const sum = (f: ReturnType<typeof forecast>, k: 'profit' | 'revenue') => f.points.reduce((a, p) => a + p[k], 0);
   const end = (f: ReturnType<typeof forecast>) => f.points.at(-1)?.cash ?? game.ledger.balances.cash;
   const delta = (a: number, b: number) => { const d = b - a; return `${d >= 0 ? '+' : '−'}${formatGBP(Math.abs(d), { compact: true })}`; };
@@ -177,9 +179,9 @@ export function WhatIfCard({ game }: { game: GameState }) {
       {result.error ? <p role="alert" className="mt-3 text-sm font-bold text-critical-text">{result.error}</p> : result.f && (
         <div className="mt-3">
           <KeyValue rows={[
-            ['12-month profit', `${formatGBP(sum(result.f, 'profit'), { compact: true })} (${changed ? delta(sum(base, 'profit'), sum(result.f, 'profit')) : 'same as now'})`],
-            ['12-month revenue', `${formatGBP(sum(result.f, 'revenue'), { compact: true })} (${changed ? delta(sum(base, 'revenue'), sum(result.f, 'revenue')) : 'same as now'})`],
-            ['Cash in 12 months', `${formatGBP(end(result.f), { compact: true })} (${changed ? delta(end(base), end(result.f)) : 'same as now'})`],
+            [`${horizon}-month profit`, `${formatGBP(sum(result.f, 'profit'), { compact: true })} (${changed ? delta(sum(base, 'profit'), sum(result.f, 'profit')) : 'same as now'})`],
+            [`${horizon}-month revenue`, `${formatGBP(sum(result.f, 'revenue'), { compact: true })} (${changed ? delta(sum(base, 'revenue'), sum(result.f, 'revenue')) : 'same as now'})`],
+            [`Cash in ${horizon} months`, `${formatGBP(end(result.f), { compact: true })} (${changed ? delta(end(base), end(result.f)) : 'same as now'})`],
             ['Lowest cash', formatGBP(result.f.minCash, { compact: true })],
           ]} />
           {result.f.insolventInMonths && <p className="mt-2 text-sm font-bold text-critical-text">Careful: this runs out of money in {result.f.insolventInMonths} months.</p>}
@@ -187,8 +189,8 @@ export function WhatIfCard({ game }: { game: GameState }) {
           {changed && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <TextInput value={planName} maxLength={30} placeholder="Name this plan" aria-label="Plan name" onChange={(e) => setPlanName(e.target.value)} className="w-44" />
-              <Button disabled={!planName.trim() || plans.length >= MAX_PLANS} onClick={() => { savePlanAction({ name: planName.trim(), price, marketing, hires }); setPlanName(''); }}>Save plan</Button>
-              {plans.length >= MAX_PLANS && <span className="text-xs text-muted">Delete a plan to save another.</span>}
+              <Button disabled={!planName.trim() || plans.length >= slots} onClick={() => { savePlanAction({ name: planName.trim(), price, marketing, hires }); setPlanName(''); }}>Save plan</Button>
+              {plans.length >= slots && <span className="text-xs text-muted">Delete a plan to save another.</span>}
             </div>
           )}
         </div>

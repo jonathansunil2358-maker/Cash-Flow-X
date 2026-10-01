@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import type { PassState } from './progress';
 import { modifierBonus } from './modifiers-opt';
 import { DIFFICULTIES, type DifficultyId } from './difficulty';
 import type { DailyState, Mission } from './gamification';
@@ -75,6 +76,9 @@ export interface Profile {
   logo?: Logo;
   /** Saved scenario plans (see plans.ts). */
   plans?: Plan[];
+  /** Founder skills learned and this month's season pass (see progress.ts). */
+  skills?: string[];
+  pass?: PassState;
 }
 
 export const STARTER_GEMS = 50;

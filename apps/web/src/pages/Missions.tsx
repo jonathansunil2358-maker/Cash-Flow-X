@@ -7,6 +7,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
+import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
 import { TitlesCard } from './Titles';
 import { WeeklyEventCard } from './Weekly';
@@ -41,6 +42,8 @@ export function Missions({ game }: { game: GameState }) {
 
       <QuestsCard />
       <BoxesCard />
+      <SeasonPassCard />
+      <SkillsCard />
       <DailyChallengeCard game={game} />
       <WeeklyEventCard game={game} />
       <ChallengeCard game={game} />
@@ -92,6 +95,7 @@ export function Missions({ game }: { game: GameState }) {
 
       <AlbumCard />
 
+      <MasteryCard />
       <TitlesCard />
 
       <Card title={`Achievements (${earned}/${ACHIEVEMENTS.length})`}>

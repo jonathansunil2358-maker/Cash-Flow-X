@@ -1,7 +1,7 @@
-import { monthLabel, type GameState } from '@cfx/engine';
+import { hasSkill, monthLabel, type GameState } from '@cfx/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../components/ui';
-import { PHOTO_FILTERS, renderPhoto, sharePhoto } from '../lib/photo';
+import { EXTRA_FILTERS, PHOTO_FILTERS, renderPhoto, sharePhoto } from '../lib/photo';
 import { useGame } from '../store';
 
 /** A camera button on the scene, and the photo studio it opens. */
@@ -21,9 +21,11 @@ function PhotoStudio({ game, onClose }: { game: GameState; onClose: () => void }
   const [filterId, setFilterId] = useState('none');
   const [msg, setMsg] = useState<string | null>(null);
   const toast = useGame((s) => s.toast);
+  const extras = useGame((s) => hasSkill(s.profile, 'photoFilters'));
+  const filters = useMemo(() => (extras ? [...PHOTO_FILTERS, ...EXTRA_FILTERS] : PHOTO_FILTERS), [extras]);
   const preview = useRef<HTMLCanvasElement>(null);
   const source = useMemo(() => document.querySelector<HTMLCanvasElement>('section[aria-label="Your business"] canvas'), []);
-  const filter = PHOTO_FILTERS.find((f) => f.id === filterId) ?? PHOTO_FILTERS[0];
+  const filter = filters.find((f) => f.id === filterId) ?? filters[0];
   const sky = useMemo(() => getComputedStyle(document.documentElement).getPropertyValue('--sky').trim() || '#bfe6ff', []);
   const caption = game.companyName;
   const sub = `${monthLabel(game.month)} · ${game.industryId}`;
@@ -51,7 +53,7 @@ function PhotoStudio({ game, onClose }: { game: GameState; onClose: () => void }
         <div className="font-display text-xl">Photo studio</div>
         {source ? <canvas ref={preview} className="mt-2 w-full rounded-xl border-[3px] border-outline" aria-label="Photo preview" /> : <p className="mt-2 text-sm font-bold">{msg ?? 'Turn the 3D scene on in Settings to take photos.'}</p>}
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Filters">
-          {PHOTO_FILTERS.map((f) => <Button key={f.id} variant={filterId === f.id ? 'primary' : 'secondary'} aria-pressed={filterId === f.id} onClick={() => setFilterId(f.id)}>{f.name}</Button>)}
+          {filters.map((f) => <Button key={f.id} variant={filterId === f.id ? 'primary' : 'secondary'} aria-pressed={filterId === f.id} onClick={() => setFilterId(f.id)}>{f.name}</Button>)}
         </div>
         <div className="mt-3 flex gap-2">
           <Button variant="primary" disabled={!source} onClick={() => void share()}>Share or save</Button>

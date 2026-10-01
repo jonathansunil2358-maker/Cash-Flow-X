@@ -28,6 +28,7 @@ import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure'
 import { runAutopilot } from './model/autopilot';
 import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
+import { advanceVentures } from './model/venture';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
@@ -256,6 +257,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceListing(s, rng, !!opts.simulation);
   if (!opts.simulation) maybeOffer(s, rng);
   advanceSurprise(s, rng, !!opts.simulation);
+  advanceVentures(s, rng, !!opts.simulation);
 
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);

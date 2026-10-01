@@ -1,5 +1,5 @@
 import {
-  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
+  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
   rebirthsRemaining, SCENARIOS, startingCash, type DifficultyId, type EquipmentFinance, type IndustryId,
 } from '@cfx/engine';
 import { challengeField, isValidChallengeCode } from '@cfx/engine';
@@ -49,6 +49,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const [difficulty, setDifficulty] = useState<DifficultyId>(preset?.difficulty ?? 'medium');
   const [finance, setFinance] = useState<EquipmentFinance>('lease');
   const [mods, setMods] = useState<string[]>([]);
+  const [culture, setCulture] = useState<string | null>(null);
   const [seed, setSeed] = useState(randomSeedLabel);
   const [, refresh] = useState(0);
   const signedIn = !!useAccount((s) => s.me);
@@ -66,7 +67,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
     setBusy(true);
     await start({
     companyName: name.trim() || defaultName, industryId: ind.id, seed: seed.trim() || randomSeedLabel(), scenarioId,
-    difficulty, equipmentFinance: finance, icon, modifiers: difficulty === 'hard' || caseStudy ? [] : mods,
+    difficulty, equipmentFinance: finance, icon, modifiers: difficulty === 'hard' || caseStudy ? [] : [...mods, ...(culture ? [culture] : [])],
     });
     setBusy(false);
   };
@@ -253,6 +254,20 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
                 })}
               </div>
               {mods.length > 0 && <p className="mt-2 text-sm font-extrabold">Score and Legacy bonus: +{Math.round(MODIFIER_BONUS * mods.length * 100)}%</p>}
+              <div className="mt-4 font-display text-lg">Company culture</div>
+              <p className="text-xs text-ink-2">Optional. A small trade-off that gives your company a personality. It pays no bonus.</p>
+              <div className="mt-2 grid gap-2" role="radiogroup" aria-label="Company culture">
+                {CULTURES.map((c) => {
+                  const on = culture === c.id;
+                  return (
+                    <button key={c.id} type="button" role="radio" aria-checked={on} className={`cfx-tile !p-2.5 text-left ${on ? 'ring-4 ring-[var(--coin)]' : ''}`}
+                      onClick={() => setCulture(on ? null : c.id)}>
+                      <span className="cfx-tile__name !text-lg">{on ? '✓ ' : ''}{c.name}</span>
+                      <span className="cfx-tile__meta">{c.blurb}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           )}
 

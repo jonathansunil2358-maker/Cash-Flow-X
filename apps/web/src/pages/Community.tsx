@@ -1,5 +1,5 @@
 import {
-  applyActionInPlace, formatGBP, INDUSTRIES, MAX_PLANS, monthLabel, newGame, plansOf, plSummary, tickInPlace, type Action, type GameState,
+  applyActionInPlace, formatGBP, INDUSTRIES, planSlotsOf, monthLabel, newGame, plansOf, plSummary, tickInPlace, type Action, type GameState,
 } from '@cfx/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
@@ -199,7 +199,7 @@ function PlanMarket() {
   const { profile, savePlanAction, toast } = useGame();
   const [sort, setSort] = useState<'top' | 'new'>('top');
   const [plans, setPlans] = useState<SharedPlan[] | null>(null);
-  const mine = plansOf(profile);
+  const mine = plansOf(profile, 99);
   const load = () => api.plans(sort).then((r) => setPlans(r.plans)).catch(() => setPlans([]));
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [sort]);
   const like = async (id: string) => { try { await api.likePlan(id); await load(); } catch (e) { toast('error', (e as Error).message); } };
@@ -225,7 +225,7 @@ function PlanMarket() {
                 <div className="min-w-0"><div className="font-display text-base leading-tight">{p.name}</div><div className="text-xs text-ink-2">by {p.author} · price {p.price > 0 ? '+' : ''}{p.price}% · marketing {p.marketing}% · hire {p.hires}</div></div>
                 <div className="flex gap-1.5">
                   <Button aria-pressed={p.liked} disabled={p.mine} onClick={() => void like(p.id)} aria-label={`Like ${p.name}`}>{p.liked ? '♥' : '♡'} {p.likes}</Button>
-                  <Button disabled={mine.length >= MAX_PLANS} onClick={() => savePlanAction({ name: p.name, price: p.price, marketing: p.marketing, hires: p.hires })}>Try it</Button>
+                  <Button disabled={mine.length >= planSlotsOf(profile)} onClick={() => savePlanAction({ name: p.name, price: p.price, marketing: p.marketing, hires: p.hires })}>Try it</Button>
                   {p.mine && <Button variant="danger" onClick={() => void remove(p.id)} aria-label={`Remove ${p.name}`}>Remove</Button>}
                 </div>
               </div>

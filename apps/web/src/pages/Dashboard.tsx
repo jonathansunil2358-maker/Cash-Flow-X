@@ -5,6 +5,7 @@ import {
 import { useMemo } from 'react';
 import { CashChart, PerformanceChart, type CashPoint } from '../components/charts';
 import { Card, Meter, Stat, StatusPill } from '../components/ui';
+import { ReputationTier } from './Progress';
 import { useDerived } from '../lib/derived';
 import { useGame, type BooksTab, type Sheet } from '../store';
 
@@ -81,6 +82,7 @@ export function Dashboard({ game }: { game: GameState }) {
           help="Demand you can serve with current operations staff. Over 100% means lost sales and, for subscriptions, extra churn." />
         <Stat label="Equity value" value={formatGBP(d.valuation.equityValue, { compact: true })} sub={canPrestige ? `${formatPct(progress, 0)} of the way to prestige` : 'Hard mode: no prestige'}
           help={`${d.valuation.method}. See the Valuation tab for the workings.`} />
+        <Stat label="Reputation" value={<span>{Math.round(game.reputation)}</span>} sub={<ReputationTier game={game} />} help="Reputation nudges demand by up to 10%. Event decisions move it." />
         <Stat label="Financial health" value={<span>{health.grade}</span>} sub={`${Math.round(health.score * 100)}/100`} tone={health.score >= 0.6 ? 'good' : health.score < 0.35 ? 'bad' : 'neutral'}
           help="Liquidity, leverage, return on capital and cash cover. It multiplies your final score." />
       </div>

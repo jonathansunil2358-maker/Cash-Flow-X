@@ -1,5 +1,5 @@
 import {
-  advisors, breakEven, calendarTotal, cashCalendar, cleanRules, formatGBP, formatInt, MAX_RULES, monthLabel, riskOf, RULE_INFO, type AutoRule, type GameState,
+  advisors, calendarMonthsOf, breakEven, calendarTotal, cashCalendar, cleanRules, formatGBP, formatInt, MAX_RULES, monthLabel, riskOf, RULE_INFO, type AutoRule, type GameState,
 } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Field, Meter, MoneyInput, StatusPill } from '../components/ui';
@@ -131,10 +131,12 @@ export function AutopilotCard({ game }: { game: GameState }) {
 
 /** The big payments coming up, month by month. */
 export function CalendarCard({ game }: { game: GameState }) {
-  const items = cashCalendar(game, 6);
-  const months = Array.from({ length: 6 }, (_, i) => game.month + i);
+  const profile = useGame((st) => st.profile);
+  const n = calendarMonthsOf(profile);
+  const items = cashCalendar(game, n);
+  const months = Array.from({ length: n }, (_, i) => game.month + i);
   return (
-    <Fold id="card-calendar" title="Cash-flow calendar" summary={`Next six months: ${formatGBP(months.reduce((a, m) => a + calendarTotal(items, m), 0), { compact: true })} of known payments. Open for the timeline.`}
+    <Fold id="card-calendar" title="Cash-flow calendar" summary={`Next ${n} months: ${formatGBP(months.reduce((a, m) => a + calendarTotal(items, m), 0), { compact: true })} of known payments. Open for the timeline.`}
       subtitle="The payments you can already see coming: payroll, quarterly rent, insurance, loan repayments and any tax bill. It is a plan, not a promise.">
       <ol className="space-y-2">
         {months.map((m) => {
