@@ -34,3 +34,4 @@ export * from './model/investors';
 export * from './model/guild';
 export * from './sync';
 export * from './model/promotions';
+export * from './model/morale';

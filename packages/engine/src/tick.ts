@@ -21,6 +21,7 @@ import {
 import { effectiveTaxRate, TAX_PAYMENT_LAG } from './model/tax';
 import { valuationOf } from './model/valuation';
 import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapital';
+import { advanceMorale, grossPayroll, leaverCost, moraleProductivity, rollLeavers } from './model/morale';
 import { advancePromo, effectivePrice } from './model/promotions';
 import { createRng, neutralRng, noise, roundProb, type Rng } from './rng';
 
@@ -110,7 +111,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   s.marketSize *= 1 + ind.marketGrowth;
   updateCompetitors(s, ind, rng, s.history.at(-1)?.kpis.marketShare ?? 0);
   s.quality = Math.min(100, Math.max(1,
-    s.quality + ind.founderQuality + mods.qualityPerMonth + ind.qualityPerRnd * Math.pow(s.staff.rnd, 0.85) - ind.qualityDecay * s.quality));
+    s.quality + ind.founderQuality + mods.qualityPerMonth + ind.qualityPerRnd * Math.pow(s.staff.rnd, 0.85) * moraleProductivity(s.morale) - ind.qualityDecay * s.quality));
   s.brand = s.brand * 0.9 + (s.marketingBudget / ind.marketingPerBrandPoint) * mods.brandGainMult;
   const d = demandFor(s, ind);
   const capacity = capacityOf(s, ind);
@@ -126,11 +127,20 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   s.deferredSchedule.push(0);
   if (release) P('Deferred revenue recognised', [dr('deferredRevenue', release), cr('revenue', release)]);
 
-  const gross = Math.round(ROLE_IDS.reduce((a, r) => a + s.staff[r] * ind.roles[r].salary, 0) * s.salaryIndex / 12);
+  const gross = grossPayroll(s);
   if (gross > 0) {
     const total = Math.round(gross * 1.15);
     const net = Math.round(gross * 0.78);
     P('Payroll: net pay to staff, PAYE/NI/pension accrued', [dr('wages', total), cr('cash', net), cr('accruals', total - net)]);
+  }
+
+  if (s.trainingSpend > 0 && headcount(s) > 0) P('Staff training', [dr('wages', s.trainingSpend), cr('cash', s.trainingSpend)]);
+  advanceMorale(s);
+  for (const leaver of rollLeavers(s, rng)) {
+    const cost = leaverCost(s, leaver.role) * leaver.count;
+    if (cost > 0) P(`Staff turnover: ${leaver.count} × ${ind.roles[leaver.role].title} left (handover and backfill)`, [dr('recruitment', cost), cr('cash', cost)]);
+    s.staff[leaver.role] -= leaver.count;
+    if (!opts.simulation) logItem(s, 'warning', 'Staff have left', `${leaver.count} × ${ind.roles[leaver.role].title} resigned. Morale is ${Math.round(s.morale)}: pay, training and a calm balance sheet keep people.`);
   }
 
   const rent = Math.round((ind.rentBase + ind.rentPerHead * headcount(s)) * s.rentIndex);

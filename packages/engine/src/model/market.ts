@@ -1,6 +1,7 @@
 import { chance, type Rng } from '../rng';
 import type { IndustryConfig } from './industries';
 import { modifiersOf } from './modifiers';
+import { moraleProductivity } from './morale';
 import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
 import { DIFFICULTIES } from './difficulty';
 import { logItem, yearOf, type GameState } from './state';
@@ -20,7 +21,7 @@ export function capacityMultiplier(s: GameState, ind: IndustryConfig): number {
 }
 
 export function capacityOf(s: GameState, ind: IndustryConfig): number {
-  return (ind.founderCapacity + s.staff.ops * ind.capacityPerOps) * capacityMultiplier(s, ind) * modifiersOf(s).capacityMult;
+  return (ind.founderCapacity + s.staff.ops * ind.capacityPerOps) * capacityMultiplier(s, ind) * modifiersOf(s).capacityMult * moraleProductivity(s.morale);
 }
 
 /** Brand points at which reach is ~63% of the way from 5% to 100%. */
