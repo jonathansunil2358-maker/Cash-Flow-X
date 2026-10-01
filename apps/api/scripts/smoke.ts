@@ -139,7 +139,7 @@ check('investment accepted and valued', acc.status === 200 && holdings.json.inve
 const detail = await call<{ level: number; members: unknown[] }>(`/guilds/${g.json.id}`, { token: alice.token });
 check('holding company lists both members', detail.json.members.length === 2, detail);
 
-// Alice prestiges: Bob is bought out, Alice earns Legacy points on the server.
+// Alice prestiges: her company carries on, Bob keeps his shares, Alice earns Legacy points on the server.
 for (let i = 0; i < 24 && !prestigeCheck(a.game).eligible; i++) { answer(a.game); applyPolicy(a.game); answer(a.game); tickInPlace(a.game); }
 answer(a.game);
 if (prestigeCheck(a.game).eligible) {
@@ -150,7 +150,7 @@ if (prestigeCheck(a.game).eligible) {
   const after = await call<{ user: { legacyPoints: number; prestigeCount: number } }>('/me', { token: alice.token });
   check('prestige is verified and awards Legacy points', rp.status === 200 && after.json.user.prestigeCount === 1 && after.json.user.legacyPoints === pts, { rp, u: after.json.user });
   const hb = await call<{ investments: { holdings: { status: string; buyout: number }[] } }>('/me', { token: bob.token });
-  check('investor bought out at valuation on prestige', hb.json.investments.holdings[0]?.status === 'bought-out' && hb.json.investments.holdings[0].buyout > 0, hb.json.investments);
+  check('investors keep their shares: the company carries on after prestige', hb.json.investments.holdings[0]?.status === 'accepted' && rp.json.status === 'playing', hb.json.investments);
   const perk = await call('/me/perks', { token: alice.token, body: { perkId: 'fin_loans' } });
   check('perk bought with server Legacy points', perk.status === 200, perk);
 } else {

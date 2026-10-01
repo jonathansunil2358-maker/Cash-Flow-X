@@ -153,6 +153,8 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
   // A company from before the update has to be carried over to the new rules first.
   if (state.version !== STATE_VERSION) throw new HttpError(409, JSON.stringify({ code: 'CARRYOVER_REQUIRED' }));
   const monthBefore = state.month;
+  const levelBefore = state.prestigeLevel ?? 0;
+  const awardBefore = state.prestigeAward ?? 0;
   try {
     continueRun(state, actions, b.month as number);
   } catch (e) {
@@ -193,12 +195,14 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
   }
 
   const season = seasonOf();
-  if (state.status === 'prestiged') {
-    const pts = state.prestigeAward;
-    stmts.push(env.DB.prepare(`UPDATE users SET legacy_points = legacy_points + ?, legacy_earned = legacy_earned + ?, prestige_count = prestige_count + 1, updated_at = ? WHERE id = ?`)
-      .bind(pts, pts, now, user.id));
-    stmts.push(env.DB.prepare(`INSERT INTO season_stats (user_id, season, prestiges) VALUES (?, ?, 1)
-      ON CONFLICT (user_id, season) DO UPDATE SET prestiges = prestiges + 1`).bind(user.id, season));
+  // Prestiges done in this batch (verified by the replay): each one earns Legacy points and a rank.
+  const prestiges = (state.prestigeLevel ?? 0) - levelBefore;
+  if (prestiges > 0) {
+    const pts = (state.prestigeAward ?? 0) - awardBefore;
+    stmts.push(env.DB.prepare(`UPDATE users SET legacy_points = legacy_points + ?, legacy_earned = legacy_earned + ?, prestige_count = prestige_count + ?, updated_at = ? WHERE id = ?`)
+      .bind(pts, pts, prestiges, now, user.id));
+    stmts.push(env.DB.prepare(`INSERT INTO season_stats (user_id, season, prestiges) VALUES (?, ?, ?)
+      ON CONFLICT (user_id, season) DO UPDATE SET prestiges = prestiges + excluded.prestiges`).bind(user.id, season, prestiges));
   }
   const score = scoreStatement(env, run, state, user.id, now);
   if (score) stmts.push(score);

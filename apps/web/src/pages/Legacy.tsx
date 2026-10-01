@@ -62,32 +62,21 @@ function RankPanel({ rank, points }: { rank: number; points: number }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-[10px] border-2 border-outline bg-[var(--legacy)] px-2 py-0.5 text-sm font-black text-[#3a2210]" aria-label={`Prestige rank ${rank}`}>★ {rank}</span>
         <span className="font-display text-lg">{prestigeTitle(rank)}</span>
-        <span className="text-sm text-ink-2">{rank === 0 ? 'No prestige yet' : `${pct(now)} demand on every new company, for good`}</span>
+        <span className="text-sm text-ink-2">{rank === 0 ? 'No prestige yet' : `${pct(now)} demand, for good`}</span>
       </div>
       <p className="text-sm text-ink-2">
         {capped
           ? 'You have reached the highest bonus. Prestige still earns Legacy points and gems.'
-          : `Prestige now to become ${prestigeTitle(rank + 1)}: every new company starts with ${pct(next)} demand${points > 0 ? `, plus ${points} Legacy points to spend` : ''}.`}
+          : `Prestige now to become ${prestigeTitle(rank + 1)}: demand rises to ${pct(next)} straight away${points > 0 ? `, and you earn ${points} Legacy points to spend` : ''}. The next prestige then needs a bigger stake.`}
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg bg-surface-2 p-2.5 text-sm">
-          <div className="mb-1 font-bold text-ink">You keep</div>
-          <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
-            <li>Your prestige rank and its permanent demand bonus</li>
-            <li>Legacy points, perks and the perk tree</li>
-            <li>Gems, banked boosts and Founder XP</li>
-            <li>Achievements and your history</li>
-          </ul>
-        </div>
-        <div className="rounded-lg bg-surface-2 p-2.5 text-sm">
-          <div className="mb-1 font-bold text-ink">Resets to day one</div>
-          <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
-            <li>Your company, cash and loans</li>
-            <li>Staff, upgrades and R&amp;D projects</li>
-            <li>Prices, marketing and your seasonal plans</li>
-            <li>Your investors are bought out at valuation</li>
-          </ul>
-        </div>
+      <div className="rounded-lg bg-surface-2 p-2.5 text-sm">
+        <div className="mb-1 font-bold text-ink">What happens</div>
+        <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
+          <li>Your company, cash, staff, upgrades and investors all stay</li>
+          <li>You earn Legacy points, gems and Founder XP</li>
+          <li>Your rank and its demand bonus start working immediately, and stay for every future company</li>
+          <li>The stake needed for the next prestige goes up</li>
+        </ul>
       </div>
     </div>
   );
@@ -105,7 +94,7 @@ export function Legacy({ game }: { game: GameState }) {
           <Button key={id} variant={view === id ? 'primary' : 'secondary'} role="tab" aria-selected={view === id} onClick={() => setView(id)}>{label}</Button>
         ))}
       </div>
-      <PageTitle title="Prestige & Legacy" subtitle="Prestige sells your company at its valuation and turns your stake into Legacy points. You start again with cash and upgrades reset, but keep perks, gems, boosts and cosmetics." />
+      <PageTitle title="Prestige & Legacy" subtitle="Prestige turns your stake into Legacy points and a permanent rank. Your company carries on exactly as it is: nothing resets." />
       {view === 'prestige' ? (
       <>
       <div className="grid gap-5 lg:grid-cols-2">
@@ -123,7 +112,7 @@ export function Legacy({ game }: { game: GameState }) {
               ]} />
               <div className="mt-3"><Meter value={check.stake / check.threshold} label="Progress to prestige" /></div>
               <Button className="mt-4" variant="primary" disabled={!check.eligible}
-                onClick={() => act({ type: 'prestige' }, `Prestiged for ${check.points} Legacy points.`)}>
+                onClick={() => act({ type: 'prestige' }, `Prestige! +${check.points} Legacy points. Your company carries on.`)}>
                 {check.eligible ? `Prestige now for ${check.points} Legacy` : check.reason}
               </Button>
             </>

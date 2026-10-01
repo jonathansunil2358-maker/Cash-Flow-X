@@ -33,7 +33,8 @@ export function toSubmission(s: GameState): RunSubmission {
     equipmentFinance: s.start.equipmentFinance,
     perks: s.perks,
     boosts: s.start.boosts,
-    prestigeLevel: s.prestigeLevel,
+    // The rank the company started with: prestiges done during the run are replayed from the action log.
+    prestigeLevel: (s.prestigeLevel ?? 0) - s.actionLog.filter((a) => (a.action as { type?: string }).type === 'prestige').length,
     icon: s.icon,
     actions: s.actionLog as { month: number; action: Action }[],
     months: s.month,

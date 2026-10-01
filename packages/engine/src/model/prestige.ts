@@ -142,6 +142,20 @@ const summarise = (s: GameState, outcome: RunSummary['outcome'], legacy: number)
 const bankBoosts = (profile: Profile, s: GameState): ActiveBoost[] =>
   DIFFICULTIES[s.difficulty].perksApply ? s.boosts.filter((b) => b.monthsRemaining > 0).map((b) => ({ ...b })) : profile.boosts;
 
+/** Bank one prestige of a company that carries on: Legacy points, gems, XP and one more rank. */
+export function awardPrestige(profile: Profile, points: number, stake: Pence): Profile {
+  return {
+    ...profile,
+    xp: profile.xp + points * 100,
+    legacyPoints: profile.legacyPoints + points,
+    legacyEarned: profile.legacyEarned + points,
+    prestigeCount: profile.prestigeCount + 1,
+    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
+    rebirthsUsed: 0,
+    lifetime: { ...(profile.lifetime ?? emptyLifetime()), bestStake: Math.max(profile.lifetime?.bestStake ?? 0, stake) },
+  };
+}
+
 /** Update the profile after a run was prestiged (the run's `prestigeAward` holds the points). */
 export function applyPrestige(profile: Profile, s: GameState): Profile {
   if (s.status !== 'prestiged') throw new Error('This run was not prestiged.');

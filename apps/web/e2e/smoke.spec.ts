@@ -256,19 +256,18 @@ test('the new Business cards open: promotions, morale and pay, R&D projects and 
   await expect(rivals.getByText(/Normal prices/).first()).toBeVisible();
 });
 
-test('prestige explains what you keep and what resets, with stats and history one tap away', async ({ page }) => {
+test('prestige explains what happens, with stats and history one tap away', async ({ page }) => {
   await freshCompany(page, 'Rank');
   await openDock(page, 'Prestige');
   const sheet = page.getByRole('dialog', { name: 'Prestige & Legacy' });
-  await expect(sheet.getByText('You keep')).toBeVisible();
-  await expect(sheet.getByText('Resets to day one')).toBeVisible();
+  await expect(sheet.getByText('What happens')).toBeVisible();
   await expect(sheet.getByLabel('Prestige rank 0')).toBeVisible();
   await expect(sheet.getByText(/Prestige now to become Operator/)).toBeVisible();
   await sheet.getByRole('tab', { name: 'Stats & history' }).click();
   await expect(sheet.getByText('Lifetime')).toBeVisible();
   await expect(sheet.getByText('Achievements')).toBeVisible();
   await sheet.getByRole('tab', { name: 'Prestige' }).click();
-  await expect(sheet.getByText('You keep')).toBeVisible();
+  await expect(sheet.getByText('What happens')).toBeVisible();
 });
 
 test('sound and vibration are switchable, remembered, and actually make a sound when on', async ({ page }) => {
@@ -490,8 +489,8 @@ test('the weekly event shows its twist, and a friend challenge can be made, join
   await challenge.getByRole('button', { name: 'Make a challenge and share it' }).click();
   await expect(challenge.getByText(/code [A-Z2-9]{6}/)).toBeVisible();
   const code = (await challenge.getByText(/code [A-Z2-9]{6}/).innerText()).match(/code ([A-Z2-9]{6})/)![1];
-  const name = await challenge.locator('.font-display', { hasText: /^Challenge \w+ Ltd$/ }).first().innerText();
-  expect(name).toMatch(/^Challenge \w+ Ltd$/);
+  const name = await challenge.locator('.font-display', { hasText: /^Challenge [\w-]+ Ltd$/ }).first().innerText();
+  expect(name).toMatch(/^Challenge [\w-]+ Ltd$/);
   await challenge.getByRole('button', { name: 'Play this challenge' }).click();
   await challenge.getByRole('button', { name: 'Play without saving' }).click();
   await expect(page.locator('.cfx-hud__name')).toHaveText(name);

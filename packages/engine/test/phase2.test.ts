@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ActionError, applyActionInPlace, applyBankruptcy, applyPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
+  ActionError, applyActionInPlace, applyBankruptcy, awardPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
   createRng, DIFFICULTIES, finalScore, legacyFor, leasesCurrentPortion, modifiersOf, newGame, newProfile, perkEffects,
   prestigeCheck, prestigeThreshold, rebirthCheck, replay, runEvents, startingCash, tickInPlace, toSubmission, upgradeOptions,
   type GameState,
@@ -151,7 +151,6 @@ describe('prestige and rebirth', () => {
 
   it('cannot prestige below the threshold or on Hard', () => {
     const s = newGame({ companyName: 'P', industryId: 'software', seed: 'P', difficulty: 'easy' });
-    expect(prestigeCheck(s).eligible).toBe(false);
     expect(() => applyActionInPlace(s, { type: 'prestige' })).toThrow(ActionError);
     const hard = newGame({ companyName: 'P', industryId: 'software', seed: 'P', difficulty: 'hard' });
     expect(prestigeCheck(hard).reason).toMatch(/Hard/);
@@ -161,9 +160,18 @@ describe('prestige and rebirth', () => {
     const s = playPolicy('software', 'PRESTIGE', 72);
     const check = prestigeCheck(s);
     expect(check.eligible).toBe(true);
+    const cash = s.ledger.balances.cash;
+    const staff = { ...s.staff };
+    const month = s.month;
     applyActionInPlace(s, { type: 'prestige' });
-    expect(s.status).toBe('prestiged');
-    let profile = applyPrestige({ ...newProfile(), rebirthsUsed: 2 }, s);
+    // The company carries on: nothing resets, the rank rises and the next target moves up.
+    expect(s.status).toBe('playing');
+    expect(s.ledger.balances.cash).toBe(cash);
+    expect(s.staff).toEqual(staff);
+    expect(s.month).toBe(month);
+    expect(s.prestigeLevel).toBe(1);
+    expect(prestigeCheck(s).threshold).toBe(prestigeThreshold(1));
+    let profile = awardPrestige({ ...newProfile(), rebirthsUsed: 2 }, s.prestigeAward, check.stake);
     expect(profile.legacyPoints).toBe(check.points);
     expect(profile.prestigeCount).toBe(1);
     expect(profile.rebirthsUsed).toBe(0);
@@ -172,7 +180,7 @@ describe('prestige and rebirth', () => {
     expect(profile.perks.fin_loans).toBe(1);
     expect(() => buyPerk(profile, 'ops_capacity')).toThrow(/Talent network/);
     expect(perkEffects(profile.perks).loanSpreadDelta).toBeCloseTo(-0.003);
-    // The replay of a prestiged run reproduces its score.
+    // The replay of a run that prestiged reproduces its score.
     expect(finalScore(replay(toSubmission(s))).score).toBe(finalScore(s).score);
   });
 

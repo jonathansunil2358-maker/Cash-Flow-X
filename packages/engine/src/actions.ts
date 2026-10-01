@@ -10,7 +10,7 @@ import { acceptInvestment, buyOutHolders, distributeDividend } from './model/inv
 import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { BOOSTS, type BoostId } from './model/perks';
-import { prestigeCheck } from './model/prestige';
+import { prestigeCheck, prestigeThreshold } from './model/prestige';
 import { MAX_TRAINING_SPEND, PAY_LEVELS } from './model/morale';
 import { monthlyProjectCost, projectCheck, projectDef } from './model/rnd';
 import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
@@ -464,12 +464,11 @@ export function applyActionInPlace(s: GameState, action: Action): void {
     case 'prestige': {
       const check = prestigeCheck(s);
       if (!check.eligible) fail(check.reason ?? 'You cannot prestige yet.');
-      // Outside investors are bought out at the current valuation before the sale.
-      buyOutHolders(s);
-      s.status = 'prestiged';
-      s.prestigeAward = check.points;
-      s.endReason = `You sold ${s.companyName} with your stake valued at ${formatGBP(check.stake)} and earned ${check.points} Legacy points.`;
-      logItem(s, 'milestone', 'Prestiged', s.endReason);
+      // The company carries on. Prestige banks Legacy points, raises your rank (a permanent bonus that
+      // applies at once) and moves the next target up.
+      s.prestigeLevel = (s.prestigeLevel ?? 0) + 1;
+      s.prestigeAward += check.points;
+      logItem(s, 'milestone', `Prestige ${s.prestigeLevel}!`, `Your stake of ${formatGBP(check.stake)} earned ${check.points} Legacy points and a permanent demand bonus. The company carries on; the next prestige needs ${formatGBP(prestigeThreshold(s.prestigeLevel))}.`);
       break;
     }
     case 'setGuildLevel': {

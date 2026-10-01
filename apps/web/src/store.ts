@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  buySkin, compactForServer, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  awardPrestige, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -282,7 +282,12 @@ export const useGame = create<Store>((set, get) => {
       try {
         const next = applyAction(game, action);
         const xp = action.type === 'resolveEvent' ? XP_REWARDS.decision : action.type === 'buyUpgrade' ? XP_REWARDS.upgrade : 0;
-        if (next.status === 'prestiged') {
+        if (action.type === 'prestige') {
+          // The company carries on: bank the points and rank, keep playing.
+          const points = next.prestigeAward - game.prestigeAward;
+          commit(game, next, 0, { undoStack: [], profile: persistProfile(awardPrestige(get().profile, points, ownerStakeOf(game))), sheet: null });
+          playSound('success');
+        } else if (next.status === 'prestiged') {
           const prestiged = applyPrestige(get().profile, next);
           saveGame('autosave', next);
           set({ game: next, undoStack: [], profile: persistProfile(prestiged), sheet: null });
