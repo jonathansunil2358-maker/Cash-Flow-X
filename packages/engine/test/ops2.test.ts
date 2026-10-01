@@ -102,12 +102,8 @@ describe('segments and IPO day', () => {
 
   it('listing the company opens an IPO day decision, and every choice leaves the books balanced', () => {
     for (const choice of ['bell', 'roadshow', 'quiet']) {
-      let s: GameState | null = null;
-      for (let k = 0; k < 6 && !s; k++) {
-        const g = fresh('software', `IPO${k}`);
-        play(g, 40);
-        if (g.status === 'playing' && listCheck(g).allowed) s = g;
-      }
+      const pool = Array.from({ length: 6 }, (_, k) => play(fresh('software', `IPO${k}`), 40));
+      const s = pool.find((g) => g.status === 'playing' && listCheck(g).allowed);
       if (!s) continue; // no company in this sample qualified; the logic is covered by the other cases
       answer(s);
       s.pendingEvent = null;
