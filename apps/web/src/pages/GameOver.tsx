@@ -5,7 +5,7 @@ import { shareResultCard } from '../lib/shareCard';
 import { useGame } from '../store';
 
 export function GameOver({ game }: { game: GameState }) {
-  const { endBankruptRun, nextRun, profile, toast } = useGame();
+  const { endBankruptRun, nextRun, resumeSold, profile, toast } = useGame();
   const rebirth = game.status === 'insolvent' ? rebirthCheck(profile, game) : null;
   const score = useMemo(() => finalScore(game), [game]);
   const scenario = scenarioOf(game.scenarioId);
@@ -42,12 +42,17 @@ export function GameOver({ game }: { game: GameState }) {
             <Button onClick={() => endBankruptRun(false)}>Start over</Button>
           </div>
         ) : (
-          <Button variant="primary" onClick={nextRun}>{game.status === 'prestiged' ? 'Start your next company' : 'New game'}</Button>
+          game.status === 'prestiged' ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" onClick={resumeSold}>Keep playing this company</Button>
+              <Button onClick={nextRun}>Start your next company</Button>
+            </div>
+          ) : <Button variant="primary" onClick={nextRun}>New game</Button>
         )
       }>
       {game.status === 'prestiged' && (
         <p className="mb-4 rounded-lg border border-line p-3 text-sm" role="status">
-          <strong>★ Rank {game.prestigeLevel + 1}: {prestigeTitle(game.prestigeLevel + 1)}.</strong> Every new company you start now gets +{Math.round(prestigeBonus(game.prestigeLevel + 1) * 100)}% demand for good, and your Legacy points are waiting in the perk tree.
+          <strong>★ Rank {game.prestigeLevel + 1}: {prestigeTitle(game.prestigeLevel + 1)}.</strong> Prestige no longer ends your company: keep playing it with nothing lost, and your points are already banked. Every new company you start gets +{Math.round(prestigeBonus(game.prestigeLevel + 1) * 100)}% demand for good, and your Legacy points are waiting in the perk tree.
         </p>
       )}
       <div className="grid gap-5 md:grid-cols-2">

@@ -48,9 +48,10 @@ export function loadGame(slot: SlotId): GameState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { version?: number };
     const from = parsed?.version;
+    const wasSold = (parsed as { status?: string }).status === 'prestiged';
     const g = migrateState(parsed);
     if (!g) return null;
-    if (from !== STATE_VERSION) {
+    if (from !== STATE_VERSION || wasSold) {
       if (g.server && g.status === 'playing') g.server.carry = 'pending';
       upgraded.add(g);
       try { localStorage.setItem(key(slot), JSON.stringify(g)); } catch { /* the upgrade still works for this session */ }

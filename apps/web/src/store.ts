@@ -91,6 +91,8 @@ interface Store {
   quit: () => void;
   endBankruptRun: (rebirth: boolean) => void;
   nextRun: () => void;
+  /** A company sold under the old prestige rules carries on instead (one rank higher). */
+  resumeSold: () => void;
   buyPerk: (perkId: string) => Promise<void>;
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
@@ -514,6 +516,19 @@ export const useGame = create<Store>((set, get) => {
         profile: next, game: null, undoStack: [], sheet: null,
         preset: useRebirth ? { reason: 'rebirth', difficulty: game.difficulty, lockDifficulty: true } : { reason: 'new' },
       });
+    },
+
+    resumeSold() {
+      const { game } = get();
+      if (!game || game.status !== 'prestiged') return;
+      const resumed: GameState = {
+        ...game, status: 'playing', endReason: undefined, prestigeLevel: (game.prestigeLevel ?? 0) + 1,
+        ...(game.server && !game.server.flagged ? { server: { ...game.server, carry: 'pending' as const } } : {}),
+      };
+      saveGame('autosave', resumed);
+      set({ game: resumed, undoStack: [], sheet: null, monthProgress: 0 });
+      get().toast('success', 'Your company carries on. Prestige no longer ends it.');
+      void get().carryOver();
     },
 
     nextRun() {
