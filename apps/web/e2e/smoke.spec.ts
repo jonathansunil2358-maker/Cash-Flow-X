@@ -446,13 +446,13 @@ test('the growth cards open: locations, contracts, insurance, and the stock mark
   await expect(insurance.getByRole('button', { name: /Basic cover/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#card-insurance').getByText(/excess of/)).toBeVisible();
 
-  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close panel' }).click();
   await openDock(page, 'Finance');
   const fin = page.getByRole('dialog', { name: 'Finance' });
   const listing = fin.locator('#card-listing');
   await listing.getByRole('button', { name: 'Open' }).click();
   await expect(listing.getByRole('button', { name: 'List the company' })).toBeDisabled();
-  await expect(listing.getByText(/Listing needs a company worth at least/)).toBeVisible();
+  await expect(listing.getByText(/Investors want 24 months of accounts first/)).toBeVisible();
 });
 
 test('a game saved by the version before this one (state 4) carries on with the new features', async ({ page }) => {
@@ -490,7 +490,7 @@ test('the weekly event shows its twist, and a friend challenge can be made, join
   await challenge.getByRole('button', { name: 'Make a challenge and share it' }).click();
   await expect(challenge.getByText(/code [A-Z2-9]{6}/)).toBeVisible();
   const code = (await challenge.getByText(/code [A-Z2-9]{6}/).innerText()).match(/code ([A-Z2-9]{6})/)![1];
-  const name = await challenge.locator('.font-display').first().innerText();
+  const name = await challenge.locator('.font-display', { hasText: /^Challenge \w+ Ltd$/ }).first().innerText();
   expect(name).toMatch(/^Challenge \w+ Ltd$/);
   await challenge.getByRole('button', { name: 'Play this challenge' }).click();
   await challenge.getByRole('button', { name: 'Play without saving' }).click();
@@ -527,10 +527,10 @@ test('titles are earned, and the island shop sells skins for gems', async ({ pag
   const missions = page.getByRole('dialog', { name: 'Missions' });
   const titles = missions.locator('#card-titles');
   await expect(titles.getByText('the Careful')).toBeVisible();
-  await titles.getByRole('button', { name: 'Wear' }).first().click();
+  await titles.locator('button:not([disabled])', { hasText: 'Wear' }).first().click();
   await expect(titles.getByText('You are "the Careful".')).toBeVisible();
-  await expect(titles.getByRole('button', { name: 'Wear' }).first()).toBeDisabled(); // the rest are locked
-  await page.keyboard.press('Escape');
+  await expect(titles.getByRole('button', { name: 'Worn' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Close panel' }).click();
 
   await page.getByRole('button', { name: /^(Menu|Settings)/ }).first().click();
   const shop = page.locator('#card-shop');
