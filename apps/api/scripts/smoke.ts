@@ -311,6 +311,8 @@ check('rival: a rival of the week is picked from the neighbours (or none if alon
   check('cards: a friend claims it', got.status === 200 && got.json.card === 'mentor0', got);
   check('cards: a gift can only be claimed once', (await call('/cards/claim', { token: stranger.token, body: { code: gift.json.code } })).status === 404);
   const gr = await call<{ mine: unknown }>('/guild/rival', { token: stranger.token });
+  const hall = await call<{ rows: unknown[] }>('/hall', { token: stranger.token });
+  check('hall of fame: returns a list', hall.status === 200 && Array.isArray(hall.json.rows), hall);
   check('guild rival: someone with no holding company gets nothing', gr.status === 200 && gr.json.mine === null, gr);
 }
 

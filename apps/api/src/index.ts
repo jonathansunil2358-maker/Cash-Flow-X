@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 import { dailyBoard } from './daily';
 import { challengeView, claimWeeklyReward, createChallenge, weeklyView } from './fixed';
 import { answerPuzzle, leagueView } from './league';
-import { claimCard, createLink, giftCard, guildRival, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
+import { claimCard, createLink, giftCard, guildRival, hallOfFame, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
 import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
@@ -213,6 +213,7 @@ app.post('/coop/suggestion/:id/resolve', requireUser, async (c) => c.json(await 
 app.post('/coop/:code/revoke', requireUser, async (c) => c.json(await revokeLink(c.env, c.get('user'), c.req.param('code'))));
 app.post('/cards/gift', requireUser, async (c) => c.json(await giftCard(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).card)));
 app.post('/cards/claim', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await claimCard(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });
+app.get('/hall', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await hallOfFame(c.env)); });
 app.get('/guild/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await guildRival(c.env, c.get('user'))); });
 app.get('/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await rivalView(c.env, c.get('user'))); });
 app.get('/replays/:kind/:key', requireUser, async (c) => { c.header('cache-control', 'private, max-age=60'); return c.json(await replayOf(c.env, c.req.param('kind')!, c.req.param('key')!, Number(c.req.query('rank') ?? 1))); });

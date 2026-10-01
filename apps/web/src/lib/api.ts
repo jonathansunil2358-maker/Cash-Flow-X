@@ -143,6 +143,8 @@ export interface CoopView { code: string; role: 'advise' | 'watch'; isOwner: boo
 export interface CoopList { mine: { code: string; role: string; members: number; open: number }[]; joined: { code: string; role: string; owner: string }[] }
 export interface GuildRivalView { week: string; rank?: number; of?: number; mine: { name: string; icon: string; value: number; members: number } | null; rival: { name: string; icon: string; value: number; members: number; above: boolean } | null }
 
+export interface HallView { rows: { rank: number; name: string; icon: string; company: string | null; sector: string | null; netWorth: number; prestige: number }[] }
+
 export interface LeagueView { week: string; maxPoints: number; mine: { points: number; answered: number }; rows: { rank: number; id: string; name: string; icon: string; points: number; me: boolean }[] }
 
 export const api = {
@@ -177,6 +179,7 @@ export const api = {
   coopRevoke: (code: string) => request<{ ok: boolean }>(`/coop/${encodeURIComponent(code)}/revoke`, { body: {} }),
   giftCard: (card: string) => request<{ code: string; card: string }>('/cards/gift', { body: { card } }),
   claimCard: (code: string) => request<{ card: string }>('/cards/claim', { body: { code } }),
+  hall: () => request<HallView>('/hall'),
   guildRival: () => request<GuildRivalView>('/guild/rival'),
   league: () => request<LeagueView>('/league'),
   answerLeague: (kind: 'spot' | 'detective' | 'journal', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),

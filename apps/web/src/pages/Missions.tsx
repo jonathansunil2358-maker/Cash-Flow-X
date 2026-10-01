@@ -12,7 +12,7 @@ import { MuseumCard, TrailsCard } from './Collect';
 import { GamesCards } from './Minis';
 import { DiaryCard, DocumentaryCard, EomCard, NemesisCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
 import { AuditCard, DetectiveCard, GlossaryCard, InterviewCard, JournalCard, SpotCard, SprintCard } from './Learn';
-import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
+import { ChallengesCard, DynastyCard, MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
 import { TitlesCard } from './Titles';
 import { WeeklyEventCard } from './Weekly';
@@ -118,6 +118,8 @@ export function Missions({ game }: { game: GameState }) {
       <TheatreCard game={game} />
       <TrailsCard />
       <MasteryCard />
+      <ChallengesCard sector={game.industryId} />
+      <DynastyCard />
       <MuseumCard />
       <TitlesCard />
 

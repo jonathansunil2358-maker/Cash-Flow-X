@@ -4,6 +4,7 @@ import {
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
   hearTip as hearTipOn, addCard as addCardOn, takeForGift as takeForGiftOn, collectCards, cardDef, recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf, adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
+  claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -121,6 +122,7 @@ interface Store {
   finishSprint: (day: string, points: number, gems: number) => void;
   hearTip: (id: string) => void;
   addCardGift: (id: string) => void;
+  claimInheritance: () => void;
   takeSpareCard: (id: string) => boolean;
   finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
@@ -228,6 +230,13 @@ function progressAfter(
     if (ch && after.status === 'finished' && scenarioOf(after.scenarioId).objectives!(after).every((o) => o.met) && !(p.campaign ?? []).includes(ch.n)) {
       p = { ...p, campaign: [...(p.campaign ?? []), ch.n], gems: p.gems + 25 };
       celebrations.push({ id: nextId++, kind: 'milestone', title: `Chapter ${ch.n} complete: ${ch.title}`, text: ch.n === 10 ? 'You finished the story. What a journey.' : 'The next chapter is unlocked on the start screen.', gems: 25 });
+    }
+  }
+  // Mastery challenges: hand-picked perfect-run goals pay once, ever.
+  if (closed > 0) {
+    for (const c of newlyMet(after, p)) {
+      p = { ...p, mchallenges: [...(p.mchallenges ?? []), c.id], gems: p.gems + CHALLENGE_GEMS };
+      celebrations.push({ id: nextId++, kind: 'milestone', title: `Challenge met: ${c.name}`, text: c.text, gems: CHALLENGE_GEMS });
     }
   }
   // Speedrun: remember the best time on this device.
@@ -755,6 +764,16 @@ export const useGame = create<Store>((set, get) => {
       set({ profile: persistProfile(addCardOn(get().profile, id)) });
       get().toast('good', `A gift arrived: ${cardDef(id)?.name ?? 'a card'}!`);
       playSound('success');
+    },
+
+    claimInheritance() {
+      try {
+        const before = get().profile;
+        const next = claimInheritanceOn(before);
+        set({ profile: persistProfile(next) });
+        get().toast('good', `Inheritance claimed: +${next.gems - before.gems} gems.`);
+        playSound('success');
+      } catch (e) { get().toast('error', (e as Error).message); }
     },
 
     takeSpareCard(id) {

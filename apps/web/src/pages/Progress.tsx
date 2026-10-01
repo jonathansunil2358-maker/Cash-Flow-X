@@ -1,4 +1,5 @@
 import {
+  challengesDone, challengesFor, CHALLENGE_GEMS, claimableGenerations, dynastyOf, INHERITANCE_GEMS,
   formatGBP, INDUSTRIES, INDUSTRY_IDS, MASTERY_STEPS, masteryOf, MAX_VENTURES, passOf, passTier, PASS_POINTS_PER_TIER, PASS_REWARDS, PASS_TIERS, reputationTier,
   SKILLS, skillPoints, skillsOf, VENTURES, ventureCheck, VENTURE_CASH_SHARE, type GameState, type VentureKind,
 } from '@cfx/engine';
@@ -111,6 +112,45 @@ export function VentureCard({ game }: { game: GameState }) {
         <p className="text-xs text-ink-2">{VENTURES.find((v) => v.id === kind)!.blurb}</p>
         {!check.ok && <p className="text-xs text-muted">{check.reason}</p>}
       </div>
+    </Card>
+  );
+}
+
+/** Your finished companies as a family tree, five to a generation. */
+export function DynastyCard() {
+  const { profile, claimInheritance } = useGame();
+  const gens = dynastyOf(profile);
+  const claim = claimableGenerations(profile);
+  return (
+    <Card id="card-dynasty" title="Your dynasty" subtitle={`Every five finished companies complete a generation, and each pays an inheritance of ${INHERITANCE_GEMS} gems.`}>
+      {gens.length === 0 ? <p className="text-sm text-ink-2">Finish a company and your family tree starts here.</p> : (
+        <ol className="space-y-3">
+          {gens.map((g) => (
+            <li key={g.n} className="rounded-lg border border-line p-2">
+              <div className="text-sm font-bold">Generation {g.n} · best stake {formatGBP(g.best, { compact: true })}</div>
+              <ul className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                {g.companies.map((c, i) => <li key={i} className="rounded-full border border-line px-2 py-0.5" title={`${c.sector}, ${c.months} months`}><span aria-hidden>{c.emoji}</span> {c.name}</li>)}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3"><Button disabled={claim < 1} onClick={claimInheritance}>{claim > 0 ? `Claim inheritance (${claim})` : 'No inheritance waiting'}</Button></div>
+    </Card>
+  );
+}
+
+/** Hand-picked perfect-run goals for the sector you are playing. */
+export function ChallengesCard({ sector }: { sector: Parameters<typeof challengesFor>[0] }) {
+  const profile = useGame((s) => s.profile);
+  const done = new Set(challengesDone(profile));
+  return (
+    <Card id="card-mastery-challenges" title="Mastery challenges" subtitle={`Meet one of these in any company and earn ${CHALLENGE_GEMS} gems, once each.`}>
+      <ul className="space-y-1.5 text-sm">
+        {challengesFor(sector).map((c) => (
+          <li key={c.id} className="flex gap-2"><span aria-hidden>{done.has(c.id) ? '✅' : '⬜'}</span><span><b>{c.name}</b>: {c.text}</span></li>
+        ))}
+      </ul>
     </Card>
   );
 }

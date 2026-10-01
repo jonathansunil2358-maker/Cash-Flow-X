@@ -41,6 +41,7 @@ export * from './model/personality';
 export * from './model/collect';
 export * from './model/games';
 export * from './model/documentary';
+export * from './model/legacy3';
 export * from './model/feel';
 export * from './model/social3';
 export * from './model/minigames';

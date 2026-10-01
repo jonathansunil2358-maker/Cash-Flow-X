@@ -1,5 +1,6 @@
 import { cardDef, cleanSuggestion } from '@cfx/engine';
 import type { UserRow } from './auth';
+import { NET_WORTH_SQL, type NetWorthRow } from './social';
 import { HttpError, newId, nowIso, weekOf, type Env } from './util';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -145,4 +146,16 @@ export async function guildRival(env: Env, user: UserRow) {
   const rival = list[i - 1] ?? list[i + 1] ?? null;
   const shape = (g: typeof mine) => ({ name: g.name, icon: g.icon, value: g.value, members: g.members });
   return { week: weekOf(), rank: i + 1, of: list.length, mine: shape(mine), rival: rival ? { ...shape(rival), above: list.indexOf(rival) < i } : null };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Hall of fame: the richest verified companies right now, as a skyline
+// ---------------------------------------------------------------------------------------------
+export async function hallOfFame(env: Env) {
+  const r = await env.DB.prepare(
+    `SELECT * FROM (${NET_WORTH_SQL}) WHERE company_name IS NOT NULL AND net_worth > 0 ORDER BY net_worth DESC, id ASC LIMIT 12`,
+  ).all<NetWorthRow>();
+  return {
+    rows: r.results.map((x, i) => ({ rank: i + 1, name: x.name, icon: x.icon, company: x.company_name, sector: x.industry_id, netWorth: x.net_worth, prestige: x.prestige_count })),
+  };
 }

@@ -4,7 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
-import { CardsCard, CoopCard, GuildRivalCard, SeasonBanner } from './Together';
+import { CardsCard, CoopCard, GuildRivalCard, HallCard, SeasonBanner } from './Together';
 import { api, type LeagueView, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
@@ -263,6 +263,7 @@ export function CommunityTab() {
       <CommunityGoal />
       <CoopCard />
       <GuildRivalCard />
+      <HallCard />
       <CardsCard />
       <PuzzleLeague />
       <RivalOfTheWeek />

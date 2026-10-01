@@ -1387,3 +1387,17 @@ test('V3 Batch E: accessibility settings, sound packs, keyboard shortcuts, the g
   await page.keyboard.press('m');
   await expect(page.getByRole('dialog', { name: 'Missions' })).toHaveCount(0);
 });
+
+test('V3 Batch F: mastery challenges, dynasty and the empire venture', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.locator('#card-mastery-challenges').getByText('Twelve in the black')).toBeVisible();
+  await expect(missions.locator('#card-dynasty').getByText('Finish a company')).toBeVisible();
+  await expect(missions.locator('#card-dynasty').getByRole('button', { name: 'No inheritance waiting' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});

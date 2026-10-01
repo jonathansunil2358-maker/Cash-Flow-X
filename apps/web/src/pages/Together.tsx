@@ -3,7 +3,7 @@ import {
 } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { Button, Card, Field, TextInput } from '../components/ui';
-import { api, type CoopList, type CoopView, type GuildRivalView } from '../lib/api';
+import { api, type CoopList, type CoopView, type GuildRivalView, type HallView } from '../lib/api';
 import { useGame } from '../store';
 
 const describe = (a: Action): string => {
@@ -152,6 +152,24 @@ export function GuildRivalCard() {
     <Card id="card-guild-rival" title="Holding-company rivalry" subtitle="Your holding company against its neighbour in the table, by combined value of its members' companies.">
       <p className="text-sm"><b>{v.mine.name}</b> ({formatGBP(v.mine.value, { compact: true })}, {v.mine.members} members) is {v.rank} of {v.of}.</p>
       {v.rival ? <p className="text-sm">{v.rival.above ? 'Catch up with' : 'Hold off'} <b>{v.rival.name}</b>: {formatGBP(v.rival.value, { compact: true })}, {v.rival.members} members.</p> : <p className="text-sm text-ink-2">No rival yet: you are the only holding company.</p>}
+    </Card>
+  );
+}
+
+/** The richest verified companies right now, drawn as a skyline. */
+export function HallCard() {
+  const [v, setV] = useState<HallView | null>(null);
+  useEffect(() => { api.hall().then(setV).catch(() => setV(null)); }, []);
+  if (!v || v.rows.length === 0) return null;
+  const top = Math.max(1, ...v.rows.map((r) => r.netWorth));
+  return (
+    <Card id="card-hall" title="Hall of fame" subtitle="The richest verified companies right now. Taller towers are worth more.">
+      <div className="flex h-40 items-end gap-1" role="img" aria-label="Skyline of the richest companies">
+        {v.rows.map((r) => <div key={r.rank} className="flex-1 rounded-t-md bg-accent/70" style={{ height: `${Math.max(8, Math.round((r.netWorth / top) * 100))}%` }} title={`${r.company ?? r.name}: ${formatGBP(r.netWorth, { compact: true })}`} />)}
+      </div>
+      <ol className="mt-3 space-y-1 text-sm">
+        {v.rows.map((r) => <li key={r.rank}>{r.rank}. <span aria-hidden>{r.icon}</span> <b>{r.company ?? r.name}</b> · {r.name} · {formatGBP(r.netWorth, { compact: true })}</li>)}
+      </ol>
     </Card>
   );
 }
