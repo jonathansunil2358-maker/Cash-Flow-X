@@ -47,6 +47,7 @@ export * from './model/social3';
 export * from './model/minigames';
 export * from './model/nemesis';
 export * from './model/prestige';
+export * from './model/economy';
 export * from './model/gamification';
 export * from './model/cosmetics';
 export * from './model/quests';

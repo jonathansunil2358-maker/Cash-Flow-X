@@ -68,7 +68,7 @@ export async function leaderboard(env: Env, viewer: UserRow | null, board: Board
 }
 
 /** Season rewards: the top 10 of each board in a finished season get gems once. */
-export const SEASON_REWARDS = (rank: number): number => (rank === 1 ? 300 : rank <= 3 ? 200 : rank <= 10 ? 100 : 0);
+export const SEASON_REWARDS = (rank: number): number => (rank === 1 ? 1000 : rank <= 3 ? 600 : rank <= 10 ? 300 : 0);
 
 export async function seasonRewards(env: Env, user: UserRow) {
   const season = previousSeason();

@@ -2,7 +2,8 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  hearTip as hearTipOn, addCard as addCardOn, takeForGift as takeForGiftOn, collectCards, cardDef, recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf, adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  hearTip as hearTipOn, addCard as addCardOn, takeForGift as takeForGiftOn, collectCards, cardDef, recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf,
+  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, grantAwardBoxes, payPlayGems, payPrestigeGems, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
   claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
 } from '@cfx/engine';
@@ -203,6 +204,8 @@ export function mergeProfile(local: Profile, me: Me): Profile {
  * Award XP, achievements, missions and level-ups after the game state changes. Pure with respect
  * to the game: only the profile and UI queues change.
  */
+const PLAY_LIMIT_NOTE = "Today's gems from play are used up, so this one pays XP only. More tomorrow.";
+
 function progressAfter(
   profile: Profile, before: GameState, after: GameState, extraXp: number,
 ): { profile: Profile; celebrations: Celebration[] } {
@@ -214,9 +217,10 @@ function progressAfter(
     xp += XP_REWARDS.monthClosed * closed;
     if (plSummary(after.history[after.history.length - 1].period.pl).profit > 0) xp += XP_REWARDS.profitableMonth;
   }
-  // Every award won is a mystery box.
+  // Repeatable play (missions, level-ups, award boxes) pays gems up to a daily allowance.
+  const day = utcDay();
   const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
-  if (newAwards > 0) p = addBoxes(p, newAwards);
+  if (newAwards > 0) p = grantAwardBoxes(p, day, newAwards).profile;
   if (closed > 0) p = addPassPoints(p, closed);
   if (closed > 0) {
     const got = collectCards(p, after);
@@ -265,9 +269,10 @@ function progressAfter(
     for (const m of missions) {
       const st = missionStatus(m, after);
       if (st.done) {
-        p = addPassPoints({ ...p, gems: p.gems + m.rewardGems, missionsCompleted: p.missionsCompleted + 1 }, 5);
+        const pay = payPlayGems({ ...p, missionsCompleted: p.missionsCompleted + 1 }, day, m.rewardGems);
+        p = addPassPoints(pay.profile, 5);
         xp += m.rewardXp;
-        celebrations.push({ id: nextId++, kind: 'mission', title: 'Mission complete', text: st.title, gems: m.rewardGems });
+        celebrations.push({ id: nextId++, kind: 'mission', title: 'Mission complete', text: pay.paid < m.rewardGems ? `${st.title}. ${PLAY_LIMIT_NOTE}` : st.title, gems: pay.paid });
       } else remaining.push(m);
     }
     p = { ...p, missions: refillMissions(remaining, after, mathRng) };
@@ -277,9 +282,9 @@ function progressAfter(
     p = { ...p, xp: p.xp + xp };
     const newLevel = levelForXp(p.xp);
     for (let l = oldLevel + 1; l <= newLevel; l++) {
-      const gems = XP_REWARDS.levelUpGemsPerLevel * l;
-      p = { ...p, gems: p.gems + gems };
-      celebrations.push({ id: nextId++, kind: 'level', title: `Founder level ${l}!`, text: 'You are getting better at this.', gems });
+      const pay = payPlayGems(p, utcDay(), XP_REWARDS.levelUpGemsPerLevel * l);
+      p = pay.profile;
+      celebrations.push({ id: nextId++, kind: 'level', title: `Founder level ${l}!`, text: pay.paid ? 'You are getting better at this.' : `You are getting better at this. ${PLAY_LIMIT_NOTE}`, gems: pay.paid });
     }
   }
   return { profile: p, celebrations };
@@ -386,10 +391,12 @@ export const useGame = create<Store>((set, get) => {
         if (action.type === 'prestige') {
           // The company carries on: bank the points and rank, keep playing.
           const points = next.prestigeAward - game.prestigeAward;
-          commit(game, next, 0, { undoStack: [], profile: persistProfile(awardPrestige(get().profile, points, ownerStakeOf(game))), sheet: null });
+          const banked = payPrestigeGems(awardPrestige(get().profile, points, ownerStakeOf(game)), utcDay());
+          commit(game, next, 0, { undoStack: [], profile: persistProfile(banked.profile), sheet: null });
+          get().toast('success', banked.paid ? `Prestige! +${points} Legacy points and +${banked.paid} gems.` : `Prestige! +${points} Legacy points. (Prestige gems are paid once a day.)`);
           playSound('success');
         } else if (next.status === 'prestiged') {
-          const prestiged = applyPrestige(get().profile, next);
+          const prestiged = payPrestigeGems(applyPrestige(get().profile, next), utcDay()).profile;
           saveGame('autosave', next);
           set({ game: next, undoStack: [], profile: persistProfile(prestiged), sheet: null });
         } else {
@@ -795,10 +802,14 @@ export const useGame = create<Store>((set, get) => {
     },
 
     finishInterview(key, right, gems) {
-      const r = recordInterviewOn(get().profile, key, right === 3 ? gems : right === 2 ? Math.ceil(gems / 2) : 0);
+      const want = right === 3 ? gems : right === 2 ? Math.ceil(gems / 2) : 0;
+      const r = recordInterviewOn(get().profile, key, 0);
       if (r.profile === get().profile) return;
-      set({ profile: persistProfile(r.profile) });
-      if (r.gems) { get().toast('good', `The investor is impressed: +${r.gems} gems.`); playSound('success'); }
+      // Interviews come round every game year, so their gems count towards the daily play allowance.
+      const pay = payPlayGems(r.profile, utcDay(), want);
+      set({ profile: persistProfile(pay.profile) });
+      if (pay.paid) { get().toast('good', `The investor is impressed: +${pay.paid} gems.`); playSound('success'); }
+      else if (want) get().toast('info', "The investor is impressed. (Today's gems from play are used up.)");
     },
 
     seeTerm(id) {

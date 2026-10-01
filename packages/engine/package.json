@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "bench": "tsx scripts/bench.ts",
-    "balance": "tsx scripts/balance.ts"
+    "balance": "tsx scripts/balance.ts",
+    "difficulty": "tsx scripts/difficulty.ts",
+    "gems": "tsx scripts/gems.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

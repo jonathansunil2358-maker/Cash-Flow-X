@@ -1,5 +1,6 @@
 import {
-  ACHIEVEMENTS, dailyStatus, DAILY_REWARDS, formatGBP, levelForXp, LEVEL_UNLOCKS, missionStatus, xpForLevel, type GameState, type MissionStatus,
+  ACHIEVEMENTS, AWARD_BOXES_PER_DAY, DAILY_PLAY_GEMS, dailyStatus, DAILY_REWARDS, formatGBP, levelForXp, LEVEL_UNLOCKS, missionStatus, playGemsOf, PRESTIGE_GEMS, utcDay,
+  xpForLevel, type GameState, type MissionStatus,
 } from '@cfx/engine';
 import { Button, Card, Meter, PageTitle, StatusPill } from '../components/ui';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
@@ -57,6 +58,11 @@ export function Missions({ game }: { game: GameState }) {
       <Card title={`Founder level ${level}`} subtitle={next ? `Level ${next.level} unlocks ${next.label}.` : 'Every feature unlocked.'}>
         <Meter value={profile.xp - from} max={to - from} label="XP to next level" text={`${(profile.xp - from).toLocaleString('en-GB')} / ${(to - from).toLocaleString('en-GB')} XP`} />
         <p className="mt-2 text-xs text-ink-2">XP: +5 per month, +5 more if profitable, +15 per decision, +10 per upgrade, +60 per mission, +25 per achievement. Each level pays gems.</p>
+        <div className="mt-3">
+          <Meter value={playGemsOf(profile, utcDay()).gems} max={DAILY_PLAY_GEMS} tone="go" label="Gems from play today"
+            text={`Gems from play today: ${playGemsOf(profile, utcDay()).gems} / ${DAILY_PLAY_GEMS}`} />
+          <p className="mt-1 text-xs text-ink-2">Missions and level-ups pay up to {DAILY_PLAY_GEMS} gems a day; after that they still give XP. The first prestige each day pays {PRESTIGE_GEMS} gems, and awards give up to {AWARD_BOXES_PER_DAY} mystery box a day. Daily rewards, quests, puzzles, the season pass and achievements are not limited.</p>
+        </div>
       </Card>
 
       <Card title="Daily reward" subtitle={daily.canClaim ? `Day ${daily.day} of your streak is ready.` : `Come back tomorrow for day ${Math.min(daily.day + 1, 7)}.`}>

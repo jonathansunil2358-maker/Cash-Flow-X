@@ -17,10 +17,10 @@ import type { Profile } from './prestige';
 // ---------------------------------------------------------------------------------------------
 export interface PetKind { id: string; name: string; emoji: string; gems: number }
 export const PETS: PetKind[] = [
-  { id: 'dog', name: 'Dog', emoji: '🐶', gems: 30 },
-  { id: 'cat', name: 'Cat', emoji: '🐱', gems: 30 },
-  { id: 'parrot', name: 'Parrot', emoji: '🦜', gems: 40 },
-  { id: 'robot', name: 'Robot', emoji: '🤖', gems: 60 },
+  { id: 'dog', name: 'Dog', emoji: '🐶', gems: 150 },
+  { id: 'cat', name: 'Cat', emoji: '🐱', gems: 150 },
+  { id: 'parrot', name: 'Parrot', emoji: '🦜', gems: 200 },
+  { id: 'robot', name: 'Robot', emoji: '🤖', gems: 300 },
 ];
 export interface PetState { kind: string; name: string; adopted: string }
 export const petOf = (p: Pick<Profile, 'pet'>): PetState | null => (p.pet && PETS.some((x) => x.id === p.pet!.kind) ? p.pet : null);
@@ -121,10 +121,10 @@ export const diaryShareText = (e: DiaryEntry): string => `${e.company}, year ${e
 // ---------------------------------------------------------------------------------------------
 export interface Hat { id: string; name: string; emoji: string; gems: number; colour: string }
 export const HATS: Hat[] = [
-  { id: 'cap', name: 'Baseball cap', emoji: '🧢', gems: 15, colour: '#3a7bd5' },
-  { id: 'party', name: 'Party hat', emoji: '🎉', gems: 20, colour: '#ff6fae' },
-  { id: 'helmet', name: 'Hard hat', emoji: '⛑️', gems: 20, colour: '#ffc633' },
-  { id: 'crown', name: 'Crown', emoji: '👑', gems: 50, colour: '#ffd24a' },
+  { id: 'cap', name: 'Baseball cap', emoji: '🧢', gems: 75, colour: '#3a7bd5' },
+  { id: 'party', name: 'Party hat', emoji: '🎉', gems: 100, colour: '#ff6fae' },
+  { id: 'helmet', name: 'Hard hat', emoji: '⛑️', gems: 100, colour: '#ffc633' },
+  { id: 'crown', name: 'Crown', emoji: '👑', gems: 250, colour: '#ffd24a' },
 ];
 export interface Wardrobe { owned: string[]; equipped: string | null }
 export const wardrobeOf = (p: Pick<Profile, 'wardrobe'>): Wardrobe => ({

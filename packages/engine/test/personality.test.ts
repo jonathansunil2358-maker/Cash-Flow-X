@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  adoptPet, applyActionInPlace, buildingNames, buyHat, canNameEom, cleanName, diaryOf, diaryShareText, eomOf, headlineOf, HATS, MAX_NAMES, nameEom, newGame, newProfile, petMood, petOf,
+  adoptPet, applyActionInPlace, PETS, buildingNames, buyHat, canNameEom, cleanName, diaryOf, diaryShareText, eomOf, headlineOf, HATS, MAX_NAMES, nameEom, newGame, newProfile, petMood, petOf,
   rosterOf, setBuildingName, stateChecksum, tickInPlace, upgradeIdsFor, wardrobeOf, wearHat, writeDiary, type GameState,
 } from '../src/index';
 import { applyPolicy } from '../scripts/policy';
@@ -20,11 +20,11 @@ describe('personality never touches the company', () => {
 
 describe('pet', () => {
   it('costs gems, you get one, names are cleaned', () => {
-    let p = { ...newProfile(), gems: 100 };
+    let p = { ...newProfile(), gems: 1000 };
     expect(() => adoptPet({ ...p, gems: 1 }, 'dog', 'Rex', '2026-10-01')).toThrow(/gems/);
     expect(() => adoptPet(p, 'dragon', 'Rex', '2026-10-01')).toThrow(/Unknown/);
     p = adoptPet(p, 'dog', '  <b>Rex</b> the very long named dog ', '2026-10-01');
-    expect(p.gems).toBe(70);
+    expect(p.gems).toBe(1000 - PETS.find((k) => k.id === 'dog')!.gems);
     expect(petOf(p)!.name.length).toBeLessThanOrEqual(16);
     expect(petOf(p)!.name).not.toMatch(/[<>]/);
     expect(() => adoptPet(p, 'cat', 'Tom', '2026-10-02')).toThrow(/already/);
@@ -78,7 +78,7 @@ describe('building names, diary and hats', () => {
   });
 
   it('hats cost gems, you wear one at a time and cannot wear what you do not own', () => {
-    let p = { ...newProfile(), gems: 100 };
+    let p = { ...newProfile(), gems: 1000 };
     expect(() => buyHat({ ...p, gems: 1 }, 'crown')).toThrow(/gems/);
     expect(() => wearHat(p, 'crown')).toThrow(/own/);
     p = buyHat(p, 'cap');

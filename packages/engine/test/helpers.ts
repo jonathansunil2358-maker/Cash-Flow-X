@@ -10,3 +10,14 @@ export function playPolicy(industryId: IndustryId, seed: string, months: number,
   }
   return s;
 }
+
+/** Play with the heuristic policy until `done` (answering any decisions), or give up after `maxMonths`. */
+export function playUntil(industryId: IndustryId, seed: string, maxMonths: number, done: (s: GameState) => boolean, extra: Partial<NewGameOptions> = {}): GameState {
+  const s = newGame({ companyName: 'Test Co', industryId, seed, difficulty: 'easy', ...extra });
+  for (let i = 0; i < maxMonths && s.status === 'playing' && !done(s); i++) {
+    applyPolicy(s);
+    tickInPlace(s);
+  }
+  if (s.pendingEvent) applyPolicy(s);
+  return s;
+}

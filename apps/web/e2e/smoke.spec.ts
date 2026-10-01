@@ -516,7 +516,7 @@ test('titles are earned, and the island shop sells skins for gems', async ({ pag
   // Give the player some gems and an achievement title to wear.
   await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('cfx:profile')!);
-    p.gems = 500;
+    p.gems = 1000;
     p.achievements = { ...p.achievements, insured: new Date().toISOString() };
     localStorage.setItem('cfx:profile', JSON.stringify(p));
   });
@@ -534,9 +534,9 @@ test('titles are earned, and the island shop sells skins for gems', async ({ pag
   await page.getByRole('button', { name: /^(Menu|Settings)/ }).first().click();
   const shop = page.locator('#card-shop');
   await expect(shop.getByText('Autumn')).toBeVisible();
-  await shop.getByRole('button', { name: /Buy for 60/ }).click();
+  await shop.getByRole('button', { name: /Buy for 600/ }).click();
   await expect(shop.getByRole('button', { name: 'Equipped' })).toHaveCount(1);
-  await expect(shop.getByText(/You have 440 gems/)).toBeVisible();
+  await expect(shop.getByText(/You have 400 gems/)).toBeVisible();
   await shop.getByRole('button', { name: 'Equip' }).first().click();
   const profile = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!));
   expect(profile.cosmetics.owned).toEqual(['default', 'autumn']);
@@ -758,7 +758,7 @@ test('Batch C: decorations, logo, photo studio, trophy hall and the year in revi
   await clearOverlays(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const decor = page.locator('#card-decor');
-  await decor.getByRole('button', { name: /Buy for 40/ }).click();
+  await decor.getByRole('button', { name: /Buy for 200/ }).click();
   await expect(decor.getByRole('button', { name: 'On the island' })).toHaveCount(1);
   await decor.getByRole('button', { name: 'On the island' }).click();
   await expect(decor.getByRole('button', { name: 'Place it' })).toHaveCount(1);
@@ -1122,7 +1122,7 @@ test('V2 Batch E: land and its decorations, soundtracks, achievement trails and 
   await clearOverlays(page);
   await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('cfx:profile')!);
-    p.gems = 600;
+    p.gems = 1000;
     localStorage.setItem('cfx:profile', JSON.stringify(p));
   });
   await page.reload();
@@ -1136,10 +1136,10 @@ test('V2 Batch E: land and its decorations, soundtracks, achievement trails and 
   await expect(playground.getByRole('button', { name: /Needs the west lawn/ })).toBeDisabled();
   await st.locator('#card-land').locator('div', { hasText: 'West lawn' }).getByRole('button').first().click();
   await expect(st.locator('#card-land').getByText('Yours')).toBeVisible();
-  await playground.getByRole('button', { name: /Buy for 35/ }).click();
+  await playground.getByRole('button', { name: /Buy for 175/ }).click();
   await expect(playground.getByRole('button', { name: 'On the island' })).toBeVisible();
   // A soundtrack.
-  await st.locator('#card-tracks li', { hasText: 'Smoky jazz' }).getByRole('button', { name: /30 gems/ }).click();
+  await st.locator('#card-tracks li', { hasText: 'Smoky jazz' }).getByRole('button', { name: /150 gems/ }).click();
   await expect(st.locator('#card-tracks li', { hasText: 'Smoky jazz' }).getByRole('button', { name: 'Playing' })).toBeVisible();
   const prof = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!));
   expect(prof.land).toEqual(['west']);

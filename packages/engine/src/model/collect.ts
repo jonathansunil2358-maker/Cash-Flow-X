@@ -12,9 +12,9 @@ import { INDUSTRIES } from './industries';
 // ---------------------------------------------------------------------------------------------
 export interface LandDef { id: string; name: string; gems: number; at: [number, number] }
 export const LAND: LandDef[] = [
-  { id: 'west', name: 'West lawn', gems: 40, at: [-11, -3] },
-  { id: 'east', name: 'East lawn', gems: 60, at: [11, -3] },
-  { id: 'north', name: 'North meadow', gems: 80, at: [0, -11] },
+  { id: 'west', name: 'West lawn', gems: 200, at: [-11, -3] },
+  { id: 'east', name: 'East lawn', gems: 300, at: [11, -3] },
+  { id: 'north', name: 'North meadow', gems: 400, at: [0, -11] },
 ];
 export const landOf = (p: Pick<Profile, 'land'>): string[] => (p.land ?? []).filter((id) => LAND.some((l) => l.id === id));
 export function buyLand<T extends Pick<Profile, 'land' | 'gems'>>(p: T, id: string): T {
@@ -56,9 +56,9 @@ export function claimTrail<T extends Pick<Profile, 'trails' | 'achievements' | '
 export interface Soundtrack { id: string; name: string; blurb: string; gems: number }
 export const SOUNDTRACKS: Soundtrack[] = [
   { id: 'gentle', name: 'Gentle', blurb: 'The original: soft and simple.', gems: 0 },
-  { id: 'jazz', name: 'Smoky jazz', blurb: 'Bluesy notes and a laid-back beat.', gems: 30 },
-  { id: 'chiptune', name: 'Chiptune', blurb: 'Bleeps and bloops like an old arcade.', gems: 40 },
-  { id: 'dreamy', name: 'Dreamy', blurb: 'Long, slow, floaty notes.', gems: 50 },
+  { id: 'jazz', name: 'Smoky jazz', blurb: 'Bluesy notes and a laid-back beat.', gems: 150 },
+  { id: 'chiptune', name: 'Chiptune', blurb: 'Bleeps and bloops like an old arcade.', gems: 200 },
+  { id: 'dreamy', name: 'Dreamy', blurb: 'Long, slow, floaty notes.', gems: 250 },
 ];
 export interface Tracks { owned: string[]; selected: string }
 export const tracksOf = (p: Pick<Profile, 'tracks'>): Tracks => {

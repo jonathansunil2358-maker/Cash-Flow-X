@@ -40,7 +40,7 @@ describe('trails', () => {
 
 describe('soundtracks', () => {
   it('you always own the gentle one, buy others, and pick only what you own', () => {
-    let p = { ...newProfile(), gems: 100 };
+    let p = { ...newProfile(), gems: 1000 };
     expect(tracksOf(p)).toEqual({ owned: ['gentle'], selected: 'gentle' });
     expect(() => selectTrack(p, 'jazz')).toThrow(/own/);
     p = buyTrack(p, 'jazz');

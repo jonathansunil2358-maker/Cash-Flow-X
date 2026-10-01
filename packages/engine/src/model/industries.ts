@@ -84,12 +84,12 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     priceElasticity: 1.2,
     unitCost: gbp(6),
     annualPrepaidShare: 0.3,
-    baseChurn: 0.03,
+    baseChurn: 0.04,
     stockCoverDefault: 0,
     spoilage: 0,
     receivableDays: 30,
     payableDays: 30,
-    marketSize: 800,
+    marketSize: 290,
     marketGrowth: 0.006,
     seasonality: [1.02, 1.01, 1.02, 1.0, 0.99, 0.97, 0.97, 0.97, 1.01, 1.02, 1.01, 1.01],
     roles: {
@@ -197,7 +197,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0.25,
     receivableDays: 0,
     payableDays: 30,
-    marketSize: 14000,
+    marketSize: 17000,
     marketGrowth: 0.006,
     seasonality: [0.9, 0.94, 0.97, 1.0, 1.03, 1.03, 1.03, 1.0, 0.97, 0.97, 1.0, 1.16],
     roles: {
@@ -251,7 +251,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0,
     receivableDays: 0,
     payableDays: 30,
-    marketSize: 1100,
+    marketSize: 650,
     marketGrowth: 0.005,
     seasonality: [1.2, 1.1, 1.03, 1.0, 0.97, 0.94, 0.92, 0.94, 1.0, 1.0, 0.98, 0.94],
     roles: {
@@ -305,7 +305,7 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
     spoilage: 0.01,
     receivableDays: 3,
     payableDays: 30,
-    marketSize: 25000,
+    marketSize: 16000,
     marketGrowth: 0.006,
     seasonality: [0.92, 0.9, 0.94, 0.95, 0.97, 0.95, 0.94, 0.97, 1.0, 1.06, 1.23, 1.18],
     roles: {

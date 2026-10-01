@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ActionError, applyActionInPlace, applyBankruptcy, awardPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
+  STARTER_GEMS, ActionError, applyActionInPlace, applyBankruptcy, awardPrestige, balanceSheet, buyPerk, cashFlowStatement, checkIntegrity,
   createRng, DIFFICULTIES, finalScore, legacyFor, leasesCurrentPortion, modifiersOf, newGame, newProfile, perkEffects,
   prestigeCheck, prestigeThreshold, rebirthCheck, replay, runEvents, startingCash, tickInPlace, toSubmission, upgradeOptions,
   type GameState,
 } from '../src/index';
-import { playPolicy } from './helpers';
+import { playPolicy, playUntil } from './helpers';
 
 describe('difficulty', () => {
   it('sets starting cash: £100k / £50k / £25k', () => {
@@ -157,7 +157,8 @@ describe('prestige and rebirth', () => {
   });
 
   it('a successful software run can prestige, and the profile banks points, gems and perks', () => {
-    const s = playPolicy('software', 'PRESTIGE', 72);
+    // Prestige takes years now that the early sprint is valued realistically; play until the stake qualifies.
+    const s = playUntil('software', 'PRESTIGE', 240, (g) => prestigeCheck(g).eligible);
     const check = prestigeCheck(s);
     expect(check.eligible).toBe(true);
     const cash = s.ledger.balances.cash;
@@ -175,7 +176,8 @@ describe('prestige and rebirth', () => {
     expect(profile.legacyPoints).toBe(check.points);
     expect(profile.prestigeCount).toBe(1);
     expect(profile.rebirthsUsed).toBe(0);
-    expect(profile.gems).toBe(50 + 25 * check.points);
+    // Prestige gems are paid once a day by payPrestigeGems (economy.ts), not per Legacy point.
+    expect(profile.gems).toBe(STARTER_GEMS);
     profile = buyPerk(profile, 'fin_loans');
     expect(profile.perks.fin_loans).toBe(1);
     expect(() => buyPerk(profile, 'ops_capacity')).toThrow(/Talent network/);
