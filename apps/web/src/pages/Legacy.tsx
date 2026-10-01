@@ -1,5 +1,6 @@
 import {
-  BOOSTS, DIFFICULTIES, formatGBP, INDUSTRIES, PERKS, perkPurchase, prestigeCheck, type BoostId, type GameState, type PerkBranch,
+  BOOSTS, DIFFICULTIES, formatGBP, INDUSTRIES, PERKS, perkPurchase, prestigeBonus, prestigeCheck, prestigeTitle, PRESTIGE_BONUS_MAX_RANK,
+  type BoostId, type GameState, type PerkBranch,
 } from '@cfx/engine';
 import { Button, Card, KeyValue, Meter, PageTitle, StatusPill } from '../components/ui';
 import { useGame } from '../store';
@@ -48,6 +49,48 @@ export function PerkTree() {
   );
 }
 
+/** Your prestige rank, what the next prestige adds, and exactly what you keep and lose. */
+function RankPanel({ rank, points }: { rank: number; points: number }) {
+  const now = prestigeBonus(rank);
+  const next = prestigeBonus(rank + 1);
+  const capped = rank >= PRESTIGE_BONUS_MAX_RANK;
+  const pct = (x: number) => `+${Math.round(x * 100)}%`;
+  return (
+    <div className="mb-4 space-y-3 rounded-lg border border-line p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-[10px] border-2 border-outline bg-[var(--legacy)] px-2 py-0.5 text-sm font-black text-[#3a2210]" aria-label={`Prestige rank ${rank}`}>★ {rank}</span>
+        <span className="font-display text-lg">{prestigeTitle(rank)}</span>
+        <span className="text-sm text-ink-2">{rank === 0 ? 'No prestige yet' : `${pct(now)} demand on every new company, for good`}</span>
+      </div>
+      <p className="text-sm text-ink-2">
+        {capped
+          ? 'You have reached the highest bonus. Prestige still earns Legacy points and gems.'
+          : `Prestige now to become ${prestigeTitle(rank + 1)}: every new company starts with ${pct(next)} demand${points > 0 ? `, plus ${points} Legacy points to spend` : ''}.`}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg bg-surface-2 p-2.5 text-sm">
+          <div className="mb-1 font-bold text-ink">You keep</div>
+          <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
+            <li>Your prestige rank and its permanent demand bonus</li>
+            <li>Legacy points, perks and the perk tree</li>
+            <li>Gems, banked boosts and Founder XP</li>
+            <li>Achievements and your history</li>
+          </ul>
+        </div>
+        <div className="rounded-lg bg-surface-2 p-2.5 text-sm">
+          <div className="mb-1 font-bold text-ink">Resets to day one</div>
+          <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
+            <li>Your company, cash and loans</li>
+            <li>Staff, upgrades and R&amp;D projects</li>
+            <li>Prices, marketing and your seasonal plans</li>
+            <li>Your investors are bought out at valuation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Legacy({ game }: { game: GameState }) {
   const { profile, act, buyBoost } = useGame();
   const check = prestigeCheck(game);
@@ -61,6 +104,7 @@ export function Legacy({ game }: { game: GameState }) {
             <p className="text-sm text-ink-2">Hard mode runs cannot prestige. Your perks and boosts are switched off here too.</p>
           ) : (
             <>
+              <RankPanel rank={profile.prestigeCount} points={check.points} />
               <KeyValue rows={[
                 ['Your stake (equity value × ownership)', formatGBP(check.stake)],
                 ['Needed to prestige', formatGBP(check.threshold)],

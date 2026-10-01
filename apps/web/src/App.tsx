@@ -1,5 +1,5 @@
 import {
-  dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, unlocked, upgradeOptions, xpForLevel,
+  dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
@@ -165,7 +165,7 @@ function Hud({ game }: { game: GameState }) {
         <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="cfx-hud__name">{game.companyName}</div>
-          <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}</div>
+          <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}{profile.prestigeCount > 0 && game.difficulty !== 'hard' ? ` · ★ ${prestigeTitle(profile.prestigeCount)}` : ''}</div>
         </div>
         {ONLINE && (
           <button type="button" className="cfx-icon-btn relative !bg-[var(--gem)]" style={{ boxShadow: 'inset 0 -5px 0 0 var(--gem-edge), var(--edge-sm)' }} aria-label={`Holding company and leaderboards${offers ? `, ${offers} investment offers` : ''}`} onClick={() => openSheet('social')}>

@@ -7,6 +7,7 @@ import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle
 import { suggestedMarketing } from '../lib/coach';
 import { useDerived } from '../lib/derived';
 import { useGame } from '../store';
+import { MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
 
 export function Operations({ game }: { game: GameState }) {
   const d = useDerived(game);
@@ -17,7 +18,7 @@ export function Operations({ game }: { game: GameState }) {
     <div>
       <PageTitle title="Run the business" subtitle="Hiring, pricing, marketing, stock and credit terms. One-off costs (recruitment, equipment, redundancy) post straight away; see Books › Ledger." />
       <nav className="sticky top-[52px] z-[5] -mx-1 mb-3 flex gap-1.5 overflow-x-auto bg-surface px-1 py-1.5" aria-label="Jump to">
-        {[['card-team', 'Staff'], ['card-pricing', 'Pricing'], ['card-marketing', 'Marketing'], ...(ind.model === 'unit' ? [['card-inventory', 'Stock']] : []), ['card-credit', 'Credit']].map(([id, label]) => (
+        {[['card-team', 'Staff'], ['card-pricing', 'Pricing'], ['card-marketing', 'Marketing'], ...(ind.model === 'unit' ? [['card-inventory', 'Stock']] : []), ['card-credit', 'Credit'], ['card-promo', 'Promos'], ['card-morale', 'Morale'], ['card-projects', 'R&D'], ['card-rivals', 'Rivals']].map(([id, label]) => (
           <button key={id} type="button" className="cfx-btn is-soft is-sm shrink-0 !min-h-8 !px-3 !text-sm"
             onClick={() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>{label}</button>
         ))}
@@ -43,6 +44,10 @@ export function Operations({ game }: { game: GameState }) {
 
         {ind.model === 'unit' && <StockCard game={game} />}
         <TermsCard game={game} />
+        <PromotionsCard game={game} />
+        <MoraleCard game={game} />
+        <ProjectsCard game={game} />
+        <RivalsCard game={game} />
       </div>
     </div>
   );

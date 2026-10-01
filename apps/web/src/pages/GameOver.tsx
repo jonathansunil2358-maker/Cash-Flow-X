@@ -1,4 +1,4 @@
-import { finalScore, formatGBP, formatInt, formatPct, monthLabel, rebirthCheck, scenarioOf, type GameState } from '@cfx/engine';
+import { finalScore, formatGBP, formatInt, formatPct, monthLabel, prestigeBonus, prestigeTitle, rebirthCheck, scenarioOf, type GameState } from '@cfx/engine';
 import { useMemo } from 'react';
 import { Button, Card, KeyValue, StatusPill } from '../components/ui';
 import { useGame } from '../store';
@@ -29,6 +29,11 @@ export function GameOver({ game }: { game: GameState }) {
           <Button variant="primary" onClick={nextRun}>{game.status === 'prestiged' ? 'Start your next company' : 'New game'}</Button>
         )
       }>
+      {game.status === 'prestiged' && (
+        <p className="mb-4 rounded-lg border border-line p-3 text-sm" role="status">
+          <strong>★ Rank {game.prestigeLevel + 1}: {prestigeTitle(game.prestigeLevel + 1)}.</strong> Every new company you start now gets +{Math.round(prestigeBonus(game.prestigeLevel + 1) * 100)}% demand for good, and your Legacy points are waiting in the perk tree.
+        </p>
+      )}
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <div className="text-xs text-muted">Final score</div>

@@ -1,6 +1,7 @@
 import { DIFFICULTIES } from './difficulty';
 import { guildPerks } from './guild';
 import { boostActive, perkEffects } from './perks';
+import { prestigeBonus } from './rank';
 import { projectModifiers } from './rnd';
 import type { GameState } from './state';
 import { upgradeModifiers } from './upgrades';
@@ -32,7 +33,7 @@ function cacheKey(s: GameState): string {
   for (const id in s.perks) k += `|${id}${s.perks[id]}`;
   for (const b of s.boosts) k += `|${b.id}${b.monthsRemaining > 0 ? 1 : 0}`;
   for (const id of s.projectsDone) k += `|r${id}`;
-  k += `|g${s.guildLevel ?? 0}`;
+  k += `|g${s.guildLevel ?? 0}|p${s.prestigeLevel ?? 0}`;
   return k;
 }
 
@@ -62,7 +63,7 @@ function computeModifiers(s: GameState): Modifiers {
     unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult,
     churnMult: u.churnMult * p.churnMult,
     spoilageMult: u.spoilageMult * p.spoilageMult,
-    demandMult: p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1),
+    demandMult: p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1) * (perksOn ? 1 + prestigeBonus(s.prestigeLevel ?? 0) : 1),
     recruitmentMult: p.recruitmentMult,
     upgradeCostMult: p.upgradeCostMult,
     loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0),
