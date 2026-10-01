@@ -167,7 +167,8 @@ app.get('/leaderboards/:board', requireUser, async (c) => {
   return c.json(await leaderboard(c.env, c.get('user'), c.req.param('board') as Board, period));
 });
 app.get('/daily', requireUser, async (c) => {
-  c.header('cache-control', 'private, max-age=10');
+  // Never cached: the player's own status changes the moment they start or finish an attempt.
+  c.header('cache-control', 'private, no-store');
   return c.json(await dailyBoard(c.env, c.get('user'), c.req.query('day')));
 });
 app.post('/rewards/season/:board', requireUser, async (c) => c.json(await claimSeasonReward(c.env, c.get('user'), c.req.param('board') as Board)));

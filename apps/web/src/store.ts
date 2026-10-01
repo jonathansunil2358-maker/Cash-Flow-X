@@ -66,7 +66,8 @@ interface Store {
   /** The sector walkthrough is showing (the clock stops while it is open). */
   tourOpen: boolean;
   setTourOpen: (open: boolean) => void;
-  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'>) => Promise<void>;
+  /** `practice` plays the daily challenge without registering it for the board. */
+  start: (opts: Omit<NewGameOptions, 'perks' | 'boosts' | 'prestigeLevel'> & { practice?: boolean }) => Promise<void>;
   /** Send new decisions to the server for verification (online runs). */
   syncNow: () => Promise<void>;
   /** Reload the account and merge server-owned progress into the profile. */
@@ -239,13 +240,14 @@ export const useGame = create<Store>((set, get) => {
     async start(opts) {
       const { profile } = get();
       let game: GameState;
-      const ranked = ONLINE && (opts.scenarioId ?? 'standard') === 'standard';
+      const daily = opts.scenarioId === 'daily';
+      const ranked = ONLINE && ((opts.scenarioId ?? 'standard') === 'standard' || (daily && !opts.practice));
       if (ranked) {
         // Register the company first: the server fixes its perks and prestige level.
         try {
           const r = await api.createRun({
             seed: opts.seed, industryId: opts.industryId, difficulty: opts.difficulty ?? 'medium', equipmentFinance: opts.equipmentFinance ?? 'buy',
-            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION,
+            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION, ...(daily ? { daily: true } : {}),
           });
           game = newGame({ ...opts, companyName: r.companyName, perks: r.perks, boosts: r.boosts, prestigeLevel: r.prestigeLevel });
           game.server = { runId: r.runId, synced: 0, syncedMonth: 0 };
@@ -256,7 +258,7 @@ export const useGame = create<Store>((set, get) => {
       } else {
         game = newGame({ ...opts, perks: profile.perks, boosts: profile.boosts, prestigeLevel: profile.prestigeCount });
       }
-      if (game.marketingBudget === 0 && (opts.scenarioId ?? 'standard') === 'standard') {
+      if (game.marketingBudget === 0 && ((opts.scenarioId ?? 'standard') === 'standard' || daily)) {
         game = applyAction(game, { type: 'setMarketing', amount: startingMarketing(INDUSTRIES[game.industryId]) });
       }
       saveGame('autosave', game);

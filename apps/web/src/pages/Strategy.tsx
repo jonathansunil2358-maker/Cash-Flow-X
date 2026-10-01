@@ -50,6 +50,7 @@ export function PromotionsCard({ game }: { game: GameState }) {
     <Fold id="card-promo" title="Promotions & season" summary={`${next}. Demand has seasons: open to plan around them.`}
       subtitle="Demand rises and falls through the year. A promotion cuts your price for a few months: customers respond to the lower price, you earn less on each sale, and the month after is quiet.">
       <div className="space-y-4">
+        <p className="text-sm font-bold" role="status">{next}.</p>
         <SeasonStrip game={game} />
         <p className="text-xs text-ink-2">
           Best month for your sector: {monthLabel(peak.indexOf(Math.max(...peak))).slice(0, 3)}. Quietest: {monthLabel(peak.indexOf(Math.min(...peak))).slice(0, 3)}.

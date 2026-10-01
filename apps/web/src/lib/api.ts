@@ -69,6 +69,15 @@ export interface Me {
 export type Visibility = 'full' | 'summary' | 'hidden';
 export type Board = 'networth' | 'prestige' | 'guilds';
 
+export interface DailyBoard {
+  day: string;
+  isToday: boolean;
+  challenge: { seed: string; industryId: IndustryId; companyName: string; months: number };
+  endsInMs: number;
+  entries: { rank: number; id: string; name: string; icon: string; score: number; months: number; me: boolean }[];
+  me: { status: string; score: number; months: number; finished: boolean; rank: number | null } | null;
+}
+
 export interface RunStart {
   runId: string;
   seed: string;
@@ -104,8 +113,9 @@ export const api = {
   me: () => request<Me>('/me'),
   updateMe: (patch: { name?: string; icon?: string; visibility?: Visibility; client?: unknown }) => request('/me', { method: 'PUT', body: patch }),
   buyPerk: (perkId: string) => request<{ perks: PerkLevels; legacyPoints: number }>('/me/perks', { body: { perkId } }),
-  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number }) =>
+  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean }) =>
     request<RunStart>('/runs', { body: b }),
+  daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),
   syncRun: (runId: string, b: { fromAction: number; actions: { month: number; action: Action }[]; month: number; checksum: string }) =>
     request<{ actionsVerified: number; status: string; netWorth?: number }>(`/runs/${runId}/sync`, { body: b }),
   guilds: (q = '') => request<{ guilds: GuildSummary[] }>(`/guilds?q=${encodeURIComponent(q)}`),

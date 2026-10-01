@@ -225,3 +225,113 @@ test('every upgrade for the sector can be found in the Upgrades panel', async ({
     await expect(sheet.getByText(name).first()).toBeVisible();
   }
 });
+
+test('the new Business cards open: promotions, morale and pay, R&D projects and rivals', async ({ page }) => {
+  await freshCompany(page, 'Cards');
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Run the business' });
+
+  const promo = sheet.locator('#card-promo');
+  await promo.getByRole('button', { name: 'Open' }).click();
+  await expect(promo.getByLabel('Seasonal demand for the next six months')).toBeVisible();
+  await promo.getByRole('button', { name: 'Start promotion' }).click();
+  await expect(promo.getByText(/20% off, 2 months left/)).toBeVisible();
+  await expect(promo.getByRole('button', { name: 'Start promotion' })).toBeDisabled();
+
+  const morale = sheet.locator('#card-morale');
+  await morale.getByRole('button', { name: 'Open' }).click();
+  await morale.getByRole('button', { name: /Above market/ }).click();
+  await expect(morale.getByRole('button', { name: /Above market/ })).toHaveAttribute('aria-pressed', 'true');
+
+  const rnd = sheet.locator('#card-projects');
+  await rnd.getByRole('button', { name: 'Open' }).click();
+  await expect(rnd.getByText('New product line')).toBeVisible();
+  await expect(rnd.getByRole('button', { name: 'Start project' }).first()).toBeDisabled();
+  await expect(rnd.getByText(/at least 3 R&D staff/).first()).toBeVisible();
+
+  const rivals = sheet.locator('#card-rivals');
+  await rivals.getByRole('button', { name: 'Open' }).click();
+  await expect(rivals.getByText(/Normal prices/).first()).toBeVisible();
+});
+
+test('prestige explains what you keep and what resets, with stats and history one tap away', async ({ page }) => {
+  await freshCompany(page, 'Rank');
+  await openDock(page, 'Prestige');
+  const sheet = page.getByRole('dialog', { name: 'Prestige & Legacy' });
+  await expect(sheet.getByText('You keep')).toBeVisible();
+  await expect(sheet.getByText('Resets to day one')).toBeVisible();
+  await expect(sheet.getByLabel('Prestige rank 0')).toBeVisible();
+  await expect(sheet.getByText(/Prestige now to become Operator/)).toBeVisible();
+  await sheet.getByRole('tab', { name: 'Stats & history' }).click();
+  await expect(sheet.getByText('Lifetime')).toBeVisible();
+  await expect(sheet.getByText('Achievements')).toBeVisible();
+  await sheet.getByRole('tab', { name: 'Prestige' }).click();
+  await expect(sheet.getByText('You keep')).toBeVisible();
+});
+
+test('sound and vibration are switchable, remembered, and actually make a sound when on', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __osc: number; AudioContext: unknown };
+    w.__osc = 0;
+    w.AudioContext = class {
+      currentTime = 0; state = 'running'; destination = {};
+      resume() { return Promise.resolve(); }
+      createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
+      createOscillator() { w.__osc++; return { type: '', frequency: { value: 0 }, connect() {}, start() {}, stop() {} }; }
+    };
+  });
+  await freshCompany(page, 'Sound');
+  await openDock(page, 'Business');
+  await page.getByRole('dialog', { name: 'Run the business' }).getByRole('button', { name: 'Close panel' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const sfx = page.getByRole('checkbox', { name: 'Sound effects' });
+  await expect(sfx).not.toBeChecked(); // off by default in automated browsers
+  expect(await page.evaluate(() => (window as unknown as { __osc: number }).__osc)).toBe(0);
+  await sfx.check();
+  expect(await page.evaluate(() => localStorage.getItem('cfx:pref:sfx'))).toBe('on');
+  expect(await page.evaluate(() => (window as unknown as { __osc: number }).__osc)).toBeGreaterThan(0);
+  await sfx.uncheck();
+  expect(await page.evaluate(() => localStorage.getItem('cfx:pref:sfx'))).toBe('off');
+  const before = await page.evaluate(() => (window as unknown as { __osc: number }).__osc);
+  await page.getByRole('button', { name: 'Save to slot 1' }).click(); // makes a toast
+  expect(await page.evaluate(() => (window as unknown as { __osc: number }).__osc)).toBe(before);
+  await page.getByRole('checkbox', { name: 'Vibration' }).check();
+  expect(await page.evaluate(() => localStorage.getItem('cfx:pref:haptics'))).toBe('on');
+});
+
+test('the daily challenge: the same company for everyone, practise or play ranked once', async ({ page }) => {
+  await freshCompany(page, 'Daily');
+  await openDock(page, 'Missions');
+  const sheet = page.getByRole('dialog', { name: 'Missions' });
+  const card = sheet.locator('#card-daily');
+  await expect(card.getByText(/Everyone plays the same company for 24 months/)).toBeVisible();
+  await expect(card.getByLabel('Time left today')).toHaveText(/^\d\d:\d\d:\d\d$/);
+  const name = await card.locator('.font-display').nth(1).innerText();
+  expect(name).toMatch(/^Daily \w+ Ltd$/);
+
+  // Ranked: it replaces the current company, and can only be done once a day.
+  await card.getByRole('button', { name: "Play today's challenge" }).click();
+  await card.getByRole('button', { name: 'Play without saving' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText(name);
+  await skipTour(page);
+  await openDock(page, 'Missions');
+  const again = page.getByRole('dialog', { name: 'Missions' }).locator('#card-daily');
+  await expect(again.getByText(/You are playing it now: month 0 of 24/)).toBeVisible();
+  await expect(again.getByRole('button', { name: "Play today's challenge" })).toHaveCount(0);
+  await expect(again.getByRole('button', { name: /Practise/ })).toBeDisabled();
+});
+
+test('a share card is a real picture', async ({ page }) => {
+  await page.goto('/');
+  const info = await page.evaluate(async () => {
+    const m = await import('/src/lib/shareCard.ts');
+    const c = m.drawShareCard({ heading: 'Daily Software Ltd', sub: 'Software · Medium · 2.0 years', badge: 'Prestiged: +12 Legacy', tone: 'good',
+      stats: [['Final score', '1,234,567'], ['Equity value', '£12.3m'], ['Months in business', '24']] });
+    const blob: Blob | null = await new Promise((r) => c.toBlob(r, 'image/png'));
+    return { w: c.width, h: c.height, size: blob?.size ?? 0, type: blob?.type };
+  });
+  expect(info.w).toBe(1080);
+  expect(info.h).toBe(1350);
+  expect(info.type).toBe('image/png');
+  expect(info.size).toBeGreaterThan(10_000);
+});
