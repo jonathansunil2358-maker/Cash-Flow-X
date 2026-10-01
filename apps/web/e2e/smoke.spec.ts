@@ -616,3 +616,77 @@ test('extra challenges can be chosen for a new company, and the pressures and ri
   await expect(rivals.getByText(/Price slasher/)).toBeVisible();
   await expect(rivals.getByText(/Quality snob/)).toBeVisible();
 });
+
+test('the fun cards: board meetings, team, daily quests, trophies and the what-if forecaster', async ({ page }) => {
+  await freshCompany(page, 'Fun');
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const board = biz.locator('#card-board');
+  await board.getByRole('button', { name: 'Open' }).click();
+  await expect(board.getByText(/Set at month 3/)).toBeVisible();
+  const team = biz.locator('#card-roster');
+  await team.getByRole('button', { name: 'Open' }).click();
+  await expect(team.getByText(/Hire someone in the Team panel to meet them here/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const quests = missions.locator('#card-quests');
+  await expect(quests.getByRole('button', { name: /Claim/ })).toHaveCount(3);
+  await expect(quests.getByRole('button', { name: /Claim/ }).first()).toBeDisabled();
+  await expect(quests.getByText('0/3 claimed')).toBeVisible();
+  await expect(missions.locator('#card-trophies').getByText('Best Employer')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await openDock(page, 'Books');
+  await page.getByRole('tab', { name: /Forecast/ }).click();
+  const whatif = page.locator('#card-whatif');
+  await expect(whatif.getByText(/same as now/).first()).toBeVisible();
+  await whatif.getByLabel('Price change').fill('20');
+  await expect(whatif.getByText(/Price \+20%/)).toBeVisible();
+  await expect(whatif.getByRole('button', { name: 'Reset sliders' })).toBeVisible();
+});
+
+test('a finished quest can be claimed for gems, once', async ({ page }) => {
+  await freshCompany(page, 'Quest');
+  const gemsBefore = await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.quests = {
+      day: new Date().toISOString().slice(0, 10), streak: 0, lastDone: null, bonusPaid: false,
+      items: [{ id: 'months3', progress: 3, claimed: false }, { id: 'upgrade1', progress: 0, claimed: false }, { id: 'hire1', progress: 0, claimed: false }],
+    };
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+    return p.gems as number;
+  });
+  await page.reload();
+  await skipTourIfShown(page);
+  await openDock(page, 'Missions');
+  const quests = page.getByRole('dialog', { name: 'Missions' }).locator('#card-quests');
+  await expect(quests.getByText('Close 3 months')).toBeVisible();
+  await quests.getByRole('button', { name: 'Claim' }).first().click();
+  await expect(quests.getByText('1/3 claimed')).toBeVisible();
+  await expect(quests.getByRole('button', { name: 'Claimed' })).toHaveCount(1);
+  const gemsAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).gems as number);
+  expect(gemsAfter).toBe(gemsBefore + 5);
+});
+
+test('a company worth millions gets a helipad and the 3D scene still renders', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  g.history.at(-1).valuation.equityValue = 800_000_000;
+  await page.addInitScript((game) => {
+    if (localStorage.getItem('cfx:seeded')) return;
+    localStorage.setItem('cfx:seeded', '1');
+    localStorage.setItem('cfx:save:autosave', JSON.stringify(game));
+    localStorage.setItem('cfx:meta:autosave', JSON.stringify({ slot: 'autosave', companyName: game.companyName, industryId: game.industryId, label: 'x', savedAt: new Date().toISOString(), status: 'playing' }));
+    localStorage.setItem(`cfx:pref:tour:${game.industryId}`, 'done');
+  }, g);
+  await page.clock.install();
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Player name' }).fill(`Heli${Date.now().toString(36).slice(-6)}`);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('section[aria-label="Your business"] canvas')).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(1500);
+  expect(errors).toEqual([]);
+});

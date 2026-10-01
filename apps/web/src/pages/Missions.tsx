@@ -6,6 +6,7 @@ import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
+import { QuestsCard, TrophyCard } from './Fun';
 import { TitlesCard } from './Titles';
 import { WeeklyEventCard } from './Weekly';
 
@@ -37,6 +38,7 @@ export function Missions({ game }: { game: GameState }) {
     <div className="space-y-5">
       <PageTitle title="Missions" subtitle="Earn XP and gems by running your business well. Missions change as you complete them, and each one teaches a bit of finance." />
 
+      <QuestsCard />
       <DailyChallengeCard game={game} />
       <WeeklyEventCard game={game} />
       <ChallengeCard game={game} />
@@ -83,6 +85,8 @@ export function Missions({ game }: { game: GameState }) {
           <p className="text-xs text-ink-2">{profile.missionsCompleted} missions completed so far.</p>
         </div>
       </Card>
+
+      <TrophyCard game={game} />
 
       <TitlesCard />
 

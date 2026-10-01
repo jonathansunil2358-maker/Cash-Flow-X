@@ -112,6 +112,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'daily_done', name: 'Daily grind', description: 'Finish a daily challenge.', icon: 'coffee', gems: 20, title: 'Daily Driver', check: (s) => s.scenarioId === 'daily' && s.status === 'finished' },
   { id: 'weekly_done', name: 'Weekly warrior', description: 'Finish a weekly event.', icon: 'flame', gems: 30, title: 'Event Veteran', check: (s) => s.scenarioId === 'weekly' && s.status === 'finished' },
   { id: 'challenge_done', name: 'Friendly rivalry', description: 'Finish a challenge set by a friend.', icon: 'heart', gems: 30, title: 'Good Sport', check: (s) => s.scenarioId === 'challenge' && s.status === 'finished' },
+  { id: 'board_first', name: 'Board approval', description: 'Beat a quarterly board target.', icon: 'chart', gems: 15, check: (s) => (s.board?.hits ?? 0) >= 1 },
+  { id: 'board_streak', name: 'Board favourite', description: 'Beat the board four quarters in a row.', icon: 'crown', gems: 40, title: 'Board Favourite', check: (s) => (s.board?.streak ?? 0) >= 4 },
+  { id: 'award_first', name: 'Trophy shelf', description: 'Win an annual award.', icon: 'star', gems: 20, title: 'Award Winner', check: (s) => (s.awards?.length ?? 0) >= 1 },
+  { id: 'award_five', name: 'Trophy cabinet', description: 'Win five annual awards.', icon: 'diamond', gems: 40, check: (s) => (s.awards?.length ?? 0) >= 5 },
+  { id: 'award_sweep', name: 'Clean sweep', description: 'Win three awards in one year.', icon: 'flame', gems: 50, title: 'Clean Sweeper',
+    check: (s) => { const by: Record<number, number> = {}; for (const a of s.awards ?? []) by[a.year] = (by[a.year] ?? 0) + 1; return Object.values(by).some((n) => n >= 3); } },
   { id: 'hard_win', name: 'Against the odds', description: 'Reach the £10m target on Hard.', icon: 'mountain', gems: 60, title: 'Against All Odds', check: (s) => s.difficulty === 'hard' && s.wonAtMonth !== null },
 ];
 

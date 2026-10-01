@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { CashChart, type CashPoint } from '../components/charts';
 import { Card, PageTitle, Stat } from '../components/ui';
 import { useDerived } from '../lib/derived';
+import { WhatIfCard } from './Fun';
 
 export function ForecastPage({ game }: { game: GameState }) {
   const d = useDerived(game);
@@ -27,7 +28,8 @@ export function ForecastPage({ game }: { game: GameState }) {
         <Stat label="Forecast profit (12m)" value={formatGBP(totalProfit, { compact: true })} tone={totalProfit >= 0 ? 'good' : 'bad'} />
         <Stat label="Forecast cash flow (12m)" value={formatGBP(totalCash, { compact: true })} tone={totalCash >= 0 ? 'good' : 'bad'} sub="Profit ≠ cash: working capital, capex, debt and tax timing" />
       </div>
-      <Card title="Cash runway">
+      <WhatIfCard game={game} />
+      <Card className="mt-5" title="Cash runway">
         <CashChart data={data} height={300} />
       </Card>
       <Card className="mt-5" title="Projected monthly figures">

@@ -6,7 +6,7 @@ import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
-import { Billboard, Ferry, Fisher, Gull, Lighthouse, PhoneBox, Pond } from './extras';
+import { Billboard, Ferry, Fisher, Gull, Helipad, Lighthouse, PhoneBox, Pond } from './extras';
 import { Ball, Blk, Bush, C, Car, Cyl, Lamp, Tree } from './parts';
 
 /**
@@ -72,7 +72,7 @@ function Patch({ x0, x1, z0, z1, y = 0.012, c }: { x0: number; x1: number; z0: n
   );
 }
 
-function Island({ night, doorX, sk }: { night: boolean; doorX: number; sk: SkinPalette }) {
+function Island({ night, doorX, sk, rich }: { night: boolean; doorX: number; sk: SkinPalette; rich: boolean }) {
   const asphalt = night ? '#3f4550' : '#5d6470';
   const paving = night ? '#a9a294' : '#ddd5c4';
   const line = '#fff8ec';
@@ -185,6 +185,7 @@ function Island({ night, doorX, sk }: { night: boolean; doorX: number; sk: SkinP
 
       {/* landmarks and wildlife */}
       <Lighthouse x={-7.4} z={7.4} night={night} />
+      {rich && <Helipad x={-1.4} z={6.6} night={night} />}
       <Pond x={5.6} z={-5.0} night={night} />
       <PhoneBox x={-4.9} z={1.05} />
       <Fisher x={JETTY_X - 0.3} z={GRASS / 2 + 1.7} />
@@ -570,6 +571,7 @@ export default function Scene3D({ game }: { game: GameState }) {
   const occupied = new Set(built.map((u) => u.plot));
   const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  const rich = (game.history.at(-1)?.valuation?.equityValue ?? 0) >= 5_000_000_00;
   const skinId = useGame((s) => cosmeticsOf(s.profile).skin);
   const sk = skinOf(skinId).palette;
   const setSceneFocus = useGame((s) => s.setSceneFocus);
@@ -645,7 +647,7 @@ export default function Scene3D({ game }: { game: GameState }) {
       <Sea night={night} sk={sk} />
       <Boat night={night} />
       <group position={[0, -0.2, 0]}>
-        <Island night={night} doorX={doorX} sk={sk} />
+        <Island night={night} doorX={doorX} sk={sk} rich={rich} />
         <group position={[HQ_POS[0], 0, HQ_POS[1]]}>
           <Headquarters industry={game.industryId} floors={floors} />
         </group>

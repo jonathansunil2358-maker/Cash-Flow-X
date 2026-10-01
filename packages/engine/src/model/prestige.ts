@@ -4,6 +4,7 @@ import { DIFFICULTIES, type DifficultyId } from './difficulty';
 import type { DailyState, Mission } from './gamification';
 import type { IndustryId } from './industries';
 import type { Cosmetics } from './cosmetics';
+import type { QuestState } from './quests';
 import { BOOSTS, perkPurchase, type ActiveBoost, type BoostId, type PerkLevels } from './perks';
 import { isFixedScenario } from '../scenarios';
 import { ownership, type GameState } from './state';
@@ -59,6 +60,8 @@ export interface Profile {
   title?: string | null;
   /** Skins bought and equipped. Optional so older saves load unchanged. */
   cosmetics?: Cosmetics;
+  /** Today's quests and the streak (see quests.ts). Optional so older saves load unchanged. */
+  quests?: QuestState;
 }
 
 export const STARTER_GEMS = 50;
