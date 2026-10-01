@@ -1,11 +1,12 @@
 import {
-  ActionError, advanceMonth, applyAction, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
+  ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
   RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
+import { startingMarketing } from './lib/coach';
 import { api, ApiError, ONLINE, type Me } from './lib/api';
 import { loadGame, loadProfile, readPref, saveGame, saveProfile, writePref, type SlotId } from './lib/save';
 
@@ -251,6 +252,9 @@ export const useGame = create<Store>((set, get) => {
         }
       } else {
         game = newGame({ ...opts, perks: profile.perks, boosts: profile.boosts, prestigeLevel: profile.prestigeCount });
+      }
+      if (game.marketingBudget === 0 && (opts.scenarioId ?? 'standard') === 'standard') {
+        game = applyAction(game, { type: 'setMarketing', amount: startingMarketing(INDUSTRIES[game.industryId]) });
       }
       saveGame('autosave', game);
       const p = persistProfile({ ...profile, missions: refillMissions(profile.missions, game, mathRng) });

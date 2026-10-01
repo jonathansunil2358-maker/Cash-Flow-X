@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type React
 import { Vector3, type Group, type Mesh } from 'three';
 import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
 import { iconUrl } from '../lib/icons';
+import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
 import { Billboard, Ferry, Fisher, Gull, Lighthouse, PhoneBox, Pond } from './extras';
 import { Ball, Blk, Bush, C, Car, Cyl, Lamp, Tree } from './parts';
@@ -493,29 +494,46 @@ function Boat({ night }: { night: boolean }) {
  * A tappable tag floating over something on the island. It does what the thing is for: open its
  * upgrade card, or jump to the panel that runs it.
  */
-interface SceneTag { id: string; at: [number, number, number]; label: string; ghost?: boolean; onSelect: () => void; content: ReactNode }
+interface SceneTag { id: string; at: [number, number, number]; label: string; ghost?: boolean; onSelect: () => void; content: ReactNode;
+  /** Lower ranks win when tags would overlap; a tag that cannot find room is hidden. */
+  rank: number }
+type TagPoint = { at: [number, number, number]; rank: number };
+
+const Padlock = () => (
+  <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden className="-ml-0.5"><rect x="3" y="7" width="10" height="8" rx="2" fill="currentColor" /><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+);
 
 /**
  * Pins the tag buttons (plain DOM over the canvas) to their 3D points every frame. Plain DOM in
  * the app's own tree, rather than one React root per label, keeps every tag reliably mounted.
  */
-function TagProjector({ els, points }: { els: MutableRefObject<Map<string, HTMLElement>>; points: MutableRefObject<Map<string, [number, number, number]>> }) {
+function TagProjector({ els, points }: { els: MutableRefObject<Map<string, HTMLElement>>; points: MutableRefObject<Map<string, TagPoint>> }) {
   const v = useMemo(() => new Vector3(), []);
   useFrame(({ camera, size }) => {
-    for (const [id, el] of els.current) {
+    // Read every size first, then write, so the browser lays out once per frame.
+    const items = [...els.current].flatMap(([id, el]) => {
       const p = points.current.get(id);
-      if (!p) continue;
-      v.set(p[0], p[1], p[2]).project(camera);
-      el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%)`;
+      if (!p) return [];
+      v.set(p.at[0], p.at[1], p.at[2]).project(camera);
+      return [{ el, rank: p.rank, x: ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height, w: el.offsetWidth, h: el.offsetHeight }];
+    }).sort((a, b) => a.rank - b.rank);
+    const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+    for (const it of items) {
+      // Try the natural spot, then nudge up to two rows higher; hide the tag if it still collides.
+      let shown = false;
+      let dy = 0;
+      for (let attempt = 0; attempt < 3 && !shown; attempt++, dy -= it.h + 2) {
+        const box = { x0: it.x - it.w / 2 - 2, x1: it.x + it.w / 2 + 2, y0: it.y + dy - it.h / 2 - 1, y1: it.y + dy + it.h / 2 + 1 };
+        if (!placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) {
+          placed.push(box);
+          it.el.style.transform = `translate(${it.x}px, ${it.y + dy}px) translate(-50%, -50%)`;
+          shown = true;
+        }
+      }
+      it.el.style.visibility = shown ? 'visible' : 'hidden';
     }
   });
   return null;
-}
-
-/** Pill label: first word, or first two when the first is possessive ("Chef's table"). */
-function shortName(name: string) {
-  const w = name.split(' ');
-  return w[0].endsWith("'s") && w[1] ? `${w[0]} ${w[1]}` : w[0];
 }
 
 /** Fit the whole island in the frame whatever its size (only the bridge runs off to the mainland). */
@@ -583,28 +601,30 @@ export default function Scene3D({ game }: { game: GameState }) {
     const [px, pz] = PLOTS[u.plot];
     const ready = playing && !o.maxed && !o.locked && o.cost <= cash;
     tags.push(u.level > 0 ? {
-      id: u.def.id, at: [px, 2.4, pz], onSelect: () => setSceneFocus(u.def.id),
+      id: u.def.id, at: [px, 2.4, pz], rank: 0, onSelect: () => setSceneFocus(u.def.id),
       label: `${u.def.name}, level ${u.level} of ${u.def.maxLevel}${o.maxed ? ', maxed' : ready ? ', next level affordable' : ''}. Open upgrade card.`,
-      content: <>{shortName(u.def.name)} <span className="opacity-70">Lv {u.level}</span>
+      content: <>{shortUpgradeName(u.def)} <span className="opacity-70">Lv {u.level}</span>
         {o.maxed ? <b className="cfx-scene-tag__badge is-max">MAX</b> : ready ? <b className="cfx-scene-tag__badge">▲</b> : null}</>,
     } : {
-      id: u.def.id, at: [px, 1.5, pz], ghost: true, onSelect: () => setSceneFocus(u.def.id),
+      id: u.def.id, at: [px, 1.5, pz], rank: 2, ghost: true, onSelect: () => setSceneFocus(u.def.id),
       label: `Build ${u.def.name} for ${formatGBP(o.cost)}${o.locked ? ` (${o.locked})` : ''}. Open upgrade card.`,
-      content: <>+ {shortName(u.def.name)} <span className="opacity-70">{formatGBP(o.cost, { compact: true })}</span></>,
+      content: o.locked
+        ? <><Padlock /> {shortUpgradeName(u.def)}</>
+        : <>+ {shortUpgradeName(u.def)} <span className="opacity-70">{formatGBP(o.cost, { compact: true })}</span></>,
     });
   }
   tags.push(
-    { id: 'hq', at: [HQ_POS[0], 2.0, HQ_POS[1] + 0.8], onSelect: () => openSheet('team'),
+    { id: 'hq', at: [HQ_POS[0], 2.0, HQ_POS[1] + 0.8], rank: 1, onSelect: () => openSheet('team'),
       label: `Headquarters: ${headcount(game)} staff. Open Team to hire.`, content: <>Team <span className="opacity-70">{headcount(game)} staff</span></> },
-    { id: 'billboard', at: [7.1, 2.1, 0.7], onSelect: () => openSheet('team', undefined, 'card-marketing'),
+    { id: 'billboard', at: [7.1, 2.1, 0.7], rank: 3, onSelect: () => openSheet('team', undefined, 'card-marketing'),
       label: 'Billboard: open Marketing', content: 'Marketing' },
-    { id: 'carpark', at: [4.4, 0.8, BAY_Z], onSelect: () => openSheet('books', 'market'),
+    { id: 'carpark', at: [4.4, 0.8, BAY_Z], rank: 3, onSelect: () => openSheet('books', 'market'),
       label: `Car park: ${trade.toLocaleString('en-GB')} ${tradeLabel}. Open market share in the Books.`,
       content: <>{trade.toLocaleString('en-GB')} <span className="opacity-70">{tradeLabel}</span></> },
   );
   const tagEls = useRef(new Map<string, HTMLElement>());
-  const tagPoints = useRef(new Map<string, [number, number, number]>());
-  tagPoints.current = new Map(tags.map((t) => [t.id, t.at]));
+  const tagPoints = useRef(new Map<string, TagPoint>());
+  tagPoints.current = new Map(tags.map((t) => [t.id, { at: t.at, rank: t.rank }]));
 
   return (
     <div className="relative h-full w-full">

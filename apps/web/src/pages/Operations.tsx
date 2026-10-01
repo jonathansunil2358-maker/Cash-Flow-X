@@ -4,6 +4,7 @@ import {
 } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle } from '../components/ui';
+import { suggestedMarketing } from '../lib/coach';
 import { useDerived } from '../lib/derived';
 import { useGame } from '../store';
 
@@ -14,9 +15,15 @@ export function Operations({ game }: { game: GameState }) {
   const capacity = capacityOf(game, ind);
   return (
     <div>
-      <PageTitle title="Team & trading" subtitle="Hiring, pricing, marketing and credit terms. One-off costs (recruitment, equipment, redundancy) post straight away; see Books › Ledger." />
+      <PageTitle title="Run the business" subtitle="Hiring, pricing, marketing, stock and credit terms. One-off costs (recruitment, equipment, redundancy) post straight away; see Books › Ledger." />
+      <nav className="sticky top-[52px] z-[5] -mx-1 mb-3 flex gap-1.5 overflow-x-auto bg-surface px-1 py-1.5" aria-label="Jump to">
+        {[['card-team', 'Staff'], ['card-pricing', 'Pricing'], ['card-marketing', 'Marketing'], ...(ind.model === 'unit' ? [['card-inventory', 'Stock']] : []), ['card-credit', 'Credit']].map(([id, label]) => (
+          <button key={id} type="button" className="cfx-btn is-soft is-sm shrink-0 !min-h-8 !px-3 !text-sm"
+            onClick={() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>{label}</button>
+        ))}
+      </nav>
       <div className="grid gap-5">
-        <Card title="Team" subtitle={`Salaries shown include wage inflation (index ${game.salaryIndex.toFixed(3)}). Employer NI & pension add 15%.`}>
+        <Card id="card-team" title="Team" subtitle={`Salaries shown include wage inflation (index ${game.salaryIndex.toFixed(3)}). Employer NI & pension add 15%.`}>
           <div className="space-y-4">
             {ROLE_IDS.map((r) => <RoleRow key={r} game={game} role={r} />)}
           </div>
@@ -121,12 +128,19 @@ function MarketingCard({ game, reach }: { game: GameState; reach: number }) {
   const [amount, setAmount] = useState(game.marketingBudget);
   const steadyBrand = amount / d.ind.marketingPerBrandPoint / 0.1;
   const steadyReach = reachOf({ ...game, brand: steadyBrand }, d.ind);
+  const suggested = suggestedMarketing(game);
   return (
     <Card id="card-marketing" title="Marketing" subtitle="Spend builds brand, which decays 10% a month. Brand and sales staff drive reach: the share of the market that knows you exist.">
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Monthly budget"><MoneyInput value={amount} onChange={setAmount} step={500} /></Field>
         <Button variant="primary" disabled={game.status !== 'playing' || amount === game.marketingBudget} onClick={() => act({ type: 'setMarketing', amount }, `Marketing set to ${formatGBP(amount)}/month.`)}>Set budget</Button>
       </div>
+      {suggested !== amount && (
+        <p className="mt-2 text-xs text-ink-2">
+          Suggested for your size: about {formatGBP(suggested)}/month (8% of revenue).{' '}
+          <button type="button" className="font-extrabold text-ink underline" onClick={() => setAmount(suggested)}>Use it</button>
+        </p>
+      )}
       <div className="mt-3">
         <KeyValue rows={[
           ['Brand points', game.brand.toFixed(0)],
@@ -145,7 +159,7 @@ function StockCard({ game }: { game: GameState }) {
   const [cover, setCover] = useState(game.stockCoverMonths);
   const avgCost = game.inventoryUnits ? game.ledger.balances.inventory / game.inventoryUnits : d.ind.unitCost;
   return (
-    <Card title="Inventory policy" subtitle={`Each month you buy enough stock to meet expected sales plus a buffer. More cover means fewer stock-outs but more cash tied up and more write-offs (${formatPct(d.ind.spoilage)} of stock per month).`}>
+    <Card id="card-inventory" title="Inventory policy" subtitle={`Each month you buy enough stock to meet expected sales plus a buffer. More cover means fewer stock-outs but more cash tied up and more write-offs (${formatPct(d.ind.spoilage)} of stock per month).`}>
       <Field label={`Stock cover: ${cover.toFixed(2)} months of sales`}>
         <input type="range" min={0} max={6} step={0.25} value={cover} onChange={(e) => setCover(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
       </Field>
@@ -172,7 +186,7 @@ function TermsCard({ game }: { game: GameState }) {
   const cash = d.ind.receivableDays === 0;
   const preview = { ...game, customerDays: cust, supplierDays: supp };
   return (
-    <Card title="Credit terms (working capital)" subtitle={`The fastest lever on cash. Industry norms: customers pay ${cash ? 'at the point of sale' : `in ${d.ind.receivableDays} days`}; suppliers expect payment in ${d.ind.payableDays} days.`}>
+    <Card id="card-credit" title="Credit terms (working capital)" subtitle={`The fastest lever on cash. Industry norms: customers pay ${cash ? 'at the point of sale' : `in ${d.ind.receivableDays} days`}; suppliers expect payment in ${d.ind.payableDays} days.`}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={`Customer terms: ${cust} days`} hint={cash ? 'Not applicable in this industry.' : `Demand ×${termsDemandMultiplier(preview, d.ind).toFixed(3)}. Longer terms win B2B customers but tie up cash and raise bad debts.`}>
           <input type="range" min={0} max={120} step={5} value={cust} disabled={cash} onChange={(e) => setCust(Number(e.target.value))} className="w-full accent-[var(--accent)]" />

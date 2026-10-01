@@ -63,7 +63,7 @@ test('onboard, play in real time, books balance, save/load round-trips', async (
   await expect(page.locator('#tour-title')).toHaveCount(0);
 
   // Decisions from the dock panels.
-  await openDock(page, 'Team');
+  await openDock(page, 'Business');
   await page.getByRole('button', { name: 'Hire' }).first().click();
   await expect(page.getByText(/Hired 1 ×/)).toBeVisible();
   await clearOverlays(page);
