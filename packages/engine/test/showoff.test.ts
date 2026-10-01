@@ -16,11 +16,12 @@ const play = (s: GameState, months: number) => {
 };
 
 describe('island decorations', () => {
-  it('has eight items with unique spots and ids', () => {
-    expect(DECOR).toHaveLength(8);
-    expect(new Set(DECOR.map((d) => d.id)).size).toBe(8);
-    expect(new Set(DECOR.map((d) => d.at.join(','))).size).toBe(8);
-    for (const d of DECOR) { expect(Math.abs(d.at[0])).toBeLessThanOrEqual(8); expect(Math.abs(d.at[1])).toBeLessThanOrEqual(8); }
+  it('has eight island items and three on extra land, with unique spots and ids', () => {
+    expect(DECOR).toHaveLength(11);
+    expect(new Set(DECOR.map((d) => d.id)).size).toBe(11);
+    expect(new Set(DECOR.map((d) => d.at.join(','))).size).toBe(11);
+    for (const d of DECOR.filter((x) => !x.land)) { expect(Math.abs(d.at[0])).toBeLessThanOrEqual(8); expect(Math.abs(d.at[1])).toBeLessThanOrEqual(8); }
+    expect(DECOR.filter((x) => x.land)).toHaveLength(3);
   });
 
   it('are bought once with gems, placed at once, and can be switched off and on', () => {
