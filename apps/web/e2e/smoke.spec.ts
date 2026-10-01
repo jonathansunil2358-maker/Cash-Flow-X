@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 /** Clear anything that pauses the game: event choices, celebrations, the offline summary. */
@@ -334,4 +336,91 @@ test('a share card is a real picture', async ({ page }) => {
   expect(info.h).toBe(1350);
   expect(info.type).toBe('image/png');
   expect(info.size).toBeGreaterThan(10_000);
+});
+
+
+/** A real game saved by the previous version of the game (state version 3), 18 months into a software company. */
+const oldGame = (): Record<string, any> =>
+  JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v3-software.json'), 'utf8'));
+
+/** Put an old-version game in the browser's storage before the app starts, then sign in. */
+async function openWithOldGame(page: Page, game: Record<string, any>) {
+  await page.addInitScript((g) => {
+    if (localStorage.getItem('cfx:seeded')) return;
+    localStorage.setItem('cfx:seeded', '1');
+    localStorage.setItem('cfx:save:autosave', JSON.stringify(g));
+    localStorage.setItem('cfx:meta:autosave', JSON.stringify({ slot: 'autosave', companyName: g.companyName, industryId: g.industryId, label: 'Jul 2028', savedAt: new Date().toISOString(), status: 'playing' }));
+    localStorage.setItem('cfx:pref:scene3d', 'false');
+    localStorage.setItem(`cfx:pref:tour:${g.industryId}`, 'done');
+  }, game);
+  await page.clock.install();
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Player name' }).fill(`Old${Date.now().toString(36).slice(-6)}`);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+}
+
+const savedGame = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('cfx:save:autosave') ?? 'null'));
+
+test('a game saved on the old version carries on, with the new features', async ({ page }) => {
+  const old = oldGame();
+  expect(old.version).toBe(3);
+  await openWithOldGame(page, old);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(old.companyName);
+  await expect(page.getByText(/Your company was upgraded/)).toBeVisible();
+  const saved = await savedGame(page);
+  expect(saved.version).toBe(4);
+  expect(saved.month).toBe(old.month);
+  expect(saved.ledger.balances.cash).toBe(old.ledger.balances.cash);
+
+  // The new features are all there, on the old company.
+  await expect(page.getByRole('navigation', { name: 'Actions' }).getByRole('button', { name: /^Prestige/ })).toBeVisible();
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Run the business' });
+  const promo = sheet.locator('#card-promo');
+  await promo.getByRole('button', { name: 'Open' }).click();
+  await promo.getByRole('button', { name: 'Start promotion' }).click();
+  await expect(promo.getByText(/20% off, 2 months left/)).toBeVisible();
+  await sheet.locator('#card-morale').getByRole('button', { name: 'Open' }).click();
+  await expect(sheet.locator('#card-morale').getByText(/Steady: 60/)).toBeVisible();
+});
+
+test('an online company from the old version is carried over to the server', async ({ page }) => {
+  const old = oldGame();
+  old.server = { runId: 'r-legacy', synced: 3, syncedMonth: 6 };
+  let seen: any = null;
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
+  await page.route('**/runs/r-legacy/carryover', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    seen = route.request().postDataJSON();
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ actionsVerified: seen.actions, month: seen.state.month, status: 'playing' }) });
+  });
+  await openWithOldGame(page, old);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(old.companyName);
+  await expect.poll(async () => (await savedGame(page)).server.carry, { timeout: 15_000 }).toBe('done');
+  expect(seen.state.version).toBe(4);
+  expect(seen.state.actionLog).toEqual([]); // the server only needs the compact copy
+  expect(seen.actions).toBe(old.actionLog.length);
+  const saved = await savedGame(page);
+  expect(saved.server.synced).toBe(old.actionLog.length);
+  expect(saved.server.syncedMonth).toBe(old.month);
+  expect(saved.server.flagged).toBeUndefined();
+});
+
+test('if the server refuses a carry-over, the company still plays but is unranked', async ({ page }) => {
+  const old = oldGame();
+  old.server = { runId: 'r-legacy', synced: 3, syncedMonth: 6 };
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
+  await page.route('**/runs/r-legacy/carryover', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    return route.fulfill({ status: 422, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: 'This company cannot be carried over: its accounts do not balance.' }) });
+  });
+  await openWithOldGame(page, old);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(old.companyName);
+  await expect(page.getByText(/will not count for leaderboards/)).toBeVisible({ timeout: 15_000 });
+  const saved = await savedGame(page);
+  expect(saved.server.carry).toBe('failed');
+  expect(saved.server.flagged).toMatch(/cannot be carried over/);
+  // Still playable.
+  await openDock(page, 'Business');
+  await expect(page.getByRole('dialog', { name: 'Run the business' })).toBeVisible();
 });
