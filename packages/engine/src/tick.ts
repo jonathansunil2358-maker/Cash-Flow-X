@@ -25,6 +25,8 @@ import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './m
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
+import { advanceAwards } from './model/awards';
+import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
 import { advanceProjects } from './model/rnd';
 import { advanceMorale, grossPayroll, leaverCost, moraleProductivity, rollLeavers } from './model/morale';
@@ -96,6 +98,10 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
       logItem(s, 'notice', 'New financial year', `Salaries rose ${Math.round(wageInflation(s) * 100)}% and rents 2% with inflation. New acquisition targets are available in the M&A tab.`);
     }
   }
+
+  // 1b. Board meetings and annual awards look back at the closed months.
+  advanceBoard(s, !!opts.simulation);
+  advanceAwards(s, !!opts.simulation);
 
   // 2. Economy
   runEvents(s, rng, !opts.simulation);

@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  awardPrestige, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  awardPrestige, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -97,6 +97,7 @@ interface Store {
   buyBoost: (boostId: BoostId) => void;
   claimDaily: () => void;
   /** Cosmetics and founder titles (never affect a score). */
+  claimQuest: (id: string) => void;
   buySkin: (id: string) => void;
   equipSkin: (id: string) => void;
   setTitle: (id: string | null) => void;
@@ -110,6 +111,11 @@ interface Store {
   dismissToast: (id: number) => void;
   dismissCelebration: () => void;
 }
+
+/** Which daily quest an action counts towards. */
+const QUEST_OF_ACTION: Partial<Record<Action['type'], QuestEvent>> = {
+  resolveEvent: 'decision', buyUpgrade: 'upgrade', hire: 'hire', startPromo: 'promo', startProject: 'project', setPrice: 'price',
+};
 
 let nextId = 1;
 let syncing = false;
@@ -296,6 +302,8 @@ export const useGame = create<Store>((set, get) => {
         } else {
           commit(game, next, xp, { undoStack: [...get().undoStack.slice(-19), game] });
         }
+        const qe = QUEST_OF_ACTION[action.type];
+        if (qe) set({ profile: persistProfile(recordQuest(get().profile, utcDay(), qe)) });
         if (success) get().toast('success', success);
         // Runs that end, and holding company deals, are verified straight away.
         if (next.status !== 'playing' || ['acceptInvestment', 'buyOutInvestors', 'payDividend'].includes(action.type)) void get().syncNow();
@@ -323,6 +331,12 @@ export const useGame = create<Store>((set, get) => {
       if (!game || game.status !== 'playing' || game.pendingEvent) return;
       const next = advanceMonth(game);
       commit(game, next, 0, { undoStack: [], monthProgress: 0 });
+      // Daily quests: a month closed, a profitable month, a board target beaten.
+      let q = recordQuest(get().profile, utcDay(), 'month');
+      const last = next.history.at(-1);
+      if (last && plSummary(last.period.pl).profit > 0) q = recordQuest(q, utcDay(), 'profit');
+      if ((next.board?.hits ?? 0) > (game.board?.hits ?? 0)) q = recordQuest(q, utcDay(), 'board');
+      if (q !== get().profile) set({ profile: persistProfile(q) });
       if (next.server && (next.month - next.server.syncedMonth >= SYNC_EVERY_MONTHS || next.status !== 'playing')) void get().syncNow();
     },
 
@@ -570,6 +584,17 @@ export const useGame = create<Store>((set, get) => {
       if (get().act({ type: 'activateBoost', boostId }, 'Boost activated.')) {
         // Recompute from the latest profile (act may have awarded progress) minus the gems.
         set({ profile: persistProfile({ ...get().profile, gems: get().profile.gems - (profile.gems - spent.gems) }), undoStack: [] });
+      }
+    },
+
+    claimQuest(id) {
+      try {
+        const r = claimQuestReward(get().profile, utcDay(), id);
+        set({ profile: persistProfile(r.profile) });
+        get().toast('good', r.bonus ? `Quest done: +${r.gems} gems, and +${r.bonus} for finishing all three!` : `Quest done: +${r.gems} gems.`);
+        playSound('success');
+      } catch (e) {
+        get().toast('error', (e as Error).message);
       }
     },
 

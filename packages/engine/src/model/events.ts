@@ -6,6 +6,7 @@ import { industryOf, ROLE_IDS, type RoleId } from './industries';
 import { plSummary } from '../ledger/statements';
 import { boostActive, perkEffects } from './perks';
 import { claimPayout, outageDemand } from './insurance';
+import { PERSONALITIES, rosterOf } from './roster';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
 import { scheduleIntoQueue } from './workingCapital';
@@ -195,6 +196,31 @@ interface ChoiceEventDef {
 const roleName = (s: GameState, r: RoleId) => industryOf(s).roles[r].title.toLowerCase();
 
 export const CHOICE_EVENTS: ChoiceEventDef[] = [
+  {
+    id: 'staffAsk', title: 'A team member has a request', polarity: 'good', weight: 1.2, icon: 'heart',
+    when: (s) => s.month >= 6 && headcount(s) >= 3,
+    setup: (s, rng) => {
+      const team = rosterOf(s);
+      const who = team[Math.min(team.length - 1, Math.floor(rng.next() * team.length))];
+      const p = PERSONALITIES[who.personality];
+      const raise = Math.round((industryOf(s).roles[who.role].salary * s.salaryIndex * 0.1) / 12 / 100) * 100;
+      const bonus = sized(s, 0.03, 500_00);
+      return {
+        story: `${who.name}, your ${who.title.toLowerCase()} (${p.name.toLowerCase()}: ${p.blurb.toLowerCase()}) asks to talk. They would like more recognition for the work they do.`,
+        params: { raise, bonus },
+        choices: [
+          { id: 'raise', label: `A pay rise (${formatGBP(raise)} a month)`, hint: 'Morale up and a lasting cost: all salaries rise 1%.', impact: [{ label: 'Staff costs', up: false }, { label: 'Morale', up: true }],
+            apply: (st) => { st.salaryIndex *= 1.01; st.morale = Math.min(100, st.morale + 6); return `${who.name} is delighted, and word gets round. Salaries are 1% higher.`; } },
+          { id: 'bonus', label: `A one-off bonus (${formatGBP(bonus)})`, hint: 'A smaller morale lift, no lasting cost.', impact: [{ label: 'Cash', up: false }, { label: 'Morale', up: true }],
+            apply: (st, _rng, P, pp) => { P('Staff bonus', [dr('wages', pp.bonus), cr('cash', pp.bonus)]); st.morale = Math.min(100, st.morale + 4); return `${who.name} is happy with the thank-you.`; } },
+          { id: 'timeoff', label: 'A long weekend for the whole team', hint: 'Free, but trade dips a little for a month.', impact: [{ label: 'Revenue', up: false }, { label: 'Morale', up: true }],
+            apply: (st) => { addTemporary(st, 'holiday', 'Long weekend', 1, { demandMult: 0.97 }, true); st.morale = Math.min(100, st.morale + 5); return 'The team came back refreshed. Demand dips 3% this month.'; } },
+          { id: 'decline', label: 'Not now', hint: 'Free, but people notice.', impact: [{ label: 'Morale', up: false }],
+            apply: (st) => { st.morale = Math.max(0, st.morale - 3); return `${who.name} nods politely, but the mood in the office cools.`; } },
+        ],
+      };
+    },
+  },
   {
     id: 'clientTerms', title: 'A key client wants longer payment terms', polarity: 'bad', weight: 3, icon: 'flame',
     when: (s) => s.customerDays > 0 && s.month >= 3 && lastRevenue(s) > 0,
@@ -441,6 +467,7 @@ const REPUTATION: Record<string, number> = {
   'breakdown.emergency': 2, 'breakdown.cheap': -1, 'breakdown.wait': -3,
   'inspection.adviser': 1, 'inspection.diy': -1,
   'rentReview.accept': 0, 'rentReview.negotiate': 0, 'rentReview.move': -1,
+  'staffAsk.raise': 1, 'staffAsk.bonus': 1, 'staffAsk.timeoff': 1, 'staffAsk.decline': -1,
   'investor.accept': 2, 'investor.negotiate': 1, 'investor.decline': 0,
   'bigDeal.accept': 3, 'bigDeal.decline': -1,
   'trending.boost': 4, 'trending.ride': 1,

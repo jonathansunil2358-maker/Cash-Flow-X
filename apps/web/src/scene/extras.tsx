@@ -173,3 +173,32 @@ export function Ferry({ night }: { night: boolean }) {
     </group>
   );
 }
+
+/** A helipad with a little helicopter, a reward for a company worth millions. */
+export function Helipad({ x, z, night }: { x: number; z: number; night: boolean }) {
+  const rotor = useRef<Group>(null);
+  const heli = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (rotor.current) rotor.current.rotation.y = t * 22;
+    if (heli.current) heli.current.position.y = 0.18 + Math.sin(t * 1.6) * 0.03;
+  });
+  return (
+    <group position={[x, 0, z]}>
+      <Cyl r={0.9} h={0.05} c={night ? '#4a5059' : '#6b717c'} seg={28} />
+      <Blk w={0.08} h={0.02} d={0.5} x={-0.18} y={0.05} c="#fff8ec" rad={0.005} />
+      <Blk w={0.08} h={0.02} d={0.5} x={0.18} y={0.05} c="#fff8ec" rad={0.005} />
+      <Blk w={0.36} h={0.02} d={0.07} y={0.05} c="#fff8ec" rad={0.005} />
+      {[0, 1, 2, 3].map((i) => <Ball key={i} r={0.04} x={Math.cos(i * Math.PI / 2 + 0.78) * 0.85} y={0.07} z={Math.sin(i * Math.PI / 2 + 0.78) * 0.85} c={C.orange} e={night ? C.orange : undefined} ns />)}
+      <group ref={heli} position={[0, 0.18, 0]}>
+        <Blk w={0.34} h={0.2} d={0.2} y={0.05} c={C.red} rad={0.08} />
+        <Blk w={0.5} h={0.05} d={0.05} x={-0.38} y={0.12} c={C.red} rad={0.02} />
+        <Blk w={0.18} h={0.1} d={0.16} x={0.1} y={0.1} c={C.glass} rad={0.04} />
+        <group ref={rotor} position={[0, 0.3, 0]}>
+          <Blk w={0.9} h={0.015} d={0.05} c="#2b2f36" rad={0.005} />
+          <Blk w={0.05} h={0.015} d={0.9} c="#2b2f36" rad={0.005} />
+        </group>
+      </group>
+    </group>
+  );
+}
