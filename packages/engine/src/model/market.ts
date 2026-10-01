@@ -1,6 +1,7 @@
 import { chance, pick, type Rng } from '../rng';
 import type { IndustryConfig } from './industries';
 import { modifiersOf } from './modifiers';
+import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
 import { logItem, type Competitor, type GameState } from './state';
 
 /**
@@ -64,8 +65,8 @@ export interface DemandInfo {
 
 export function demandFor(s: GameState, ind: IndustryConfig): DemandInfo {
   const mods = modifiersOf(s);
-  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * (s.away ? AWAY_DEMAND : 1);
-  const playerAttractiveness = attractiveness(s.quality, s.price, ind.basePrice, ind.priceElasticity);
+  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * seasonFactor(s, ind) * promoDemandMult(s) * (s.away ? AWAY_DEMAND : 1);
+  const playerAttractiveness = attractiveness(s.quality, effectivePrice(s), ind.basePrice, ind.priceElasticity);
   const competitorAttractiveness = s.competitors.reduce(
     (a, c) => a + attractiveness(c.quality, c.price, ind.basePrice, ind.priceElasticity, c.strength),
     0,

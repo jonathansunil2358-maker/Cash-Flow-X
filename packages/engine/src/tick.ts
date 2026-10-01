@@ -21,6 +21,7 @@ import {
 import { effectiveTaxRate, TAX_PAYMENT_LAG } from './model/tax';
 import { valuationOf } from './model/valuation';
 import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapital';
+import { advancePromo, effectivePrice } from './model/promotions';
 import { createRng, neutralRng, noise, roundProb, type Rng } from './rng';
 
 export interface TickOptions {
@@ -212,6 +213,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
 
   // 11. Close the month
   closeMonth(s, ind, d, capacity, vol, opts);
+  advancePromo(s);
 }
 
 function runSubscription(
@@ -220,7 +222,7 @@ function runSubscription(
   const m = s.month;
   const total0 = totalCustomers(s);
   const overload = total0 > capacity ? (total0 - capacity) / total0 : 0;
-  const baseChurn = ind.baseChurn * Math.sqrt(averageCompetitorQuality(s) / s.quality) * Math.pow(s.price / ind.basePrice, 0.7);
+  const baseChurn = ind.baseChurn * Math.sqrt(averageCompetitorQuality(s) / s.quality) * Math.pow(effectivePrice(s) / ind.basePrice, 0.7);
   const churn = Math.min(0.25, Math.max(0.003, baseChurn * churnMult + overload * 0.25));
 
   const churned = Math.min(s.customers, roundProb(s.customers * churn, rng));
@@ -243,13 +245,13 @@ function runSubscription(
   s.annualCohorts = s.annualCohorts.filter((c) => c.customers > 0);
   if (annualNew > 0) s.annualCohorts.push({ startMonth: m, customers: annualNew });
 
-  const monthly = s.customers * s.price;
+  const monthly = s.customers * effectivePrice(s);
   if (monthly > 0) {
     P('Monthly subscriptions invoiced', [dr('receivables', monthly), cr('revenue', monthly)]);
     scheduleIntoQueue(s.receivablesQueue, monthly, s.customerDays);
   }
   if (annualBilled > 0) {
-    const perMonth = annualBilled * s.price;
+    const perMonth = annualBilled * effectivePrice(s);
     P('Annual subscriptions invoiced in advance', [dr('receivables', perMonth * 12), cr('deferredRevenue', perMonth * 12)]);
     scheduleIntoQueue(s.receivablesQueue, perMonth * 12, s.customerDays);
     for (let i = 0; i < 12; i++) s.deferredSchedule[i] += perMonth;
@@ -283,7 +285,7 @@ function runUnits(
 
   const sold = Math.min(sellable, s.inventoryUnits);
   if (sold > 0) {
-    const revenue = sold * s.price;
+    const revenue = sold * effectivePrice(s);
     P(`Sales: ${formatInt(sold)} ${ind.unitPlural}`, [dr('receivables', revenue), cr('revenue', revenue)]);
     scheduleIntoQueue(s.receivablesQueue, revenue, s.customerDays);
     const cogs = sold === s.inventoryUnits ? L.balances.inventory : Math.round((L.balances.inventory * sold) / s.inventoryUnits);
@@ -376,7 +378,7 @@ function closeMonth(s: GameState, ind: IndustryConfig, d: DemandInfo, capacity: 
     preferenceShare: d.preferenceShare,
     reach: d.reach,
     quality: s.quality,
-    price: s.price,
+    price: effectivePrice(s),
     headcount: headcount(s),
     staff: { ...s.staff },
     stockUnits: s.inventoryUnits,

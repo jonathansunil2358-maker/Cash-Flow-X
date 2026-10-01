@@ -33,6 +33,8 @@ export type PayLevel = 'below' | 'market' | 'above';
 /** A promotion the player is running: a temporary price discount. */
 export interface Promo {
   discountPct: number;
+  /** Length it was booked for, and how many months remain. */
+  months: number;
   monthsLeft: number;
 }
 

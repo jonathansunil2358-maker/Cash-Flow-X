@@ -11,6 +11,7 @@ import { resolvePendingEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck } from './model/prestige';
+import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
 import { logItem, newId, ownership, type GameState } from './model/state';
 import { UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
 import { valuationOf } from './model/valuation';
@@ -22,6 +23,7 @@ export type Action =
   | { type: 'hire'; role: RoleId; count: number }
   | { type: 'fire'; role: RoleId; count: number }
   | { type: 'setPrice'; price: Pence }
+  | { type: 'startPromo'; discountPct: number; months: number }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -155,6 +157,17 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       post(L, m, `Redundancy: ${action.count} × ${role.title}`, [dr('restructuring', cost), cr('cash', cost)], { cf: 'operating' });
       s.staff[action.role] -= action.count;
       logItem(s, 'action', `Made ${action.count} × ${role.title} redundant`, `Redundancy cost ${formatGBP(cost)}.`);
+      break;
+    }
+    case 'startPromo': {
+      if (!(PROMO_DISCOUNTS as readonly number[]).includes(action.discountPct)) fail('Choose a 10%, 20% or 30% discount.');
+      if (!isCount(action.months, PROMO_MAX_MONTHS)) fail(`A promotion runs for 1 to ${PROMO_MAX_MONTHS} months.`);
+      const check = promoCheck(s);
+      if (!check.allowed) fail(check.reason!);
+      requireFunds(s, check.fee, 'the promotion');
+      post(L, m, `Promotion set-up: ${action.discountPct}% off for ${action.months} month${action.months === 1 ? '' : 's'}`, [dr('marketing', check.fee), cr('cash', check.fee)], { cf: 'operating' });
+      s.promo = { discountPct: action.discountPct, months: action.months, monthsLeft: action.months };
+      logItem(s, 'action', `Promotion: ${action.discountPct}% off`, `Running for ${action.months} month${action.months === 1 ? '' : 's'}. Set-up cost ${formatGBP(check.fee)}; expect a quiet month afterwards as customers have already bought.`);
       break;
     }
     case 'setPrice': {
