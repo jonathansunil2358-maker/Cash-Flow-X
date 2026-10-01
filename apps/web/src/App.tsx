@@ -1,8 +1,8 @@
 import {
-  cosmeticsOf, musicMood, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, musicMood, tracksOf, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
-import { isMusicOn, playMusic, stopMusic } from './lib/music';
+import { isMusicOn, playMusic, setTrack, stopMusic } from './lib/music';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAccount } from './lib/account';
 import { ONLINE } from './lib/api';
@@ -236,6 +236,8 @@ function SkyBackdrop() {
 /** Keeps the background music in step with how the company is doing. */
 function MusicDriver({ game }: { game: GameState }) {
   const mood = musicMood(game);
+  const track = useGame((s) => tracksOf(s.profile).selected);
+  useEffect(() => { setTrack(track); }, [track]);
   useEffect(() => {
     if (isMusicOn()) playMusic(mood);
   }, [mood]);

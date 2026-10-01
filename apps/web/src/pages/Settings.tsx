@@ -8,6 +8,7 @@ import { isDayNightOn, isWeatherOn, setDayNightOn, setWeatherOn } from '../lib/w
 import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
 import { NamesCard, WardrobeCard } from './Personality';
+import { LandCard, SoundtrackCard } from './Collect';
 import { DecorCard, LogoCard, ShopCard } from './Shop';
 
 export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () => void }) {
@@ -93,8 +94,10 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
       </Card>
       <ShopCard />
       <DecorCard />
+      <LandCard />
       {game && <LogoCard icon={game.icon} />}
       <WardrobeCard />
+      <SoundtrackCard />
       {game && <NamesCard game={game} />}
       {me && (
         <Card title="Account" subtitle={game?.server ? (game.server.flagged ? `This company failed verification: ${game.server.flagged}` : `This company is verified up to ${game.server.syncedMonth} months in.`) : undefined}>

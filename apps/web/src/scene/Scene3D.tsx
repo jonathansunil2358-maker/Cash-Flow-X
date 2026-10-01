@@ -1,4 +1,4 @@
-import { buildingNames, cosmeticsOf, decorDef, HATS, wardrobeOf, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { buildingNames, LAND, landOf, cosmeticsOf, decorDef, HATS, wardrobeOf, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
 import { Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from 'three';
@@ -606,6 +606,8 @@ export default function Scene3D({ game }: { game: GameState }) {
   const night = isDayNightOn() ? isEveningNow() : themeNight;
   const names = useGame((s) => s.profile.names);
   const custom = useMemo(() => buildingNames({ names }), [names]);
+  const landIds = useGame((st) => st.profile.land);
+  const ownedLand = useMemo(() => landOf({ land: landIds }), [landIds]);
   const hatId = useGame((s) => wardrobeOf(s.profile).equipped);
   const hatColour = HATS.find((h) => h.id === hatId)?.colour ?? null;
   // The team jumps for joy for a month after the board is pleased.
@@ -691,6 +693,12 @@ export default function Scene3D({ game }: { game: GameState }) {
       <directionalLight position={[10, 16, 6]} intensity={night ? 0.75 : 1.35} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={14} shadow-camera-bottom={-14} />
       <Sea night={night} sk={sk} />
+      {LAND.filter((l) => ownedLand.includes(l.id)).map((l) => (
+        <group key={l.id} position={[l.at[0], -0.15, l.at[1]]}>
+          <Cyl r={2.3} h={0.3} c={sk.ground} seg={28} />
+          <Cyl r={2.1} h={0.06} y={0.3} c={C.grass ?? '#6cc04a'} seg={28} />
+        </group>
+      ))}
       <Boat night={night} />
       <group position={[0, -0.2, 0]}>
         <Island night={night} doorX={doorX} sk={sk} rich={rich} cups={cups} placed={placed} />

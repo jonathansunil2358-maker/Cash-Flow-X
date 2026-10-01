@@ -1111,3 +1111,81 @@ test('V2 Batch D: chaos dial, ironman, speedrun, turnaround, boss badge area, pu
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Undo last decision' })).toBeVisible();
 });
+
+test('V2 Batch E: land and its decorations, soundtracks, achievement trails and the museum', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await page.clock.runFor(10_500);
+  await clearOverlays(page);
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.gems = 600;
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const st = page.getByRole('dialog', { name: 'Settings' });
+  // The playground needs the west lawn first.
+  const playground = st.locator('#card-decor li', { hasText: 'Playground' });
+  await expect(playground.getByRole('button', { name: /Needs the west lawn/ })).toBeDisabled();
+  await st.locator('#card-land').locator('div', { hasText: 'West lawn' }).getByRole('button').first().click();
+  await expect(st.locator('#card-land').getByText('Yours')).toBeVisible();
+  await playground.getByRole('button', { name: /Buy for 35/ }).click();
+  await expect(playground.getByRole('button', { name: 'On the island' })).toBeVisible();
+  // A soundtrack.
+  await st.locator('#card-tracks li', { hasText: 'Smoky jazz' }).getByRole('button', { name: /30 gems/ }).click();
+  await expect(st.locator('#card-tracks li', { hasText: 'Smoky jazz' }).getByRole('button', { name: 'Playing' })).toBeVisible();
+  const prof = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!));
+  expect(prof.land).toEqual(['west']);
+  expect(prof.tracks.selected).toBe('jazz');
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  await expect(m.locator('#card-trails').getByText('The money trail')).toBeVisible();
+  await expect(m.locator('#card-museum')).toBeVisible();
+});
+
+test('V2: the 3D scene draws land, new decorations, hats, a pet and weather without errors', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('cfx:pref:weather', 'on');
+    localStorage.setItem('cfx:pref:daynight', 'on');
+  });
+  await page.reload();
+  await signIn(page, 'Scene2');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await skipTour(page);
+  await expect(page.locator('section[aria-label="Your business"] canvas')).toBeVisible({ timeout: 20_000 });
+  // Give the profile land, decorations, a hat and a pet, then reload so the scene draws them.
+  await page.evaluate(() => {
+    const raw = localStorage.getItem('cfx:profile');
+    const p = raw ? JSON.parse(raw) : {};
+    p.gems = 999;
+    p.land = ['west', 'east', 'north'];
+    p.decor = { owned: ['playground', 'skatepark', 'treehouse', 'fountain'], placed: ['playground', 'skatepark', 'treehouse', 'fountain'] };
+    p.wardrobe = { owned: ['crown'], equipped: 'crown' };
+    p.pet = { kind: 'dog', name: 'Rex', adopted: '2026-10-01' };
+    p.names = { ...(p.names ?? {}) };
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await expect(page.locator('section[aria-label="Your business"] canvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('img', { name: /Rex, your dog/ })).toBeVisible();
+  await page.waitForTimeout(2000);
+  expect(errors).toEqual([]);
+});

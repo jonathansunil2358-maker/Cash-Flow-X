@@ -90,6 +90,10 @@ export interface Profile {
   diary?: { year: number; company: string; note: string; facts: string }[];
   /** Fastest speedrun (months to a £1m company) on this device. */
   speedBest?: number;
+  /** Extra island land, claimed achievement trails and soundtracks (see collect.ts). */
+  land?: string[];
+  trails?: string[];
+  tracks?: { owned: string[]; selected: string };
   wardrobe?: { owned: string[]; equipped: string | null };
   pass?: PassState;
 }

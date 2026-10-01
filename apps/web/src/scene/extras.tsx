@@ -267,6 +267,30 @@ export function DecorItem({ id, x, z, night }: { id: string; x: number; z: numbe
           <Cyl r={0.95} rt={0.02} h={0.5} y={1.28} c={C.teal} seg={8} />
         </>
       )}
+      {id === 'playground' && (
+        <>
+          {[-0.6, 0.6].map((dx) => <Cyl key={dx} r={0.05} h={1.3} x={dx} c={C.steel} seg={6} />)}
+          <Blk w={1.3} h={0.06} d={0.06} y={1.3} c={C.steel} rad={0.01} />
+          <Blk w={0.3} h={0.05} d={0.2} x={-0.25} y={0.45} c={C.red} rad={0.02} />
+          <Blk w={0.3} h={0.05} d={0.2} x={0.25} y={0.45} c={C.blue} rad={0.02} />
+          <Blk w={0.5} h={0.7} d={0.4} x={1.4} y={0.35} c={C.yellow} rad={0.03} />
+        </>
+      )}
+      {id === 'skatepark' && (
+        <>
+          <Blk w={1.6} h={0.08} d={1.1} c={C.grey} rad={0.02} />
+          <Blk w={0.8} h={0.3} d={0.8} x={-0.3} y={0.15} c={C.sand} rad={0.05} />
+          <Blk w={0.6} h={0.2} d={0.5} x={0.5} y={0.1} c={C.orange} rad={0.05} />
+        </>
+      )}
+      {id === 'treehouse' && (
+        <>
+          <Cyl r={0.2} h={1.1} c={C.woodDark} seg={8} />
+          <Ball r={0.9} y={1.7} c={C.green ?? '#4caf50'} />
+          <Blk w={0.7} h={0.5} d={0.7} y={0.9} c={C.wood} rad={0.04} />
+          <Blk w={0.8} h={0.12} d={0.8} y={1.4} c={C.red} rad={0.03} />
+        </>
+      )}
       {id === 'fireworks' && (
         <>
           <Cyl r={0.2} h={0.9} c={C.dark} seg={8} />
