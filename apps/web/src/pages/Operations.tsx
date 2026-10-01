@@ -97,7 +97,7 @@ function PriceCard({ game }: { game: GameState }) {
   const shareNew = shareAt(pence);
   const unitMargin = ind.model === 'unit' ? pence - ind.unitCost : pence - ind.unitCost;
   return (
-    <Card title="Pricing" subtitle={`Reference price ${formatGBP(ind.basePrice, { pence: true })} per ${ind.unitSingular}${ind.model === 'subscription' ? ' per month' : ''}. Demand elasticity ${ind.priceElasticity}: a 10% price rise cuts preference by roughly ${formatPct(1 - Math.pow(1 / 1.1, ind.priceElasticity), 0)}.`}>
+    <Card id="card-pricing" title="Pricing" subtitle={`Reference price ${formatGBP(ind.basePrice, { pence: true })} per ${ind.unitSingular}${ind.model === 'subscription' ? ' per month' : ''}. Demand elasticity ${ind.priceElasticity}: a 10% price rise cuts preference by roughly ${formatPct(1 - Math.pow(1 / 1.1, ind.priceElasticity), 0)}.`}>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Your price (£)">
           <input type="number" step="0.5" min={0} value={price} onChange={(e) => setPrice(Number(e.target.value))} className="w-32 rounded-lg border border-line bg-page px-2.5 py-1.5 text-sm tnum" />
@@ -122,7 +122,7 @@ function MarketingCard({ game, reach }: { game: GameState; reach: number }) {
   const steadyBrand = amount / d.ind.marketingPerBrandPoint / 0.1;
   const steadyReach = reachOf({ ...game, brand: steadyBrand }, d.ind);
   return (
-    <Card title="Marketing" subtitle="Spend builds brand, which decays 10% a month. Brand and sales staff drive reach: the share of the market that knows you exist.">
+    <Card id="card-marketing" title="Marketing" subtitle="Spend builds brand, which decays 10% a month. Brand and sales staff drive reach: the share of the market that knows you exist.">
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Monthly budget"><MoneyInput value={amount} onChange={setAmount} step={500} /></Field>
         <Button variant="primary" disabled={game.status !== 'playing' || amount === game.marketingBudget} onClick={() => act({ type: 'setMarketing', amount }, `Marketing set to ${formatGBP(amount)}/month.`)}>Set budget</Button>

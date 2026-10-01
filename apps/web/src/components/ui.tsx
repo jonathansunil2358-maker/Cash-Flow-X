@@ -1,11 +1,11 @@
 import { formatGBP, type Pence } from '@cfx/engine';
 import { useId, useState, type ReactNode } from 'react';
 
-export function Card({ title, subtitle, actions, children, className = '' }: {
-  title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string;
+export function Card({ id, title, subtitle, actions, children, className = '' }: {
+  id?: string; title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string;
 }) {
   return (
-    <section className={`rounded-[26px] border-[3px] border-outline bg-surface p-4 shadow-[var(--edge)] sm:p-5 ${className}`}>
+    <section id={id} className={`scroll-mt-20 rounded-[26px] border-[3px] border-outline bg-surface p-4 shadow-[var(--edge)] sm:p-5 ${className}`}>
       {(title || actions) && (
         <header className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
