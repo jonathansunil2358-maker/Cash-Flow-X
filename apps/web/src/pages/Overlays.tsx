@@ -40,14 +40,27 @@ export function OfflineModal() {
   );
 }
 
+/** A burst of paper for the big firsts. Pure CSS, and still for people who asked for less motion. */
+function Confetti() {
+  const colours = ['#ffc633', '#ff6fae', '#34c8c0', '#8f6cff', '#5ccf4f', '#ff7a70'];
+  return (
+    <div className="cfx-confetti" aria-hidden>
+      {Array.from({ length: 28 }, (_, i) => (
+        <i key={i} style={{ left: `${(i * 37) % 100}%`, background: colours[i % colours.length], animationDelay: `${(i % 7) * 0.12}s`, animationDuration: `${1.6 + (i % 5) * 0.3}s` }} />
+      ))}
+    </div>
+  );
+}
+
 /** Level-ups, achievements and completed missions, one at a time. */
 export function CelebrationModal() {
   const { celebrations, dismissCelebration } = useGame();
   const c = celebrations[0];
   if (!c) return null;
-  const ribbon = c.kind === 'level' ? 'Level up!' : c.kind === 'achievement' ? 'Achievement' : 'Mission complete';
+  const ribbon = c.kind === 'level' ? 'Level up!' : c.kind === 'achievement' ? 'Achievement' : c.kind === 'milestone' ? 'Milestone!' : 'Mission complete';
   return (
-    <Modal ribbon={ribbon} tone={c.kind === 'level' ? 'is-legacy' : c.kind === 'achievement' ? 'is-gem' : 'is-go'} labelledBy="celebrate-title">
+    <Modal ribbon={ribbon} tone={c.kind === 'level' ? 'is-legacy' : c.kind === 'achievement' || c.kind === 'milestone' ? 'is-gem' : 'is-go'} labelledBy="celebrate-title">
+      {c.kind === 'milestone' && <Confetti />}
       <h2 id="celebrate-title" className="text-center text-2xl leading-tight">{c.title}</h2>
       <p className="mt-1 text-center text-sm text-ink-2">{c.text}</p>
       <div className="mt-3 flex items-center justify-center gap-2">

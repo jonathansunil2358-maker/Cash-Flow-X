@@ -1,7 +1,8 @@
 import {
-  cosmeticsOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, musicMood, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
+import { isMusicOn, playMusic, stopMusic } from './lib/music';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAccount } from './lib/account';
 import { ONLINE } from './lib/api';
@@ -112,6 +113,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
         <Hud game={game} />
         <XpBar />
         <SceneArea game={game} />
+        <MusicDriver game={game} />
         {!playing && <GameOver game={game} />}
         <Alerts game={game} />
         <QuickStats game={game} />
@@ -229,6 +231,16 @@ function SkyBackdrop() {
   const skin = useGame((s) => skinOf(cosmeticsOf(s.profile).skin));
   const sky = isNight() ? skin.palette.skyNight : skin.palette.sky;
   return sky ? <div className="absolute inset-0" style={{ background: sky }} aria-hidden /> : null;
+}
+
+/** Keeps the background music in step with how the company is doing. */
+function MusicDriver({ game }: { game: GameState }) {
+  const mood = musicMood(game);
+  useEffect(() => {
+    if (isMusicOn()) playMusic(mood);
+  }, [mood]);
+  useEffect(() => () => stopMusic(), []);
+  return null;
 }
 
 function SceneArea({ game }: { game: GameState }) {

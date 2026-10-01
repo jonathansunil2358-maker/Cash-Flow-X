@@ -912,3 +912,40 @@ test('Batch F: a new company can pick a culture, and it shows in the pressures c
   await expect(page.locator('.cfx-hud__name')).toBeVisible();
   await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['culture-frugal']);
 });
+
+test('Batch G: music and weather switches, and a first gets a party', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  g.prestigeLevel = 1; // the "new rank" milestone is reached at once
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Settings: both switches persist.
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByLabel('Background music').check();
+  await settings.getByLabel('Weather on the island').uncheck();
+  expect(await page.evaluate(() => [localStorage.getItem('cfx:pref:music'), localStorage.getItem('cfx:pref:weather')])).toEqual(['on', 'off']);
+  await settings.getByLabel('Background music').uncheck();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  // A player already being tracked for milestones gets a celebration the first time one is reached.
+  await page.clock.runFor(10_500);
+  await clearOverlays(page);
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('cfx:profile')!);
+    p.milestones = [];
+    localStorage.setItem('cfx:profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  const party = page.getByRole('dialog').filter({ hasText: /Milestone!/ });
+  for (let i = 0; i < 14 && !(await party.isVisible()); i++) {
+    const choice = page.locator('.cfx-choice').first();
+    if (await choice.isVisible()) await choice.click();
+    await page.clock.runFor(10_500);
+  }
+  await expect(party).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.cfx-confetti')).toBeVisible();
+});

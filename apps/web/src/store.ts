@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  addBoxes, addPassPoints, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  addBoxes, addPassPoints, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -28,7 +28,7 @@ export interface Toast {
 
 export interface Celebration {
   id: number;
-  kind: 'achievement' | 'level' | 'mission';
+  kind: 'achievement' | 'level' | 'mission' | 'milestone';
   title: string;
   text: string;
   gems: number;
@@ -206,6 +206,13 @@ function progressAfter(
       xp += 25;
       celebrations.push({ id: nextId++, kind: 'achievement', title: a.name, text: a.description, gems: a.gems });
     }
+    // Firsts get a party. A player who was never tracked before is caught up silently.
+    const ms = newMilestones(after, p.milestones);
+    p = { ...p, milestones: ms.seen };
+    for (const m of ms.celebrate) {
+      p = { ...p, gems: p.gems + 20 };
+      celebrations.push({ id: nextId++, kind: 'milestone', title: m.title, text: m.text, gems: 20 });
+    }
     const missions = refillMissions(p.missions, after, mathRng);
     const remaining = [];
     for (const m of missions) {
@@ -236,7 +243,15 @@ function popsFor(before: GameState, after: GameState): Pop[] {
   const pl = plSummary(after.history[after.history.length - 1].period.pl);
   const cash = after.ledger.balances.cash - before.ledger.balances.cash;
   const fmt = (p: number) => `${p >= 0 ? '+' : '−'}£${Math.abs(Math.round(p / 100)).toLocaleString('en-GB')}`;
-  return [{ id: nextId++, text: `${fmt(pl.profit)} profit`, good: pl.profit >= 0 }, { id: nextId++, text: `${fmt(cash)} cash`, good: cash >= 0 }];
+  const out: Pop[] = [{ id: nextId++, text: `${fmt(pl.profit)} profit`, good: pl.profit >= 0 }, { id: nextId++, text: `${fmt(cash)} cash`, good: cash >= 0 }];
+  // The crowd reacts: a cheer or a groan for the big moments.
+  if (after.board?.last && (after.board.hits !== before.board?.hits || after.board.misses !== before.board?.misses)) {
+    out.push(after.board.last === 'hit' ? { id: nextId++, text: '👏 The board is delighted!', good: true } : { id: nextId++, text: '😬 The board is not happy', good: false });
+  }
+  if ((after.awards?.length ?? 0) > (before.awards?.length ?? 0)) out.push({ id: nextId++, text: '🏆 Award winner!', good: true });
+  const ev = after.lastEvent;
+  if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) out.push({ id: nextId++, text: ev.polarity === 'good' ? '😀 Good news!' : '😟 Bad news', good: ev.polarity === 'good' });
+  return out;
 }
 
 export const useGame = create<Store>((set, get) => {
@@ -249,11 +264,19 @@ export const useGame = create<Store>((set, get) => {
       game: after, profile, celebrations: [...get().celebrations, ...celebrations].slice(-6),
       pops: [...get().pops, ...popsFor(before, after)].slice(-6), ...extra,
     });
-    if (celebrations.length) playSound('fanfare');
+    // Each kind of news has its own sound.
+    const rivalMove = after.competitors.some((c, i) => c.cutMonths > 0 && !(before.competitors[i]?.cutMonths > 0));
+    const boardResult = !!after.board?.last && (after.board.hits !== before.board?.hits || after.board.misses !== before.board?.misses);
+    if (celebrations.some((c) => c.kind === 'milestone')) playSound('confetti');
+    else if (celebrations.length) playSound('fanfare');
+    else if ((after.awards?.length ?? 0) > (before.awards?.length ?? 0)) playSound('award');
+    else if (boardResult) playSound(after.board!.last === 'hit' ? 'board' : 'bad');
+    else if (rivalMove) playSound('rival');
     else if (after.pendingEvent && !before.pendingEvent) playSound('event');
     const ev = after.lastEvent;
     if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) {
       get().toast(ev.polarity === 'good' ? 'good' : 'bad', `${ev.title}: ${ev.text}`);
+      if (!celebrations.length) playSound(ev.polarity === 'good' ? 'good' : 'bad');
     }
   };
 

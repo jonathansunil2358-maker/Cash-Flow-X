@@ -78,6 +78,8 @@ export interface Profile {
   plans?: Plan[];
   /** Founder skills learned and this month's season pass (see progress.ts). */
   skills?: string[];
+  /** Milestones already celebrated (see mood.ts). */
+  milestones?: string[];
   pass?: PassState;
 }
 

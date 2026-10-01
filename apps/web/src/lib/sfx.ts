@@ -7,7 +7,7 @@ import { readPref, writePref } from './save';
  * switchable in Settings, and off by default for automated browsers and for people who have
  * asked their device to reduce motion.
  */
-export type Sound = 'click' | 'coin' | 'success' | 'warn' | 'event' | 'fanfare';
+export type Sound = 'click' | 'coin' | 'success' | 'warn' | 'event' | 'fanfare' | 'good' | 'bad' | 'rival' | 'award' | 'board' | 'confetti';
 type Pref = 'sfx' | 'haptics';
 
 const NOTES: Record<Sound, { freqs: number[]; step: number; len: number; type: OscillatorType; gain: number }> = {
@@ -17,10 +17,18 @@ const NOTES: Record<Sound, { freqs: number[]; step: number; len: number; type: O
   warn: { freqs: [220, 165], step: 0.12, len: 0.25, type: 'sawtooth', gain: 0.06 },
   event: { freqs: [392, 523], step: 0.1, len: 0.22, type: 'sine', gain: 0.1 },
   fanfare: { freqs: [523, 659, 784, 1047], step: 0.1, len: 0.3, type: 'triangle', gain: 0.12 },
+  // Each kind of news sounds different, so you can tell what happened without looking.
+  good: { freqs: [659, 880, 1047], step: 0.07, len: 0.18, type: 'triangle', gain: 0.1 },
+  bad: { freqs: [262, 196, 147], step: 0.12, len: 0.28, type: 'sawtooth', gain: 0.07 },
+  rival: { freqs: [330, 311, 294, 277], step: 0.09, len: 0.2, type: 'square', gain: 0.045 },
+  award: { freqs: [523, 659, 784, 1047, 1319], step: 0.09, len: 0.28, type: 'triangle', gain: 0.12 },
+  board: { freqs: [392, 494, 587], step: 0.11, len: 0.26, type: 'sine', gain: 0.1 },
+  confetti: { freqs: [784, 988, 1175, 1568, 1175, 1568], step: 0.07, len: 0.22, type: 'triangle', gain: 0.1 },
 };
 
 const BUZZ: Record<Sound, number[]> = {
   click: [5], coin: [10], success: [15, 30, 15], warn: [40], event: [20], fanfare: [20, 40, 20, 40, 60],
+  good: [15, 30, 15], bad: [60, 40, 60], rival: [25, 25, 25], award: [20, 40, 20, 40, 60], board: [30, 50], confetti: [10, 20, 10, 20, 10, 20, 40],
 };
 
 const automated = (): boolean => typeof navigator !== 'undefined' && navigator.webdriver === true;

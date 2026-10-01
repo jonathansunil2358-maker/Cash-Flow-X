@@ -1,8 +1,9 @@
-import { cosmeticsOf, decorDef, decorOf, formatGBP, headcount, skinOf, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { cosmeticsOf, decorDef, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
-import { Vector3, type Group, type Mesh } from 'three';
+import { Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from 'three';
 import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
+import { isWeatherOn } from '../lib/weather';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
@@ -307,7 +308,7 @@ function makeRoute(start: Pt, legs: Leg[], speed: number): Route {
 }
 
 /** Moves its children along a route. `forward` is the model's nose: cars face +x, people +z. */
-function Mover({ route, offset, forward, bob = false, children }: { route: Route; offset: number; forward: 'x' | 'z'; bob?: boolean; children: ReactNode }) {
+function Mover({ route, offset, forward, bob = false, cheer = false, children }: { route: Route; offset: number; forward: 'x' | 'z'; bob?: boolean; cheer?: boolean; children: ReactNode }) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }, delta) => {
     const g = ref.current;
@@ -319,7 +320,7 @@ function Mover({ route, offset, forward, bob = false, children }: { route: Route
     const z = step.a[1] + (step.b[1] - step.a[1]) * k;
     const moving = step.a !== step.b;
     g.visible = !step.hide;
-    g.position.set(x, bob && moving ? Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.06 : 0, z);
+    g.position.set(x, cheer ? Math.abs(Math.sin(clock.elapsedTime * 7 + offset)) * 0.3 : bob && moving ? Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.06 : 0, z);
     if (moving) {
       const dx = step.b[0] - step.a[0];
       const dz = step.b[1] - step.a[1];
@@ -463,6 +464,34 @@ function staffRoute(i: number): Route {
   return makeRoute(pts[0], pts.slice(1), 0.5);
 }
 
+/** Rain, snow or a warm dusk glow, following the in-game season. Pure decoration. */
+function WeatherFx({ kind }: { kind: 'rain' | 'snow' }) {
+  const count = kind === 'rain' ? 160 : 120;
+  const ref = useRef<InstancedMesh>(null);
+  const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ x: ((i * 53) % 100) / 100 * 28 - 14, z: ((i * 31) % 100) / 100 * 28 - 14, y: ((i * 17) % 100) / 100 * 11, v: 0.6 + ((i * 7) % 10) / 10 })), [count]);
+  const dummy = useMemo(() => new Object3D(), []);
+  useFrame(({ clock }) => {
+    const m = ref.current;
+    if (!m) return;
+    const t = clock.elapsedTime;
+    seeds.forEach((p, i) => {
+      const fall = kind === 'rain' ? 9 : 1.6;
+      const y = 11 - (((p.y + t * fall * p.v) % 11) + 11) % 11;
+      dummy.position.set(p.x + (kind === 'snow' ? Math.sin(t * 0.8 + i) * 0.4 : 0), y, p.z);
+      dummy.rotation.z = kind === 'rain' ? 0.15 : 0;
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, count]} frustumCulled={false}>
+      {kind === 'rain' ? <boxGeometry args={[0.02, 0.45, 0.02]} /> : <sphereGeometry args={[0.07, 6, 5]} />}
+      <meshBasicMaterial color={kind === 'rain' ? '#9ec9ff' : '#ffffff'} transparent opacity={kind === 'rain' ? 0.55 : 0.9} />
+    </instancedMesh>
+  );
+}
+
 function Cloud({ x, z, y = 7, speed }: { x: number; z: number; y?: number; speed: number }) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }) => {
@@ -573,6 +602,10 @@ export default function Scene3D({ game }: { game: GameState }) {
   const occupied = new Set(built.map((u) => u.plot));
   const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  // The team jumps for joy for a month after the board is pleased.
+  const cheering = game.board?.last === 'hit' && game.month - (game.board.due - 3) <= 1;
+  const weatherOn = isWeatherOn();
+  const weather = weatherOn ? weatherFor(game) : 'clear';
   const decor = useGame((s) => s.profile.decor);
   const placed = useMemo(() => decorOf({ decor }).placed, [decor]);
   const cups = useGame((s) => (game.awards?.length ?? 0) + Math.floor(Object.keys(s.profile.achievements).length / 3));
@@ -592,7 +625,9 @@ export default function Scene3D({ game }: { game: GameState }) {
   const open = game.status === 'playing';
   // Busier businesses draw more traffic: more visiting cars (and fuller ones), more bus and
   // ferry passengers, and more cars already parked.
-  const visiting = open ? 1 + (customers >= 4 ? 1 : 0) + (customers >= 7 ? 1 : 0) : 0;
+  // Over capacity? Customers queue, so another vehicle waits at the door.
+  const overCapacity = (volume?.utilisation ?? 0) > 1;
+  const visiting = open ? Math.min(3, 1 + (customers >= 4 ? 1 : 0) + (customers >= 7 || overCapacity ? 1 : 0)) : 0;
   const riders = customers >= 5 ? 2 : 1;
   const busPairs = customers >= 6 ? 2 : 1;
   const ferryPairs = customers >= 4 ? 1 : 0;
@@ -645,7 +680,7 @@ export default function Scene3D({ game }: { game: GameState }) {
       aria-label={`3D view of ${game.companyName}: headquarters with ${floors} floor${floors > 1 ? 's' : ''}, ${built.length} upgrade buildings, ${staff} staff, and customers arriving by car, bus and boat`}>
       <Zoom />
       <TagProjector els={tagEls} points={tagPoints} />
-      <ambientLight intensity={night ? 0.45 : 0.8} />
+      <ambientLight intensity={night ? 0.45 : weather === 'dusk' ? 0.62 : weather === 'rain' ? 0.65 : 0.8} color={weather === 'dusk' && !night ? '#ffd2a1' : '#ffffff'} />
       <hemisphereLight args={['#ffffff', sk.ground, night ? 0.2 : 0.4]} />
       <directionalLight position={[10, 16, 6]} intensity={night ? 0.75 : 1.35} castShadow shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={14} shadow-camera-bottom={-14} />
@@ -694,7 +729,7 @@ export default function Scene3D({ game }: { game: GameState }) {
         )}
 
         {Array.from({ length: staff }, (_, i) => (
-          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} /></Mover>
+          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob cheer={cheering}><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} /></Mover>
         ))}
       </group>
       <Gull r={6} y={5.5} speed={0.35} phase={0} />
@@ -703,6 +738,7 @@ export default function Scene3D({ game }: { game: GameState }) {
       <Cloud x={-10} z={-8} speed={0.3} />
       <Cloud x={4} z={-11} y={8} speed={0.22} />
       <Cloud x={14} z={2} y={6.5} speed={0.26} />
+      {weather === 'rain' || weather === 'snow' ? <WeatherFx kind={weather} /> : null}
     </Canvas>
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {tags.map((t) => (
