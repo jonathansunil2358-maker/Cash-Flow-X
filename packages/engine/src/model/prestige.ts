@@ -109,6 +109,7 @@ export function prestigeCheck(s: GameState): PrestigeCheck {
   const threshold = prestigeThreshold(s.prestigeLevel);
   const stake = ownerStakeOf(s);
   const points = legacyFor(stake);
+  if (s.scenarioId === 'daily') return { eligible: false, threshold, stake, points: 0, reason: 'Daily challenge companies cannot prestige.' };
   if (!DIFFICULTIES[s.difficulty].canPrestige) return { eligible: false, threshold, stake, points: 0, reason: 'Hard mode runs cannot prestige.' };
   if (s.status !== 'playing') return { eligible: false, threshold, stake, points, reason: 'This run has ended.' };
   if (stake < threshold) return { eligible: false, threshold, stake, points, reason: `Your stake must be worth at least £${(threshold / 100_000_000).toFixed(1)}m.` };

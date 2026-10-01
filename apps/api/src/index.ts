@@ -1,6 +1,7 @@
 import { perkPurchase, type PerkLevels } from '@cfx/engine';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
+import { dailyBoard } from './daily';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
 import { claimWeekly, createGuild, guildDetail, joinGuild, leaveGuild, listGuilds } from './guilds';
@@ -164,6 +165,10 @@ app.get('/leaderboards/:board', requireUser, async (c) => {
   const period = (c.req.query('period') === 'all' ? 'all' : 'season') as Period;
   c.header('cache-control', 'private, max-age=15');
   return c.json(await leaderboard(c.env, c.get('user'), c.req.param('board') as Board, period));
+});
+app.get('/daily', requireUser, async (c) => {
+  c.header('cache-control', 'private, max-age=10');
+  return c.json(await dailyBoard(c.env, c.get('user'), c.req.query('day')));
 });
 app.post('/rewards/season/:board', requireUser, async (c) => c.json(await claimSeasonReward(c.env, c.get('user'), c.req.param('board') as Board)));
 
