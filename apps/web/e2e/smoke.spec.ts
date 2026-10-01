@@ -1068,7 +1068,7 @@ test('V2 Batch C: pet, employee of the month, diary, newspaper, building names a
   await clearOverlays(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const st = page.getByRole('dialog', { name: 'Settings' });
-  await st.locator('#card-wardrobe').getByRole('button', { name: /15 gems/ }).click();
+  await st.locator('#card-wardrobe').getByRole('button', { name: /75 gems/ }).click();
   await expect(st.locator('#card-wardrobe').getByRole('button', { name: 'Wearing' })).toBeVisible();
   const first = st.locator('#card-names input').first();
   await first.fill('The Big Shed');
