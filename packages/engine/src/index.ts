@@ -37,3 +37,4 @@ export * from './model/promotions';
 export * from './model/morale';
 export * from './model/rnd';
 export * from './model/rank';
+export * from './model/stats';

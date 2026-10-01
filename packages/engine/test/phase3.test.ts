@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ACHIEVEMENTS, applyActionInPlace, claimDaily, createRng, dailyStatus, levelForXp, migrateProfile, missionStatus, newAchievements,
+  ACHIEVEMENTS, applyActionInPlace, applyBankruptcy, applyRetirement, claimDaily, createRng, dailyStatus, levelForXp, migrateProfile, missionStatus, newAchievements,
   newGame, newProfile, offlineMonthsFor, refillMissions, replay, reputationFactor, runEvents, runOffline, toSubmission, xpForLevel,
   type GameState,
 } from '../src/index';
@@ -106,11 +106,34 @@ describe('gamification', () => {
   it('migrates a version 1 profile without losing progress', () => {
     const v1 = { version: 1, legacyPoints: 4, legacyEarned: 7, prestigeCount: 2, perks: { fin_loans: 1 }, gems: 99, boosts: [], rebirthsUsed: 1, runs: [] };
     const p = migrateProfile(v1)!;
-    expect(p.version).toBe(2);
+    expect(p.version).toBe(3);
+    expect(p.lifetime).toEqual({ companies: 0, bankruptcies: 0, retired: 0, months: 0, bestStake: 0 });
     expect(p.legacyPoints).toBe(4);
     expect(p.gems).toBe(99);
     expect(p.xp).toBe(0);
     expect(p.daily.streak).toBe(0);
     expect(migrateProfile(newProfile())).toEqual(newProfile());
+  });
+
+  it('migrates a version 2 profile, starting lifetime totals from the runs on record', () => {
+    const run = (outcome: string, months: number, ownerStake: number) => ({ companyName: 'X', industryId: 'software', difficulty: 'easy', months, outcome, ownerStake, legacy: 0 });
+    const v2 = { ...newProfile(), version: 2, lifetime: undefined, runs: [run('prestiged', 60, 9_000_000), run('bankrupt', 12, 0), run('retired', 30, 4_000_000)] };
+    const p = migrateProfile(v2)!;
+    expect(p.version).toBe(3);
+    expect(p.lifetime).toEqual({ companies: 3, bankruptcies: 1, retired: 1, months: 102, bestStake: 9_000_000 });
+  });
+
+  it('keeps lifetime totals beyond the 20 runs the history holds', () => {
+    let p = newProfile();
+    const s = playPolicy('software', 'LIFETIME', 12);
+    s.status = 'insolvent';
+    for (let i = 0; i < 25; i++) p = applyBankruptcy(p, s, false);
+    expect(p.runs).toHaveLength(20);
+    expect(p.lifetime.companies).toBe(25);
+    expect(p.lifetime.bankruptcies).toBe(25);
+    expect(p.lifetime.months).toBe(25 * s.month);
+    p = applyRetirement(p, s);
+    expect(p.lifetime.retired).toBe(1);
+    expect(p.lifetime.bestStake).toBeGreaterThanOrEqual(0);
   });
 });

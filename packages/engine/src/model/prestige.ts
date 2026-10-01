@@ -20,8 +20,20 @@ export interface RunSummary {
   legacy: number;
 }
 
+/** Totals over every company ever run (the `runs` list only keeps the latest 20). */
+export interface Lifetime {
+  companies: number;
+  bankruptcies: number;
+  retired: number;
+  months: number;
+  /** Best owner stake at the end of any company. */
+  bestStake: Pence;
+}
+
+export const emptyLifetime = (): Lifetime => ({ companies: 0, bankruptcies: 0, retired: 0, months: 0, bestStake: 0 });
+
 export interface Profile {
-  version: 2;
+  version: 3;
   /** Founder XP (level derives from it). */
   xp: number;
   /** Achievement id → ISO date unlocked. */
@@ -39,6 +51,7 @@ export interface Profile {
   /** Rebirths used since the last prestige. */
   rebirthsUsed: number;
   runs: RunSummary[];
+  lifetime: Lifetime;
 }
 
 export const STARTER_GEMS = 50;
@@ -48,8 +61,8 @@ export const PRESTIGE_THRESHOLD_GROWTH = 2.5;
 
 export function newProfile(): Profile {
   return {
-    version: 2, xp: 0, achievements: {}, missions: [], missionsCompleted: 0, daily: { lastClaim: null, streak: 0 },
-    legacyPoints: 0, legacyEarned: 0, prestigeCount: 0, perks: {}, gems: STARTER_GEMS, boosts: [], rebirthsUsed: 0, runs: [],
+    version: 3, xp: 0, achievements: {}, missions: [], missionsCompleted: 0, daily: { lastClaim: null, streak: 0 },
+    legacyPoints: 0, legacyEarned: 0, prestigeCount: 0, perks: {}, gems: STARTER_GEMS, boosts: [], rebirthsUsed: 0, runs: [], lifetime: emptyLifetime(),
   };
 }
 
@@ -57,8 +70,19 @@ export function newProfile(): Profile {
 export function migrateProfile(raw: unknown): Profile | null {
   if (!raw || typeof raw !== 'object') return null;
   const p = raw as Partial<Profile> & { version?: number };
-  if (p.version === 2) return p as Profile;
-  if (p.version === 1) return { ...newProfile(), ...p, version: 2 } as Profile;
+  if (p.version === 3) return { ...(p as Profile), lifetime: { ...emptyLifetime(), ...(p as Profile).lifetime } };
+  if (p.version === 2 || p.version === 1) {
+    // Older profiles never counted lifetime totals: start them from the runs still on record.
+    const runs = Array.isArray(p.runs) ? p.runs : [];
+    const lifetime: Lifetime = {
+      companies: runs.length,
+      bankruptcies: runs.filter((r) => r.outcome === 'bankrupt').length,
+      retired: runs.filter((r) => r.outcome === 'retired').length,
+      months: runs.reduce((a, r) => a + r.months, 0),
+      bestStake: runs.reduce((a, r) => Math.max(a, r.ownerStake), 0),
+    };
+    return { ...newProfile(), ...p, version: 3, lifetime } as Profile;
+  }
   return null;
 }
 
@@ -91,6 +115,17 @@ export function prestigeCheck(s: GameState): PrestigeCheck {
   return { eligible: true, threshold, stake, points };
 }
 
+const addToLifetime = (profile: Profile, s: GameState, outcome: RunSummary['outcome'], stake: Pence): Lifetime => {
+  const l = profile.lifetime ?? emptyLifetime();
+  return {
+    companies: l.companies + 1,
+    bankruptcies: l.bankruptcies + (outcome === 'bankrupt' ? 1 : 0),
+    retired: l.retired + (outcome === 'retired' ? 1 : 0),
+    months: l.months + s.month,
+    bestStake: Math.max(l.bestStake, stake),
+  };
+};
+
 const summarise = (s: GameState, outcome: RunSummary['outcome'], legacy: number): RunSummary => ({
   companyName: s.companyName, industryId: s.industryId, difficulty: s.difficulty, months: s.month, outcome,
   ownerStake: outcome === 'bankrupt' ? 0 : ownerStakeOf(s), legacy,
@@ -113,6 +148,7 @@ export function applyPrestige(profile: Profile, s: GameState): Profile {
     gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
     boosts: bankBoosts(profile, s),
     rebirthsUsed: 0,
+    lifetime: addToLifetime(profile, s, 'prestiged', ownerStakeOf(s)),
     runs: [summarise(s, 'prestiged', points), ...profile.runs].slice(0, 20),
   };
 }
@@ -144,12 +180,13 @@ export function applyBankruptcy(profile: Profile, s: GameState, rebirth: boolean
     ...profile,
     boosts: bankBoosts(profile, s),
     rebirthsUsed: profile.rebirthsUsed + (rebirth ? 1 : 0),
+    lifetime: addToLifetime(profile, s, 'bankrupt', 0),
     runs: [summarise(s, 'bankrupt', 0), ...profile.runs].slice(0, 20),
   };
 }
 
 export function applyRetirement(profile: Profile, s: GameState): Profile {
-  return { ...profile, boosts: bankBoosts(profile, s), runs: [summarise(s, 'retired', 0), ...profile.runs].slice(0, 20) };
+  return { ...profile, boosts: bankBoosts(profile, s), lifetime: addToLifetime(profile, s, 'retired', ownerStakeOf(s)), runs: [summarise(s, 'retired', 0), ...profile.runs].slice(0, 20) };
 }
 
 export function buyPerk(profile: Profile, perkId: string): Profile {

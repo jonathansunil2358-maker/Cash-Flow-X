@@ -1,3 +1,4 @@
+import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
@@ -209,6 +210,8 @@ export const useGame = create<Store>((set, get) => {
       game: after, profile, celebrations: [...get().celebrations, ...celebrations].slice(-6),
       pops: [...get().pops, ...popsFor(before, after)].slice(-6), ...extra,
     });
+    if (celebrations.length) playSound('fanfare');
+    else if (after.pendingEvent && !before.pendingEvent) playSound('event');
     const ev = after.lastEvent;
     if (ev && ev !== before.lastEvent && ev.month === before.month && !after.pendingEvent) {
       get().toast(ev.polarity === 'good' ? 'good' : 'bad', `${ev.title}: ${ev.text}`);
@@ -525,6 +528,7 @@ export const useGame = create<Store>((set, get) => {
     },
 
     toast(kind, text, icon) {
+      playSound(kind === 'success' ? 'success' : kind === 'good' ? 'coin' : kind === 'info' ? 'click' : 'warn');
       const id = nextId++;
       set({ toasts: [...get().toasts.slice(-2), { id, kind, text, icon }] });
       setTimeout(() => get().dismissToast(id), kind === 'error' ? 7000 : 4500);

@@ -2,12 +2,15 @@ import { Button, Card, PageTitle } from '../components/ui';
 import { useState } from 'react';
 import { useAccount } from '../lib/account';
 import { api, ONLINE } from '../lib/api';
+import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
 
 export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () => void }) {
   const { save, quit, undo, undoStack, pauseOnPanels, setPauseOnPanels, scene3d, setScene3d, setTourOpen, openSheet, game, refreshAccount, toast } = useGame();
   const { me, signOut } = useAccount();
   const [name, setName] = useState(me?.user.name ?? '');
+  const [sound, setSound] = useState(isSoundOn());
+  const [buzz, setBuzz] = useState(isHapticsOn());
   return (
     <div className="space-y-5">
       <PageTitle title="Settings" />
@@ -32,6 +35,22 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
             <span className="block text-xs text-ink-2">Turn off on older phones to save battery. The game plays the same.</span>
           </span>
           <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={scene3d} onChange={(e) => setScene3d(e.target.checked)} />
+        </label>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <span className="block font-extrabold">Sound effects</span>
+            <span className="block text-xs text-ink-2">Short sounds for sales, decisions, events and celebrations. Made on the fly: nothing to download.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={sound} aria-label="Sound effects"
+            onChange={(e) => { setSoundOn(e.target.checked); setSound(e.target.checked); if (e.target.checked) playSound('success'); }} />
+        </label>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <span className="block font-extrabold">Vibration</span>
+            <span className="block text-xs text-ink-2">A small buzz on phones that support it.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={buzz} aria-label="Vibration"
+            onChange={(e) => { setHapticsOn(e.target.checked); setBuzz(e.target.checked); if (e.target.checked) playSound('click'); }} />
         </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button onClick={undo} disabled={!undoStack.length || game?.status !== 'playing'}>Undo last decision</Button>
