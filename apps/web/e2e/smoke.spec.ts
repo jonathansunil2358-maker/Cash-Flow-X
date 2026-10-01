@@ -534,7 +534,7 @@ test('titles are earned, and the island shop sells skins for gems', async ({ pag
   await page.getByRole('button', { name: /^(Menu|Settings)/ }).first().click();
   const shop = page.locator('#card-shop');
   await expect(shop.getByText('Autumn')).toBeVisible();
-  await shop.getByRole('button', { name: /Buy for 600/ }).click();
+  await shop.locator("button", { hasText: "Buy for 600" }).click();
   await expect(shop.getByRole('button', { name: 'Equipped' })).toHaveCount(1);
   await expect(shop.getByText(/You have 400 gems/)).toBeVisible();
   await shop.getByRole('button', { name: 'Equip' }).first().click();
@@ -758,7 +758,7 @@ test('Batch C: decorations, logo, photo studio, trophy hall and the year in revi
   await clearOverlays(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const decor = page.locator('#card-decor');
-  await decor.getByRole('button', { name: /Buy for 200/ }).click();
+  await decor.locator("button", { hasText: "Buy for 200" }).click();
   await expect(decor.getByRole('button', { name: 'On the island' })).toHaveCount(1);
   await decor.getByRole('button', { name: 'On the island' }).click();
   await expect(decor.getByRole('button', { name: 'Place it' })).toHaveCount(1);
