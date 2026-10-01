@@ -65,13 +65,14 @@ const ICONS = {
   upgrades: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M12 3l8 9h-5v9H9v-9H4z" /></svg>,
   finance: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M3 9l9-6 9 6z" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 20h18" /></svg>,
   missions: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z" /></svg>,
+  prestige: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M3 8l4.5 4L12 4l4.5 8L21 8l-2 11H5z" /><path d="M5.5 21h13" /></svg>,
   books: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M4 4h7c1.5 0 2 1 2 2v14c0-1-1-2-2-2H4z" /><path d="M20 4h-5c-1.5 0-2 1-2 2v14c0-1 1-2 2-2h5z" /></svg>,
   social: <svg viewBox="0 0 24 24" fill="#fff" stroke="#4a2c17" strokeWidth="1.8" strokeLinejoin="round"><path d="M4 21V9l8-6 8 6v12z" /><path d="M9 21v-6h6v6" /><path d="M12 8.5l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z" /></svg>,
   cog: <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6"><circle cx="12" cy="12" r="3.2" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>,
 };
 
 const SHEET_TITLES: Record<Sheet, string> = {
-  team: 'Team', upgrades: 'Upgrades', finance: 'Finance', missions: 'Missions', books: 'The Books', legacy: 'Legacy', social: 'Holding company & leaderboards', settings: 'Settings',
+  team: 'Team', upgrades: 'Upgrades', finance: 'Finance', missions: 'Missions', books: 'The Books', legacy: 'Prestige & Legacy', social: 'Holding company & leaderboards', settings: 'Settings',
 };
 
 function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string; cycleTheme: () => void }) {
@@ -98,6 +99,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
     settings: <Settings theme={theme} cycleTheme={cycleTheme} />,
   };
   const affordable = upgradeOptions(game).filter((o) => !o.maxed && !o.locked && o.cost <= game.ledger.balances.cash).length;
+  const prestigeReady = prestigeCheck(game).eligible;
   const missionBadge = (dailyStatus(profile.daily, new Date().toISOString().slice(0, 10)).canClaim ? 1 : 0);
 
   return (
@@ -116,6 +118,7 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
           <DockCard tour="dock-finance" label="Finance" tone="is-coin" icon={ICONS.finance} active={sheet === 'finance'} onClick={() => openSheet(sheet === 'finance' ? null : 'finance')} />
           <DockCard tour="dock-missions" label="Missions" tone="is-gem" icon={ICONS.missions} badge={missionBadge} active={sheet === 'missions'} onClick={() => openSheet(sheet === 'missions' ? null : 'missions')} />
           <DockCard tour="dock-books" label="Books" tone="is-legacy" icon={ICONS.books} active={sheet === 'books'} onClick={() => openSheet(sheet === 'books' ? null : 'books')} />
+          <DockCard tour="dock-prestige" label="Prestige" tone="is-legacy" icon={ICONS.prestige} badge={prestigeReady ? '!' : undefined} active={sheet === 'legacy'} onClick={() => openSheet(sheet === 'legacy' ? null : 'legacy')} />
         </nav>
       </main>
 
@@ -155,7 +158,7 @@ function Hud({ game }: { game: GameState }) {
   const cash = game.ledger.balances.cash;
   const prestige = prestigeCheck(game);
   return (
-    <header className="cfx-hud flex-col !items-stretch !gap-2 !p-2.5">
+    <header className="cfx-hud flex-col !flex-nowrap !items-stretch !gap-2 !p-2.5">
       <div className="flex items-center gap-2.5">
         <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -275,12 +278,12 @@ function QuickStats({ game }: { game: GameState }) {
   );
 }
 
-function DockCard({ tour, label, tone, icon, badge, active, onClick }: { tour: string; label: string; tone: string; icon: ReactNode; badge?: number; active: boolean; onClick: () => void }) {
+function DockCard({ tour, label, tone, icon, badge, active, onClick }: { tour: string; label: string; tone: string; icon: ReactNode; badge?: number | string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" data-tour={tour} className={`cfx-dock-card ${tone}`} onClick={onClick} aria-pressed={active} style={active ? { transform: 'translateY(3px)', boxShadow: 'inset 0 -3px 0 0 var(--edge-c), var(--edge-pressed)' } : undefined}>
       {icon}
       <span>{label}</span>
-      {!!badge && badge > 0 && <b className="cfx-dock-card__badge" aria-label={`${badge} new`}>{badge}</b>}
+      {!!badge && badge !== 0 && <b className="cfx-dock-card__badge" aria-label={badge === '!' ? 'Prestige is ready' : `${badge} new`}>{badge}</b>}
     </button>
   );
 }

@@ -54,7 +54,7 @@ export function Legacy({ game }: { game: GameState }) {
   const diff = DIFFICULTIES[game.difficulty];
   return (
     <div className="space-y-5">
-      <PageTitle title="Legacy" subtitle="Prestige sells your company at its valuation and turns your stake into Legacy points. You start again with cash and upgrades reset, but keep perks, gems, boosts and cosmetics." />
+      <PageTitle title="Prestige & Legacy" subtitle="Prestige sells your company at its valuation and turns your stake into Legacy points. You start again with cash and upgrades reset, but keep perks, gems, boosts and cosmetics." />
       <div className="grid gap-5 lg:grid-cols-2">
         <Card title="Prestige">
           {!diff.canPrestige ? (

@@ -24,7 +24,7 @@ type Pt = [number, number];
 const GRASS = 16.4;
 const HQ_POS: Pt = [-1.2, -2.0];
 /** Upgrade plots, in the sector's upgrade order, clear of the road and car park. */
-const PLOTS: Pt[] = [[-5.6, -2.2], [1.6, -5.8], [4.8, -1.4], [-4.6, 6.0], [-5.4, -6.0]];
+const PLOTS: Pt[] = [[-5.6, -2.2], [1.6, -5.8], [4.8, -1.4], [-4.6, 6.0], [-5.4, -6.0], [-0.9, 5.8], [6.6, -5.4], [-2.9, -5.9]];
 
 const ROAD_Z = 2.8;
 /** UK traffic keeps left: inbound (heading −x) on the car park side, outbound on the HQ side. */
@@ -53,8 +53,8 @@ const TREES: { p: Pt; c: string; plot?: number; s?: number }[] = [
   { p: [4.5, -1.8], c: '#8e3fe6', plot: 2 }, { p: [5.3, -0.8], c: '#4e9e2f', plot: 2 },
   { p: [-4.9, 5.6], c: '#ff8a1f', plot: 3 }, { p: [-4.0, 6.5], c: '#7ccf52', plot: 3 },
   { p: [-5.6, -6.3], c: '#4e9e2f', plot: 4 }, { p: [-4.8, -5.5], c: '#8e3fe6', plot: 4 },
-  { p: [6.9, -6.9], c: '#4e9e2f', s: 1.2 }, { p: [7.0, -4.0], c: '#7ccf52' }, { p: [-1.8, -6.6], c: '#4e9e2f', s: 1.1 },
-  { p: [-2.7, -7.2], c: '#ff8a1f', s: 0.9 }, { p: [-2.6, 4.7], c: '#7ccf52', s: 0.8 },
+  { p: [6.9, -6.9], c: '#4e9e2f', s: 1.2, plot: 6 }, { p: [7.0, -4.0], c: '#7ccf52', plot: 6 }, { p: [-1.8, -6.6], c: '#4e9e2f', s: 1.1, plot: 7 },
+  { p: [-2.7, -7.2], c: '#ff8a1f', s: 0.9, plot: 7 }, { p: [-2.6, 4.7], c: '#7ccf52', s: 0.8 },
   { p: [0.2, 7.2], c: '#4e9e2f', s: 0.8 }, { p: [-7.1, -0.4], c: '#7ccf52', s: 0.9 },
 ];
 
@@ -580,6 +580,8 @@ export default function Scene3D({ game }: { game: GameState }) {
   for (const u of upgrades) {
     const o = options.get(u.def.id);
     if (!o) continue;
+    // Locked, unbuilt plots stay quiet until their prerequisite is built, so the island isn't buried in tags.
+    if (u.level === 0 && o.locked) continue;
     const [px, pz] = PLOTS[u.plot];
     const ready = playing && !o.maxed && !o.locked && o.cost <= cash;
     tags.push(u.level > 0 ? {

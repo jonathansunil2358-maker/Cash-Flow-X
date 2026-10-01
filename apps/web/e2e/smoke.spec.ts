@@ -186,5 +186,42 @@ test('online: sign-in is required, runs are registered and verified, holding com
   await page.getByRole('tab', { name: 'All time' }).click();
   await expect(page.locator('.cfx-rank.is-me')).toBeVisible();
   await page.getByRole('tab', { name: 'Holding cos' }).click();
-  await expect(page.getByText(`E2E ${name}`)).toBeVisible();
+  // Match the leaderboard row only: a transient "is open for members" message also names the company.
+  await expect(page.locator('.cfx-rank__name').filter({ hasText: `E2E ${name}` })).toBeVisible();
+});
+
+/** A signed-in player with a fresh Easy company: fake clock (no pop-ups) and the 3D scene off, as the first test does. */
+async function freshCompany(page: Page, prefix: string) {
+  await page.clock.install();
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, prefix);
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await skipTour(page);
+}
+
+test('prestige is one tap from the dock, on screen on every device', async ({ page }) => {
+  await freshCompany(page, 'Prestige');
+  const button = page.getByRole('navigation', { name: 'Actions' }).getByRole('button', { name: /^Prestige/ });
+  // It must fit across the screen (the dock once scrolled sideways on phones, hiding the last button).
+  const box = (await button.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await openDock(page, 'Prestige');
+  const sheet = page.getByRole('dialog', { name: 'Prestige & Legacy' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Needed to prestige')).toBeVisible();
+});
+
+test('every upgrade for the sector can be found in the Upgrades panel', async ({ page }) => {
+  await freshCompany(page, 'Upgrades');
+  await openDock(page, 'Upgrades');
+  const sheet = page.getByRole('dialog', { name: 'Upgrades' });
+  for (const name of ['Cloud migration', 'Sales CRM', 'Developer tooling', 'AI assistant', 'Reliability engineering', 'Enterprise sales team']) {
+    await expect(sheet.getByText(name).first()).toBeVisible();
+  }
 });
