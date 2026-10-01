@@ -25,6 +25,7 @@ import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './m
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
+import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
@@ -101,6 +102,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   }
 
   // 1b. Board meetings and annual awards look back at the closed months.
+  advanceStory(s, !!opts.simulation);
   advanceBoard(s, !!opts.simulation);
   advanceAwards(s, !!opts.simulation);
 

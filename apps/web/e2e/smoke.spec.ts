@@ -718,3 +718,16 @@ test('Batch A: mystery boxes, sticker album, hidden achievements and the rumour 
   await expect(missions.locator('#card-album').getByText(/Sticker album \(\d+\/42\)/)).toBeVisible();
   await expect(missions.getByText('???').first()).toBeVisible();
 });
+
+test('Batch B: rival bosses with catchphrases and this year\'s mentor', async ({ page }) => {
+  await freshCompany(page, 'Story');
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const rivals = biz.locator('#card-rivals');
+  await rivals.getByRole('button', { name: 'Open' }).click();
+  await expect(rivals.getByText(/Victor Crane/)).toBeVisible();
+  await expect(rivals.getByText(/Everyone has a price/)).toBeVisible();
+  const team = biz.locator('#card-roster');
+  await team.getByRole('button', { name: 'Open' }).click();
+  await expect(team.getByText(/This year's mentor: Dame Harriet Cole/)).toBeVisible();
+});

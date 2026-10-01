@@ -1,6 +1,6 @@
 import {
   ActionError, applyAction, AWARDS, boardTarget, DIFFICULTIES, forecast, formatGBP, formatPct, INDUSTRIES, moodOf, PERSONALITIES,
-  questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
+  mentorOf, questDef, questsOf, rosterOf, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, utcDay, type Action, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
 import { Button, Card, Field, KeyValue, Meter, StatusPill } from '../components/ui';
@@ -75,6 +75,7 @@ export function TeamCard({ game }: { game: GameState }) {
     <Fold id="card-roster" title="Your team"
       summary={total ? `${total} people, ${mood.label.toLowerCase()} ${mood.face}. Open to meet them.` : 'Nobody yet. Hire your first person.'}
       subtitle="Everyone you hire has a name and a personality. They sometimes come to you with a request.">
+      <p className="mb-2 text-xs text-ink-2">This year's mentor: <b>{mentorOf(Math.floor(game.month / 12)).name}</b> ({mentorOf(Math.floor(game.month / 12)).specialty}). They drop by once a year.</p>
       {team.length === 0 ? <p className="text-sm text-ink-2">Hire someone in the Team panel to meet them here.</p> : (
         <ul className="grid gap-2 sm:grid-cols-2">
           {team.map((p) => (

@@ -51,6 +51,7 @@ export * from './model/board';
 export * from './model/awards';
 export * from './model/roster';
 export * from './model/surprise';
+export * from './model/story';
 export * from './model/modifiers-opt';
 export * from './model/insurance';
 export * from './model/contracts';

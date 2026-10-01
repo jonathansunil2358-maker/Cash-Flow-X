@@ -73,7 +73,7 @@ describe('luck streaks and rumours', () => {
     expect(sim.rumour).toBeUndefined();
   });
 
-  it('rumours resolve after two months, true ones really happen', () => {
+  it('rumours resolve after two months, true ones really happen (including a rival slipping)', () => {
     const s = fresh();
     s.month = 10;
     s.rumour = { kind: 'boom', text: 'Boom soon.', truth: true, resolveMonth: 12, target: 0 };
@@ -146,5 +146,16 @@ describe('everything replays', () => {
     expect(r.economy.active).toEqual(s.economy.active);
     expect(r.ledger.balances).toEqual(s.ledger.balances);
     expect(checkIntegrity(s)).toEqual([]);
+  });
+});
+
+describe('rumour kinds', () => {
+  it('a true rivalSlip lowers the rival\'s quality', () => {
+    const s = newGame({ companyName: 'S', industryId: 'ecommerce', seed: 'SLIP', difficulty: 'easy' });
+    s.month = 12;
+    const q = s.competitors[0].quality;
+    s.rumour = { kind: 'rivalSlip', text: 'Slip.', truth: true, resolveMonth: 12, target: 0 };
+    advanceSurprise(s, { next: () => 0.99 }, false);
+    expect(s.competitors[0].quality).toBe(q - 6);
   });
 });

@@ -10,7 +10,7 @@ export const LUCK_CHANCE = 0.04;
 export const LUCK_MONTHS = 3;
 export const LUCK_DEMAND = 0.05;
 
-export type RumourKind = 'rivalCut' | 'boom' | 'supply';
+export type RumourKind = 'rivalCut' | 'boom' | 'supply' | 'rivalSlip';
 export interface Rumour {
   kind: RumourKind;
   text: string;
@@ -22,7 +22,7 @@ export interface Rumour {
 }
 
 export const RUMOUR_CHANCE = 0.06;
-export const RUMOUR_TRUE_SHARE = 0.65;
+export const RUMOUR_TRUE_SHARE = 0.6;
 export const RUMOUR_DELAY = 2;
 
 export const luckOf = (s: GameState) => s.economy.active.find((a) => a.type === 'luck') ?? null;
@@ -48,12 +48,13 @@ export function advanceSurprise(s: GameState, rng: Rng, simulation: boolean): vo
     logItem(s, r.truth ? 'event' : 'notice', r.truth ? 'The rumour was true' : 'The rumour was false', r.truth ? `${r.text} It really happened.` : `${r.text} Nothing came of it.`);
     s.rumour = undefined;
   } else if (!r && s.month >= 6 && chance(rng, RUMOUR_CHANCE)) {
-    const kind = (['rivalCut', 'boom', 'supply'] as RumourKind[])[Math.min(2, Math.floor(rng.next() * 3))];
+    const kind = (['rivalCut', 'boom', 'supply', 'rivalSlip'] as RumourKind[])[Math.min(3, Math.floor(rng.next() * 4))];
     const target = Math.min(s.competitors.length - 1, Math.floor(rng.next() * Math.max(1, s.competitors.length)));
     const rival = s.competitors[Math.max(0, target)];
     const text = kind === 'rivalCut' ? `Word is that ${rival?.name ?? 'a rival'} is about to slash its prices.`
       : kind === 'boom' ? 'Whispers in the trade press suggest customers are about to spend more.'
-        : 'A supplier is rumoured to be putting its prices up soon.';
+        : kind === 'rivalSlip' ? `Insiders say ${rival?.name ?? 'a rival'} has hit quality problems.`
+          : 'A supplier is rumoured to be putting its prices up soon.';
     s.rumour = { kind, text, truth: chance(rng, RUMOUR_TRUE_SHARE), resolveMonth: s.month + RUMOUR_DELAY, target: Math.max(0, target) };
     logItem(s, 'notice', 'A rumour is going round', `${text} Do you believe it?`);
   }
@@ -63,6 +64,9 @@ function applyRumour(s: GameState, r: Rumour): void {
   if (r.kind === 'rivalCut') {
     const c = s.competitors[r.target];
     if (c) { c.cutMonths = 3; c.price = Math.round(c.price * 0.94); }
+  } else if (r.kind === 'rivalSlip') {
+    const c = s.competitors[r.target];
+    if (c) c.quality = Math.max(10, c.quality - 6);
   } else if (r.kind === 'boom') {
     s.economy.active.push({ type: 'rumour-boom', title: 'Spending surge', startMonth: s.month, remaining: 4, effects: { demandMult: 1.08 } });
     recomputeEconomy(s);
