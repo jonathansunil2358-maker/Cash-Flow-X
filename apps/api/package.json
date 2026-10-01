@@ -1,0 +1,25 @@
+{
+  "name": "@cfx/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply cash-flow-x --local",
+    "db:migrate:remote": "wrangler d1 migrations apply cash-flow-x --remote",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@cfx/engine": "*",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.12"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260930.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.145.0"
+  }
+}

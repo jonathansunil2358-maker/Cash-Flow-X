@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden run > 24 months of software with the reference policy 1`] = `
+{
+  "status": "playing",
+  "year1": {
+    "cash": 8497973,
+    "customers": 432,
+    "deferredRevenue": 4679500,
+    "ebitda": -4053529,
+    "equityValue": 50707607,
+    "grossProfit": 10139400,
+    "headcount": 3,
+    "profit": -4159093,
+    "receivables": 2408453,
+    "revenue": 11554200,
+    "tax": 0,
+    "totalEquity": 5840907,
+  },
+  "year2": {
+    "cash": 20059328,
+    "customers": 1400,
+    "deferredRevenue": 15680000,
+    "ebitda": 5627288,
+    "equityValue": 203810077,
+    "grossProfit": 43718100,
+    "headcount": 8,
+    "profit": 5064808,
+    "receivables": 8158451,
+    "revenue": 49818300,
+    "tax": 212452,
+    "totalEquity": 10905715,
+  },
+}
+`;

@@ -1,0 +1,21 @@
+{
+  "name": "cash-flow-x",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Turn-based business tycoon game built on a real double-entry accounting engine.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @cfx/web",
+    "dev:api": "npm run dev -w @cfx/api",
+    "build": "npm run build -w @cfx/web",
+    "test": "npm run test -w @cfx/engine",
+    "e2e": "npm run e2e -w @cfx/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "deploy:web": "npm run deploy -w @cfx/web",
+    "deploy:api": "npm run deploy -w @cfx/api"
+  }
+}

@@ -1,0 +1,274 @@
+@import 'tailwindcss';
+@import './styles/cfx.css';
+
+/*
+ * Cash Flow X design tokens (from the Cash Flow X design system): a toy-plastic game world of
+ * sky and grass, cream panels with thick outlines. Day is the default; Night is stepped for the
+ * dark surface. data-theme on <html> overrides the OS setting.
+ */
+:root {
+  color-scheme: light;
+  --sky: #8fd3ff;
+  --sky-deep: #5bb8f5;
+  --grass: #7ccf52;
+  --grass-deep: #4e9e2f;
+  --panel: #fff3dc;
+  --panel-sunken: #f3dfbb;
+  --outline: #4a2c17;
+  --ink: #3a2210;
+  --ink-muted: #7b5634;
+  --on-sky: #13324d;
+  --primary: #1f78d1;
+  --primary-edge: #145497;
+  --on-primary: #ffffff;
+  --go: #2f9420;
+  --go-edge: #1f6814;
+  --on-go: #ffffff;
+  --danger: #d93a2f;
+  --danger-edge: #9c2219;
+  --on-danger: #ffffff;
+  --coin: #ffc633;
+  --coin-edge: #c98300;
+  --gem: #8e3fe6;
+  --gem-edge: #5f20a8;
+  --on-gem: #ffffff;
+  --legacy: #ff8a1f;
+  --legacy-edge: #c25e00;
+  --xp: #22b8c7;
+  --xp-edge: #16808b;
+  --status-good: #1f7a2a;
+  --status-bad: #b42318;
+  --status-warn: #8a5a00;
+  --focus: #3a2210;
+  --font-display: 'Lilita One', 'Arial Rounded MT Bold', 'Segoe UI Black', system-ui, sans-serif;
+  --font-body: Nunito, 'Segoe UI', system-ui, sans-serif;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  --radius-sm: 10px; --radius-md: 16px; --radius-lg: 22px; --radius-xl: 32px; --radius-pill: 999px;
+  --edge-sm: 0 3px 0 0 #4a2c17;
+  --edge: 0 6px 0 0 #4a2c17;
+  --edge-pressed: 0 2px 0 0 #4a2c17;
+  --lift: 0 6px 0 0 #4a2c17, 0 14px 24px 0 rgba(19, 50, 77, 0.28);
+  --stroke: 3px;
+  --stroke-thin: 2px;
+
+  /* Legacy app tokens mapped onto the game palette. */
+  --page: var(--sky);
+  --surface: var(--panel);
+  --surface-2: var(--panel-sunken);
+  --ink-2: var(--ink-muted);
+  --muted: #7b5634;
+  --grid: rgba(74, 44, 23, 0.14);
+  --axis: rgba(74, 44, 23, 0.4);
+  --border: rgba(74, 44, 23, 0.25);
+  --s1: #1f78d1;
+  --s2: #ff8a1f;
+  --s3: #2f9420;
+  --pos: #1f78d1;
+  --neg: #d93a2f;
+  --good: #2f9420;
+  --good-text: var(--status-good);
+  --warn: #fab219;
+  --serious: #ec835a;
+  --critical: #d93a2f;
+  --critical-text: var(--status-bad);
+  --accent: var(--primary);
+  --accent-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --sky: #1a2350; --sky-deep: #121936; --grass: #2f6b3a; --grass-deep: #1f4a28;
+    --panel: #2a2140; --panel-sunken: #1f1832; --outline: #0b0714;
+    --ink: #fff1db; --ink-muted: #cbb8a0; --on-sky: #eaf2ff;
+    --primary: #2b7de0; --primary-edge: #1a4f99; --go: #3a9a2a; --go-edge: #236b18; --danger: #e0473c; --danger-edge: #a3261d;
+    --gem: #a45bff; --gem-edge: #6c2cc4; --legacy: #ff9a3c; --xp: #2fd0de; --xp-edge: #1a8f9a;
+    --status-good: #5fd46a; --status-bad: #ff7a70; --status-warn: #ffc24d; --focus: #fff1db;
+    --edge-sm: 0 3px 0 0 #0b0714; --edge: 0 6px 0 0 #0b0714; --edge-pressed: 0 2px 0 0 #0b0714;
+    --lift: 0 6px 0 0 #0b0714, 0 14px 28px 0 rgba(0, 0, 0, 0.5);
+    --muted: #cbb8a0; --grid: rgba(255, 241, 219, 0.1); --axis: rgba(255, 241, 219, 0.3); --border: rgba(255, 241, 219, 0.16);
+    --s1: #3987e5; --s2: #ff9a3c; --s3: #3a9a2a; --pos: #3987e5; --neg: #e66767;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --sky: #1a2350; --sky-deep: #121936; --grass: #2f6b3a; --grass-deep: #1f4a28;
+  --panel: #2a2140; --panel-sunken: #1f1832; --outline: #0b0714;
+  --ink: #fff1db; --ink-muted: #cbb8a0; --on-sky: #eaf2ff;
+  --primary: #2b7de0; --primary-edge: #1a4f99; --go: #3a9a2a; --go-edge: #236b18; --danger: #e0473c; --danger-edge: #a3261d;
+  --gem: #a45bff; --gem-edge: #6c2cc4; --legacy: #ff9a3c; --xp: #2fd0de; --xp-edge: #1a8f9a;
+  --status-good: #5fd46a; --status-bad: #ff7a70; --status-warn: #ffc24d; --focus: #fff1db;
+  --edge-sm: 0 3px 0 0 #0b0714; --edge: 0 6px 0 0 #0b0714; --edge-pressed: 0 2px 0 0 #0b0714;
+  --lift: 0 6px 0 0 #0b0714, 0 14px 28px 0 rgba(0, 0, 0, 0.5);
+  --muted: #cbb8a0; --grid: rgba(255, 241, 219, 0.1); --axis: rgba(255, 241, 219, 0.3); --border: rgba(255, 241, 219, 0.16);
+  --s1: #3987e5; --s2: #ff9a3c; --s3: #3a9a2a; --pos: #3987e5; --neg: #e66767;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-sky: var(--sky);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-on-sky: var(--on-sky);
+  --color-muted: var(--muted);
+  --color-grid: var(--grid);
+  --color-line: var(--border);
+  --color-outline: var(--outline);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-good-text: var(--good-text);
+  --color-warn: var(--warn);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --color-critical-text: var(--critical-text);
+  --color-coin: var(--coin);
+  --color-gem: var(--gem);
+  --color-legacy: var(--legacy);
+  --color-xp: var(--xp);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+html,
+body {
+  background: var(--sky);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none;
+}
+
+/* Panels already show their title in the sticky header. */
+[data-sheet] .cfx-page-title h1 {
+  display: none;
+}
+
+@keyframes cfx-rise {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-48px); opacity: 0; }
+}
+@keyframes cfx-pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes cfx-sheet {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.cfx-anim-rise { animation: cfx-rise 1.4s ease-out forwards; }
+.cfx-anim-pop { animation: cfx-pop 220ms ease-out; }
+.cfx-anim-sheet { animation: cfx-sheet 200ms ease-out; }
+
+/* Tutorial spotlight: a ring round the target, with everything else dimmed. */
+.cfx-tour-spot {
+  box-shadow: 0 0 0 4px #fff, 0 0 0 9999px rgb(19 50 77 / 0.65);
+  transition: left 260ms ease, top 260ms ease, width 260ms ease, height 260ms ease;
+  animation: cfx-tour-pulse 1.6s ease-in-out infinite;
+}
+@keyframes cfx-tour-pulse {
+  50% { box-shadow: 0 0 0 7px #ffc633, 0 0 0 9999px rgb(19 50 77 / 0.65); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfx-anim-rise, .cfx-anim-pop, .cfx-anim-sheet, .cfx-tour-spot { animation: none; transition: none; }
+}
+
+/*
+ * Game-world backdrop behind every screen: a sky gradient, slowly drifting clouds and rolling
+ * hills by day; a starry sky by night. Layers are fixed so panels scroll over them.
+ */
+:root {
+  --sky-top: #5fb7f5;
+  --sky-bottom: #c6ecff;
+  --hill-back: #9bd978;
+  --hill-front: #7ccf52;
+  --clouds: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520'%3E%3Cg fill='%23ffffff' fill-opacity='.9'%3E%3Cellipse cx='120' cy='90' rx='90' ry='30'/%3E%3Cellipse cx='165' cy='70' rx='55' ry='38'/%3E%3Cellipse cx='90' cy='75' rx='40' ry='26'/%3E%3Cellipse cx='560' cy='160' rx='110' ry='32'/%3E%3Cellipse cx='610' cy='135' rx='60' ry='42'/%3E%3Cellipse cx='520' cy='140' rx='45' ry='28'/%3E%3Cellipse cx='330' cy='330' rx='80' ry='24'/%3E%3Cellipse cx='365' cy='312' rx='44' ry='30'/%3E%3Cellipse cx='800' cy='400' rx='95' ry='28'/%3E%3Cellipse cx='840' cy='380' rx='50' ry='34'/%3E%3C/g%3E%3C/svg%3E");
+  --stars: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --sky-top: #0c1230;
+    --sky-bottom: #2a2160;
+    --hill-back: #22473a;
+    --hill-front: #1f4a28;
+    --clouds: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520'%3E%3Cg fill='%23ffffff' fill-opacity='.08'%3E%3Cellipse cx='120' cy='90' rx='90' ry='30'/%3E%3Cellipse cx='560' cy='160' rx='110' ry='32'/%3E%3Cellipse cx='800' cy='400' rx='95' ry='28'/%3E%3C/g%3E%3C/svg%3E");
+    --stars: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='300'%3E%3Cg fill='%23fff1db'%3E%3Ccircle cx='20' cy='30' r='1.4'/%3E%3Ccircle cx='90' cy='120' r='1'/%3E%3Ccircle cx='160' cy='40' r='1.8'/%3E%3Ccircle cx='230' cy='190' r='1.2'/%3E%3Ccircle cx='300' cy='70' r='1.5'/%3E%3Ccircle cx='60' cy='240' r='1.1'/%3E%3Ccircle cx='190' cy='270' r='1.6'/%3E%3Ccircle cx='340' cy='250' r='1'/%3E%3Ccircle cx='270' cy='20' r='1'/%3E%3Ccircle cx='120' cy='190' r='.8'/%3E%3C/g%3E%3C/svg%3E");
+  }
+}
+:root[data-theme='dark'] {
+  --sky-top: #0c1230;
+  --sky-bottom: #2a2160;
+  --hill-back: #22473a;
+  --hill-front: #1f4a28;
+  --clouds: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520'%3E%3Cg fill='%23ffffff' fill-opacity='.08'%3E%3Cellipse cx='120' cy='90' rx='90' ry='30'/%3E%3Cellipse cx='560' cy='160' rx='110' ry='32'/%3E%3Cellipse cx='800' cy='400' rx='95' ry='28'/%3E%3C/g%3E%3C/svg%3E");
+  --stars: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='300'%3E%3Cg fill='%23fff1db'%3E%3Ccircle cx='20' cy='30' r='1.4'/%3E%3Ccircle cx='90' cy='120' r='1'/%3E%3Ccircle cx='160' cy='40' r='1.8'/%3E%3Ccircle cx='230' cy='190' r='1.2'/%3E%3Ccircle cx='300' cy='70' r='1.5'/%3E%3Ccircle cx='60' cy='240' r='1.1'/%3E%3Ccircle cx='190' cy='270' r='1.6'/%3E%3Ccircle cx='340' cy='250' r='1'/%3E%3Ccircle cx='270' cy='20' r='1'/%3E%3Ccircle cx='120' cy='190' r='.8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+html {
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%) fixed;
+}
+body {
+  background: transparent !important;
+  min-height: 100vh;
+}
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Stars (night) and drifting clouds. */
+body::before {
+  background-image: var(--clouds), var(--stars);
+  background-repeat: repeat-x, repeat;
+  background-position: 0 40px, 0 0;
+  animation: cfx-clouds 140s linear infinite;
+}
+/* Rolling hills along the bottom edge. */
+body::after {
+  top: auto;
+  height: 34vh;
+  background:
+    radial-gradient(120% 90% at 20% 100%, var(--hill-front) 58%, transparent 59%),
+    radial-gradient(110% 80% at 85% 100%, var(--hill-front) 55%, transparent 56%),
+    radial-gradient(90% 100% at 55% 100%, var(--hill-back) 62%, transparent 63%);
+  opacity: 0.9;
+}
+#root {
+  position: relative;
+  z-index: 1;
+}
+@keyframes cfx-clouds {
+  from { background-position: 0 40px, 0 0; }
+  to { background-position: 900px 40px, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}

@@ -1,0 +1,158 @@
+import { cr, createLedger, dr, post, resetPeriod } from './ledger/journal';
+import { formatGBP } from './money';
+import { generateTargets } from './model/acquisitions';
+import { DIFFICULTIES, type DifficultyId } from './model/difficulty';
+import { recomputeEconomy } from './model/events';
+import { INDUSTRIES, type IndustryId } from './model/industries';
+import { startLease } from './model/leases';
+import { perkEffects, type ActiveBoost, type PerkLevels } from './model/perks';
+import { ENDLESS, logItem, newId, STATE_VERSION, type GameState } from './model/state';
+import { createRng, hashSeed } from './rng';
+import { scenarioOf } from './scenarios';
+
+export type EquipmentFinance = 'buy' | 'lease';
+
+export interface NewGameOptions {
+  companyName: string;
+  industryId: IndustryId;
+  /** Shareable seed label. The same seed + the same decisions always produce the same game. */
+  seed: string;
+  scenarioId?: string;
+  difficulty?: DifficultyId;
+  /** How to pay for the sector's start-up equipment (restaurant fit-out, gym kit, workshop tooling). */
+  equipmentFinance?: EquipmentFinance;
+  /** From the player's profile. Ignored on Hard. */
+  perks?: PerkLevels;
+  boosts?: ActiveBoost[];
+  prestigeLevel?: number;
+  /** Business icon id (cosmetic). */
+  icon?: string;
+}
+
+export function randomSeedLabel(): string {
+  const words = ['OAK', 'RIVER', 'LEDGER', 'COPPER', 'HARBOUR', 'FALCON', 'MAPLE', 'ORBIT', 'SUMMIT', 'VECTOR'];
+  const w = words[Math.floor(Math.random() * words.length)];
+  return `${w}-${Math.floor(Math.random() * 9000 + 1000)}`;
+}
+
+/** Starting cash for a difficulty after the Family money perk. */
+export function startingCash(difficulty: DifficultyId, perks: PerkLevels = {}): number {
+  const d = DIFFICULTIES[difficulty];
+  const mult = d.perksApply ? perkEffects(perks).startingCashMult : 1;
+  return Math.round((d.startingCash * mult) / 100_000) * 100_000;
+}
+
+export function newGame(opts: NewGameOptions): GameState {
+  const scenario = scenarioOf(opts.scenarioId ?? 'standard');
+  const industryId = scenario.industryId ?? opts.industryId;
+  const ind = INDUSTRIES[industryId];
+  if (!ind) throw new Error(`Unknown industry ${industryId}`);
+  const difficulty: DifficultyId = scenario.kind === 'case-study' ? 'medium' : (opts.difficulty ?? 'medium');
+  const diff = DIFFICULTIES[difficulty];
+  if (!diff) throw new Error(`Unknown difficulty ${difficulty}`);
+  const perks = diff.perksApply ? { ...(opts.perks ?? {}) } : {};
+  const boosts = diff.perksApply ? (opts.boosts ?? []).map((b) => ({ ...b })) : [];
+  const effects = perkEffects(perks);
+  const seed = hashSeed(opts.seed);
+
+  const s: GameState = {
+    version: STATE_VERSION,
+    seed,
+    seedLabel: opts.seed,
+    rng: seed,
+    month: 0,
+    companyName: opts.companyName.trim().slice(0, 40),
+    icon: opts.icon ?? 'rocket',
+    reputation: 50,
+    away: false,
+    industryId,
+    scenarioId: scenario.id,
+    difficulty,
+    status: 'playing',
+    wonAtMonth: null,
+    lastMonth: scenario.months ?? ENDLESS,
+    ledger: createLedger(),
+    history: [],
+    integrityErrors: [],
+    staff: { ops: 0, rnd: 0, sales: 0 },
+    salaryIndex: 1,
+    price: ind.basePrice,
+    marketingBudget: 0,
+    stockCoverMonths: ind.stockCoverDefault,
+    customerDays: ind.receivableDays,
+    supplierDays: ind.payableDays,
+    brand: 0,
+    quality: Math.min(100, ind.startQuality + effects.startQuality),
+    automationSpend: 0,
+    upgrades: {},
+    rentIndex: 1,
+    bonusDemand: 0,
+    customers: 0,
+    annualCohorts: [],
+    deferredSchedule: new Array(12).fill(0),
+    inventoryUnits: 0,
+    acquiredDemand: 0,
+    receivablesQueue: [],
+    payablesQueue: [],
+    ppeAssets: [],
+    loans: [],
+    leases: [],
+    fundValue: 0,
+    deposit: 0,
+    shares: { total: 1_000_000, owner: 1_000_000 },
+    ownerDividends: 0,
+    lastEquityRaiseMonth: null,
+    tax: { lossesCarriedForward: 0, ytdBooked: 0, due: 0, dueMonth: null },
+    perks,
+    guildLevel: 0,
+    outsideHolders: [],
+    boostActivations: {},
+    prestigeLevel: opts.prestigeLevel ?? 0,
+    prestigeAward: 0,
+    start: { equipmentFinance: opts.equipmentFinance ?? 'buy', boosts: boosts.map((b) => ({ ...b })) },
+    boosts,
+    pendingEvent: null,
+    lastEvent: null,
+    economy: { baseRate: 0.04, demandMult: 1, unitCostMult: 1, lendingAppetite: 1, badDebtRate: 0, active: [] },
+    marketSize: ind.marketSize,
+    competitors: ind.competitors.map((c) => ({ name: c.name, quality: c.quality, price: Math.round(ind.basePrice * c.priceFactor), strength: c.strength })),
+    targets: [],
+    acquisitions: [],
+    log: [],
+    actionLog: [],
+    nextId: 1,
+    objectives: [],
+  };
+  recomputeEconomy(s);
+
+  const capital = startingCash(difficulty, perks);
+  if (scenario.setup) {
+    scenario.setup(s);
+  } else {
+    post(s.ledger, 0, 'Shares issued for cash on incorporation', [dr('cash', capital), cr('shareCapital', capital)], {
+      cf: 'none', kind: 'opening',
+    });
+  }
+  if (!s.companyName) s.companyName = 'My Company Ltd';
+  resetPeriod(s.ledger);
+
+  let equipmentNote = '';
+  if (ind.startingCapex && !scenario.setup) {
+    const c = ind.startingCapex;
+    if ((opts.equipmentFinance ?? 'buy') === 'lease') {
+      const lease = startLease(s, c.label, c.amount, c.lifeMonths);
+      equipmentNote = ` Your ${c.label.toLowerCase()} is leased: a right-of-use asset and lease liability of ${formatGBP(c.amount)}, paid at ${formatGBP(lease.payment)} a month.`;
+    } else {
+      post(s.ledger, 0, c.label, [dr('ppe', c.amount), cr('cash', c.amount)], { cf: 'investing', cfLabel: 'Purchase of property, plant & equipment' });
+      s.ppeAssets.push({ id: newId(s, 'A'), label: c.label, cost: c.amount, lifeMonths: c.lifeMonths, accumulated: 0 });
+      equipmentNote = ` You bought ${formatGBP(c.amount)} of ${c.label.toLowerCase()} outright.`;
+    }
+  }
+
+  s.targets = generateTargets(s, createRng(s));
+  logItem(s, 'milestone', `${s.companyName} is incorporated`,
+    scenario.setup
+      ? scenario.summary
+      : `${diff.name} difficulty. You hold 100% of the shares and ${formatGBP(s.ledger.balances.cash)} in the bank.${equipmentNote} ${ind.description}`);
+  return s;
+}

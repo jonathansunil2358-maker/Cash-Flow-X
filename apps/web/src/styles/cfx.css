@@ -1,0 +1,280 @@
+/* Cash Flow X design system components (copied from the design system's bundle.css). */
+
+/* Cash Flow X components. Class prefix: cfx-. Every value comes from tokens.css. */
+
+.cfx-root, body.cfx-root {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--sky);
+  -webkit-font-smoothing: antialiased;
+}
+.cfx-tnum { font-variant-numeric: tabular-nums; }
+.cfx-display { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.01em; }
+/* White display type with a dark stroke, for titles placed on sky or on coloured fills. */
+.cfx-stroked {
+  font-family: var(--font-display);
+  color: #ffffff;
+  -webkit-text-stroke: 6px var(--outline);
+  paint-order: stroke fill;
+  letter-spacing: 0.02em;
+}
+
+:where(.cfx-btn, .cfx-tile, .cfx-choice, .cfx-dock-card, .cfx-speed button):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* ---------------- Button ---------------- */
+.cfx-btn {
+  --fill: var(--primary); --edge-c: var(--primary-edge); --label: var(--on-primary);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 48px; padding: var(--space-3) 20px;
+  font-family: var(--font-display); font-size: 20px; line-height: 1; letter-spacing: 0.02em;
+  color: var(--label); background: var(--fill);
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-md);
+  box-shadow: inset 0 -5px 0 0 var(--edge-c), var(--edge);
+  cursor: pointer; transition: transform 80ms ease, box-shadow 80ms ease;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.cfx-btn:hover { filter: brightness(1.06); }
+.cfx-btn:active { transform: translateY(4px); box-shadow: inset 0 -3px 0 0 var(--edge-c), var(--edge-pressed); }
+.cfx-btn[disabled] { filter: grayscale(0.8) opacity(0.6); cursor: not-allowed; transform: none; }
+.cfx-btn.is-go { --fill: var(--go); --edge-c: var(--go-edge); --label: var(--on-go); }
+.cfx-btn.is-danger { --fill: var(--danger); --edge-c: var(--danger-edge); --label: var(--on-danger); }
+.cfx-btn.is-gem { --fill: var(--gem); --edge-c: var(--gem-edge); --label: var(--on-gem); }
+.cfx-btn.is-coin { --fill: var(--coin); --edge-c: var(--coin-edge); --label: #3a2210; text-shadow: none; }
+.cfx-btn.is-legacy { --fill: var(--legacy); --edge-c: var(--legacy-edge); --label: #3a2210; text-shadow: none; }
+.cfx-btn.is-soft { --fill: var(--panel); --edge-c: var(--panel-sunken); --label: var(--ink); text-shadow: none; }
+.cfx-btn.is-sm { min-height: 36px; padding: 6px 14px; font-size: 16px; border-radius: var(--radius-sm); }
+.cfx-btn.is-lg { min-height: 60px; padding: var(--space-3) var(--space-6); font-size: 26px; }
+.cfx-btn .cfx-price {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  font-family: var(--font-body); font-weight: 900; font-size: 15px;
+  padding: 3px 8px; border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.22); text-shadow: none; color: #ffffff;
+}
+.cfx-btn .cfx-price img { width: 18px; height: 18px; }
+
+/* ---------------- Panel ---------------- */
+.cfx-panel {
+  position: relative; background: var(--panel); color: var(--ink);
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-xl);
+  box-shadow: var(--lift); padding: var(--space-5) var(--space-4) var(--space-4);
+}
+.cfx-panel__ribbon {
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  padding: 6px 22px; white-space: nowrap;
+  font-family: var(--font-display); font-size: 22px; color: #ffffff;
+  background: var(--primary); border: var(--stroke) solid var(--outline); border-radius: var(--radius-md);
+  box-shadow: inset 0 -4px 0 0 var(--primary-edge), var(--edge-sm); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.cfx-panel__ribbon.is-legacy { background: var(--legacy); color: #3a2210; text-shadow: none; box-shadow: inset 0 -4px 0 0 var(--legacy-edge), var(--edge-sm); }
+.cfx-panel__ribbon.is-gem { background: var(--gem); box-shadow: inset 0 -4px 0 0 var(--gem-edge), var(--edge-sm); }
+.cfx-panel__ribbon.is-danger { background: var(--danger); box-shadow: inset 0 -4px 0 0 var(--danger-edge), var(--edge-sm); }
+.cfx-panel__ribbon.is-go { background: var(--go); box-shadow: inset 0 -4px 0 0 var(--go-edge), var(--edge-sm); }
+.cfx-well { background: var(--panel-sunken); border-radius: var(--radius-md); padding: var(--space-3); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.08); }
+
+/* ---------------- Resource pill ---------------- */
+.cfx-pill {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  height: 40px; padding: 0 14px 0 4px;
+  background: var(--panel-sunken); border: var(--stroke) solid var(--outline); border-radius: var(--radius-pill);
+  box-shadow: var(--edge-sm);
+  font-weight: 900; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.cfx-pill img { width: 34px; height: 34px; margin-left: -10px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.2)); }
+.cfx-pill__label { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); font-weight: 900; }
+.cfx-pill__plus {
+  width: 24px; height: 24px; margin-left: 2px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--go); color: #ffffff; border: 2px solid var(--outline); font-size: 16px; font-weight: 900; line-height: 1;
+}
+
+/* ---------------- Progress bar ---------------- */
+.cfx-bar {
+  --fill: var(--xp); --edge-c: var(--xp-edge);
+  position: relative; height: 22px; border-radius: var(--radius-pill);
+  background: var(--panel-sunken); border: var(--stroke) solid var(--outline); overflow: hidden;
+}
+.cfx-bar__fill {
+  height: 100%; width: var(--value, 50%); background: var(--fill);
+  box-shadow: inset 0 -5px 0 0 var(--edge-c), inset 0 4px 0 rgba(255, 255, 255, 0.35);
+  border-right: var(--stroke) solid var(--outline); border-radius: var(--radius-pill);
+}
+.cfx-bar__text {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 12px; font-weight: 900; color: var(--ink); letter-spacing: 0.04em;
+}
+.cfx-bar.is-coin { --fill: var(--coin); --edge-c: var(--coin-edge); }
+.cfx-bar.is-legacy { --fill: var(--legacy); --edge-c: var(--legacy-edge); }
+.cfx-bar.is-go { --fill: var(--go); --edge-c: var(--go-edge); }
+.cfx-bar.is-danger { --fill: var(--danger); --edge-c: var(--danger-edge); }
+
+/* ---------------- HUD ---------------- */
+.cfx-hud {
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  padding: var(--space-2); background: var(--panel);
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-xl); box-shadow: var(--edge);
+}
+.cfx-hud__company { display: flex; align-items: center; gap: var(--space-2); min-width: 0; flex: 1 1 160px; }
+.cfx-hud__company img { width: 44px; height: 44px; flex: none; }
+.cfx-hud__name { font-family: var(--font-display); font-size: 20px; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfx-hud__date { font-size: 12px; font-weight: 800; color: var(--ink-muted); }
+.cfx-icon-btn {
+  width: 48px; height: 48px; display: grid; place-items: center; flex: none;
+  background: var(--primary); color: #ffffff; border: var(--stroke) solid var(--outline); border-radius: var(--radius-md);
+  box-shadow: inset 0 -5px 0 0 var(--primary-edge), var(--edge-sm); cursor: pointer;
+}
+.cfx-icon-btn svg { width: 24px; height: 24px; }
+
+/* ---------------- Speed toggle ---------------- */
+.cfx-speed {
+  display: inline-flex; padding: 4px; gap: 4px;
+  background: var(--panel); border: var(--stroke) solid var(--outline); border-radius: var(--radius-pill); box-shadow: var(--edge-sm);
+}
+.cfx-speed button {
+  min-width: 44px; height: 36px; padding: 0 10px; border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  font-family: var(--font-display); font-size: 18px; color: var(--ink-muted); background: transparent;
+}
+.cfx-speed button[aria-pressed='true'] {
+  color: #ffffff; background: var(--go); box-shadow: inset 0 -4px 0 0 var(--go-edge); border: 2px solid var(--outline);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.cfx-speed button.is-pause[aria-pressed='true'] { background: var(--danger); box-shadow: inset 0 -4px 0 0 var(--danger-edge); }
+
+/* ---------------- Tag ---------------- */
+.cfx-tag {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  padding: 4px 10px; border-radius: var(--radius-sm); border: 2px solid var(--outline);
+  font-size: 12px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1;
+  background: var(--panel); color: var(--ink);
+}
+.cfx-tag.is-good { background: var(--go); color: #ffffff; }
+.cfx-tag.is-bad { background: var(--danger); color: #ffffff; }
+.cfx-tag.is-warn { background: var(--coin); color: #3a2210; }
+.cfx-tag.is-gem { background: var(--gem); color: #ffffff; }
+.cfx-tag.is-legacy { background: var(--legacy); color: #3a2210; }
+.cfx-tag.is-hard { background: var(--outline); color: #fff1db; }
+.cfx-delta { font-weight: 900; font-variant-numeric: tabular-nums; }
+.cfx-delta.is-up { color: var(--status-good); }
+.cfx-delta.is-down { color: var(--status-bad); }
+
+/* ---------------- Event card ---------------- */
+.cfx-event { max-width: 380px; }
+.cfx-event__art {
+  height: 120px; margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-4)) var(--space-4);
+  border-radius: calc(var(--radius-xl) - 3px) calc(var(--radius-xl) - 3px) 0 0;
+  border-bottom: var(--stroke) solid var(--outline);
+  display: grid; place-items: center;
+}
+.cfx-event.is-bad .cfx-event__art { background: repeating-linear-gradient(135deg, var(--danger) 0 18px, var(--danger-edge) 18px 36px); }
+.cfx-event.is-good .cfx-event__art { background: repeating-linear-gradient(135deg, var(--go) 0 18px, var(--go-edge) 18px 36px); }
+.cfx-event__art img { width: 72px; height: 72px; }
+.cfx-event__title { font-family: var(--font-display); font-size: 30px; line-height: 1.05; margin: var(--space-2) 0 var(--space-2); }
+.cfx-event__story { font-size: 16px; font-weight: 700; line-height: 1.45; margin: 0 0 var(--space-4); }
+.cfx-choices { display: grid; gap: var(--space-3); }
+.cfx-choice {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-2);
+  text-align: left; padding: var(--space-3); cursor: pointer; width: 100%;
+  background: var(--panel); color: var(--ink); font: inherit;
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg); box-shadow: var(--edge-sm);
+}
+.cfx-choice:hover { background: var(--panel-sunken); }
+.cfx-choice__label { font-family: var(--font-display); font-size: 18px; }
+.cfx-choice__hint { grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--ink-muted); }
+.cfx-choice__impact { display: flex; gap: var(--space-2); font-size: 13px; font-weight: 900; }
+
+/* ---------------- Upgrade card ---------------- */
+.cfx-upgrade {
+  display: grid; grid-template-columns: 64px 1fr; gap: var(--space-3); align-items: center;
+  padding: var(--space-3); background: var(--panel); border: var(--stroke) solid var(--outline);
+  border-radius: var(--radius-lg); box-shadow: var(--edge);
+}
+.cfx-upgrade img { width: 64px; height: 64px; }
+.cfx-upgrade__name { font-family: var(--font-display); font-size: 20px; line-height: 1.05; }
+.cfx-upgrade__effect { font-size: 13px; font-weight: 700; color: var(--ink-muted); margin-top: 2px; }
+.cfx-pips { display: flex; gap: 4px; margin-top: 6px; }
+.cfx-pips span { width: 16px; height: 10px; border-radius: 4px; border: 2px solid var(--outline); background: var(--panel-sunken); }
+.cfx-pips span.is-on { background: var(--xp); }
+.cfx-upgrade .cfx-btn { grid-column: 1 / -1; }
+
+/* ---------------- Dock ---------------- */
+.cfx-dock {
+  display: flex; align-items: stretch; gap: var(--space-2); padding: var(--space-2) var(--space-2) var(--space-3);
+  background: var(--panel); border: var(--stroke) solid var(--outline); border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 -4px 0 0 rgba(0, 0, 0, 0.08); overflow-x: auto;
+}
+.cfx-dock-card {
+  --fill: var(--primary); --edge-c: var(--primary-edge);
+  flex: 1 0 72px; display: grid; justify-items: center; gap: 4px; padding: var(--space-2) 6px 8px; cursor: pointer;
+  background: var(--fill); color: #ffffff; border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg);
+  box-shadow: inset 0 -5px 0 0 var(--edge-c), var(--edge-sm); font: inherit; position: relative;
+}
+.cfx-dock-card svg { width: 30px; height: 30px; }
+.cfx-dock-card span { font-family: var(--font-display); font-size: 14px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); }
+.cfx-dock-card.is-gem { --fill: var(--gem); --edge-c: var(--gem-edge); }
+.cfx-dock-card.is-go { --fill: var(--go); --edge-c: var(--go-edge); }
+.cfx-dock-card.is-legacy { --fill: var(--legacy); --edge-c: var(--legacy-edge); color: #3a2210; }
+.cfx-dock-card.is-legacy span { text-shadow: none; }
+.cfx-dock-card.is-coin { --fill: var(--coin); --edge-c: var(--coin-edge); color: #3a2210; }
+.cfx-dock-card.is-coin span { text-shadow: none; }
+.cfx-dock-card__badge {
+  position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px;
+  background: var(--danger); color: #ffffff; border: 2px solid var(--outline); font-size: 12px; font-weight: 900; line-height: 18px;
+}
+
+/* ---------------- Selectable tile (sector, difficulty, icon) ---------------- */
+.cfx-tile {
+  display: grid; gap: var(--space-2); padding: var(--space-3); text-align: left; cursor: pointer; font: inherit;
+  background: var(--panel); color: var(--ink); border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg);
+  box-shadow: var(--edge); transition: transform 80ms ease;
+}
+.cfx-tile:hover { transform: translateY(-2px); }
+.cfx-tile[aria-pressed='true'] { background: var(--panel-sunken); box-shadow: 0 0 0 4px var(--primary), var(--edge); }
+.cfx-tile__name { font-family: var(--font-display); font-size: 20px; line-height: 1.05; }
+.cfx-tile__meta { font-size: 13px; font-weight: 700; color: var(--ink-muted); }
+.cfx-odds { display: flex; height: 14px; border: 2px solid var(--outline); border-radius: var(--radius-pill); overflow: hidden; }
+.cfx-odds i { display: block; }
+.cfx-odds .is-good { background: var(--go); }
+.cfx-odds .is-bad { background: var(--danger); }
+
+/* ---------------- Leaderboard row ---------------- */
+.cfx-rank {
+  display: grid; grid-template-columns: 40px 44px 1fr auto; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-3); background: var(--panel); border: var(--stroke) solid var(--outline);
+  border-radius: var(--radius-lg); box-shadow: var(--edge-sm);
+}
+.cfx-rank.is-me { background: var(--panel-sunken); box-shadow: 0 0 0 3px var(--primary), var(--edge-sm); }
+.cfx-rank__pos {
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%;
+  font-family: var(--font-display); font-size: 18px; border: var(--stroke) solid var(--outline); background: var(--panel-sunken);
+}
+.cfx-rank__pos.is-1 { background: var(--coin); color: #3a2210; }
+.cfx-rank__pos.is-2 { background: #d9dde3; color: #3a2210; }
+.cfx-rank__pos.is-3 { background: #e0a26b; color: #3a2210; }
+.cfx-rank img { width: 44px; height: 44px; }
+.cfx-rank__who { min-width: 0; }
+.cfx-rank__name { font-family: var(--font-display); font-size: 18px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfx-rank__sub { font-size: 12px; font-weight: 800; color: var(--ink-muted); }
+.cfx-rank__value { font-weight: 900; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+/* ---------------- Toast ---------------- */
+.cfx-toast {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  background: var(--panel); color: var(--ink); border: var(--stroke) solid var(--outline); border-radius: var(--radius-pill);
+  box-shadow: var(--edge); font-weight: 800; font-size: 14px; max-width: 360px;
+}
+.cfx-toast img { width: 36px; height: 36px; flex: none; }
+.cfx-coin-pop { font-family: var(--font-display); font-size: 22px; color: var(--coin); -webkit-text-stroke: 5px var(--outline); paint-order: stroke fill; }
+
+/* ---------------- Stat card ---------------- */
+.cfx-stat {
+  display: grid; gap: 4px; padding: var(--space-3) var(--space-4); background: var(--panel);
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg); box-shadow: var(--edge-sm);
+}
+.cfx-stat__label { font-size: 12px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+.cfx-stat__value { font-weight: 900; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cfx-btn, .cfx-tile { transition: none; }
+}
