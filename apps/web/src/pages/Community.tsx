@@ -4,6 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
+import { CardsCard, CoopCard, GuildRivalCard, HallCard, SeasonBanner } from './Together';
 import { api, type LeagueView, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
@@ -258,7 +259,12 @@ export function CommunityTab() {
   if (!signedIn) return <p className="text-sm text-ink-2">Sign in to join the community.</p>;
   return (
     <div className="space-y-4">
+      <SeasonBanner />
       <CommunityGoal />
+      <CoopCard />
+      <GuildRivalCard />
+      <HallCard />
+      <CardsCard />
       <PuzzleLeague />
       <RivalOfTheWeek />
       <Tournament />

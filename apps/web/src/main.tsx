@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { applyAccess } from './lib/access';
+applyAccess();
 import { isValidChallengeCode } from '@cfx/engine';
 import { writePref } from './lib/save';
 

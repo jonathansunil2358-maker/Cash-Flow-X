@@ -316,4 +316,63 @@ export const SCENARIOS: Record<string, Scenario> = {
   },
 };
 
+// ---------------------------------------------------------------------------------------------
+// The campaign: ten chapters from a market stall to a skyline
+// ---------------------------------------------------------------------------------------------
+interface Chapter {
+  n: number; title: string; industryId: IndustryId; months: number; intro: string; name: string;
+  capital: number; loan: number; fitOut: number; staff: { ops: number; rnd: number; sales: number };
+  goals: { cash?: number; profit?: boolean; value?: number; share?: number; ccc?: number };
+}
+export const CAMPAIGN: Chapter[] = [
+  { n: 1, title: 'The market stall', industryId: 'ecommerce', months: 12, name: 'Stall & Co', intro: 'Every empire starts somewhere. You have a few boxes of stock, a stall and a dream.', capital: 25_000, loan: 0, fitOut: 2_000, staff: { ops: 1, rnd: 0, sales: 0 }, goals: { cash: 32_000, profit: true } },
+  { n: 2, title: 'The first hire', industryId: 'restaurant', months: 12, name: 'The Corner Table', intro: 'The little cafe is busy. Time to hire people you can trust and keep them happy.', capital: 40_000, loan: 10_000, fitOut: 30_000, staff: { ops: 2, rnd: 0, sales: 0 }, goals: { cash: 15_000, profit: true } },
+  { n: 3, title: 'Cash pinch', industryId: 'clothing', months: 12, name: 'Thread & Needle', intro: 'Orders are up, but customers pay late and the warehouse is full. Cash is getting tight.', capital: 45_000, loan: 20_000, fitOut: 25_000, staff: { ops: 2, rnd: 0, sales: 1 }, goals: { cash: 25_000, ccc: 110 } },
+  { n: 4, title: 'Growing pains', industryId: 'software', months: 18, name: 'Pixel Forge', intro: 'The product works. Now you need to grow without breaking it.', capital: 80_000, loan: 0, fitOut: 0, staff: { ops: 2, rnd: 1, sales: 1 }, goals: { value: 400_000 } },
+  { n: 5, title: 'Price pressure', industryId: 'fitness', months: 18, name: 'Pulse Gym', intro: 'A budget chain has opened down the road. Defend your members without giving the shop away.', capital: 90_000, loan: 20_000, fitOut: 50_000, staff: { ops: 3, rnd: 0, sales: 1 }, goals: { share: 0.12, cash: 15_000 } },
+  { n: 6, title: 'Scaling up', industryId: 'ecommerce', months: 24, name: 'Parcelhouse', intro: 'Orders double every quarter. Growth is the goal, but cash will not forgive carelessness.', capital: 130_000, loan: 30_000, fitOut: 30_000, staff: { ops: 3, rnd: 0, sales: 2 }, goals: { value: 600_000 } },
+  { n: 7, title: 'The turnaround', industryId: 'fitness', months: 18, name: 'Ironside Fitness', intro: 'You have bought a failing gym for a pound. Make it a winner.', capital: 60_000, loan: 20_000, fitOut: 45_000, staff: { ops: 3, rnd: 0, sales: 0 }, goals: { profit: true, cash: 30_000 } },
+  { n: 8, title: 'Big league', industryId: 'software', months: 24, name: 'Atlas Systems', intro: 'Big customers are knocking. Say yes to the right ones.', capital: 150_000, loan: 0, fitOut: 0, staff: { ops: 3, rnd: 2, sales: 2 }, goals: { value: 2_000_000 } },
+  { n: 9, title: 'The crisis year', industryId: 'restaurant', months: 24, name: 'Harbour Group', intro: 'A hard year is coming. Costs, rivals and a shaky economy will all test you.', capital: 260_000, loan: 40_000, fitOut: 90_000, staff: { ops: 4, rnd: 0, sales: 1 }, goals: { cash: 60_000, profit: true } },
+  { n: 10, title: 'The skyline', industryId: 'software', months: 36, name: 'Skyline Holdings', intro: 'The last chapter. Build something the whole city can see.', capital: 300_000, loan: 0, fitOut: 0, staff: { ops: 4, rnd: 3, sales: 3 }, goals: { value: 6_000_000 } },
+];
+export const campaignId = (n: number): string => `campaign-${n}`;
+export const campaignChapter = (id: string | undefined): Chapter | null => CAMPAIGN.find((c) => campaignId(c.n) === id) ?? null;
+
+function chapterObjectives(c: Chapter, s: GameState): ObjectiveStatus[] {
+  const out: ObjectiveStatus[] = [surviveObjective(s, c.months)];
+  const g = c.goals;
+  if (g.cash !== undefined) out.push({ id: 'cash', text: `Finish with at least ${formatGBP(gbp(g.cash))} of cash`, met: s.ledger.balances.cash >= gbp(g.cash), detail: `Cash ${formatGBP(s.ledger.balances.cash)}` });
+  if (g.profit) {
+    const last = s.history.at(-1);
+    const profit = last ? plSummary(last.period.pl).profit : null;
+    out.push({ id: 'profit', text: 'Make a profit in the final month', met: profit !== null && profit > 0, detail: profit === null ? 'Not yet measured' : `Last month ${formatGBP(profit)}` });
+  }
+  if (g.value !== undefined) {
+    const v = s.history.at(-1)?.valuation?.equityValue ?? 0;
+    out.push({ id: 'value', text: `Be worth at least ${formatGBP(gbp(g.value), { compact: true })}`, met: v >= gbp(g.value), detail: `Worth ${formatGBP(v, { compact: true })}` });
+  }
+  if (g.share !== undefined) {
+    const sh = s.history.at(-1)?.kpis.preferenceShare ?? null;
+    out.push({ id: 'share', text: `Win at least a ${Math.round(g.share * 100)}% share of preference`, met: sh !== null && sh >= g.share, detail: `Share ${pct(sh)}` });
+  }
+  if (g.ccc !== undefined) {
+    const v = ratioOf(s, 'ccc');
+    out.push({ id: 'ccc', text: `Cash conversion cycle under ${g.ccc} days`, met: v !== null && v < g.ccc, detail: v === null ? 'Not yet measured' : `${Math.round(v)} days` });
+  }
+  return out;
+}
+for (const c of CAMPAIGN) {
+  SCENARIOS[campaignId(c.n)] = {
+    id: campaignId(c.n), name: `Chapter ${c.n}: ${c.title}`, kind: 'case-study', industryId: c.industryId, months: c.months,
+    summary: c.intro,
+    briefing: [c.intro, `Chapter ${c.n} of 10. You have ${c.months} months.`, 'Objectives are on your Dashboard. Clear them all to finish the chapter and unlock the next.'],
+    setup: (s) => {
+      openCompany(s, { name: c.name, shareCapital: gbp(c.capital), loan: gbp(c.loan), fitOut: gbp(c.fitOut), label: 'Fit-out and equipment' });
+      s.staff = { ...c.staff };
+    },
+    objectives: (s) => chapterObjectives(c, s),
+  };
+}
+
 export const scenarioOf = (id: string): Scenario => SCENARIOS[id] ?? SCENARIOS.standard;

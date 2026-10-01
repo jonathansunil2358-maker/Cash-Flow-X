@@ -8,10 +8,12 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
+import { TheatreCard } from './Feel';
 import { MuseumCard, TrailsCard } from './Collect';
-import { DiaryCard, EomCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
+import { GamesCards } from './Minis';
+import { DiaryCard, DocumentaryCard, EomCard, NemesisCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
 import { AuditCard, DetectiveCard, GlossaryCard, InterviewCard, JournalCard, SpotCard, SprintCard } from './Learn';
-import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
+import { ChallengesCard, DynastyCard, MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
 import { TitlesCard } from './Titles';
 import { WeeklyEventCard } from './Weekly';
@@ -110,14 +112,20 @@ export function Missions({ game }: { game: GameState }) {
       <JournalCard />
       <SprintCard />
       <InterviewCard game={game} />
+      <GamesCards game={game} />
       <AuditCard game={game} />
       <GlossaryCard game={game} />
+      <NemesisCard game={game} />
       <PetCard game={game} />
       <EomCard game={game} />
       <DiaryCard game={game} />
       <ShareSeedCard game={game} />
+      <DocumentaryCard game={game} />
+      <TheatreCard game={game} />
       <TrailsCard />
       <MasteryCard />
+      <ChallengesCard sector={game.industryId} />
+      <DynastyCard />
       <MuseumCard />
       <TitlesCard />
 

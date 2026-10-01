@@ -1,5 +1,5 @@
 import {
-  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CALM_ID, IRONMAN_ID, modifierBonus, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
+  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CALM_ID, CAMPAIGN, campaignId, IRONMAN_ID, ORIGINS, modifierBonus, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
   rebirthsRemaining, SCENARIOS, startingCash, type DifficultyId, type EquipmentFinance, type IndustryId,
 } from '@cfx/engine';
 import { challengeField, isValidChallengeCode } from '@cfx/engine';
@@ -62,6 +62,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const [finance, setFinance] = useState<EquipmentFinance>('lease');
   const [mods, setMods] = useState<string[]>([]);
   const [culture, setCulture] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<string | null>(null);
   const [seed, setSeed] = useState(() => {
     try { const q = new URLSearchParams(window.location.search).get('seed'); return q && /^[A-Za-z0-9-]{1,32}$/.test(q) ? q.toUpperCase() : randomSeedLabel(); } catch { return randomSeedLabel(); }
   });
@@ -73,7 +74,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const capex = caseStudy ? null : ind.startingCapex;
   const saves = SLOTS.map(slotMeta).filter((m) => m !== null);
   const perkCount = Object.values(profile.perks).reduce((a, n) => a + n, 0);
-  const defaultName = caseStudy ? CASE_NAMES[scenarioId] ?? 'Loom & Loop Ltd' : `${ind.name.split(' ')[0]} Co Ltd`;
+  const defaultName = caseStudy ? CASE_NAMES[scenarioId] ?? CAMPAIGN.find((c) => campaignId(c.n) === scenarioId)?.name ?? 'Loom & Loop Ltd' : `${ind.name.split(' ')[0]} Co Ltd`;
 
   const [busy, setBusy] = useState(false);
   const begin = async () => {
@@ -81,7 +82,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
     setBusy(true);
     await start({
     companyName: name.trim() || defaultName, industryId: ind.id, seed: seed.trim() || randomSeedLabel(), scenarioId,
-    difficulty, equipmentFinance: finance, icon, modifiers: difficulty === 'hard' || caseStudy ? [] : [...mods, ...(culture ? [culture] : [])],
+    difficulty, equipmentFinance: finance, icon, modifiers: difficulty === 'hard' || caseStudy ? [] : [...mods, ...(culture ? [culture] : []), ...(origin ? [origin] : [])],
     });
     setBusy(false);
   };
@@ -126,6 +127,22 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
             <button type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId('speedrun'); setStep('sector'); }}>
               Speedrun: a £1m company, fast{profile.speedBest ? ` (your best: ${profile.speedBest} months)` : ''}
             </button>
+            <section className="cfx-panel !p-3" aria-label="Story campaign">
+              <div className="font-display text-lg">Story campaign</div>
+              <p className="text-xs text-ink-2">Ten chapters, from a market stall to a skyline. Clear a chapter to unlock the next.</p>
+              <div className="mt-2 grid gap-2">
+                {CAMPAIGN.map((c) => {
+                  const done = (profile.campaign ?? []).includes(c.n);
+                  const locked = c.n > 1 && !(profile.campaign ?? []).includes(c.n - 1);
+                  return (
+                    <button key={c.n} type="button" disabled={locked} className="cfx-btn is-soft w-full !justify-between" aria-label={`Chapter ${c.n}: ${c.title}${done ? ' (complete)' : locked ? ' (locked)' : ''}`}
+                      onClick={() => { setScenarioId(campaignId(c.n)); setIcon(c.n % 2 ? 'rocket' : 'star'); setStep('identity'); }}>
+                      <span>{c.n}. {c.title}</span><span aria-hidden>{done ? '✓' : locked ? '🔒' : '▶'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
             {CASE_STUDIES.map((c) => (
               <button key={c.id} type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId(c.id); setIcon(c.icon); setStep('identity'); }}>
                 {SCENARIOS[c.id].name}
@@ -285,6 +302,19 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
                 </button>
               </div>
               {modifierBonus(mods) !== 1 && <p className="mt-2 text-sm font-extrabold">Score and Legacy {modifierBonus(mods) > 1 ? 'bonus' : 'change'}: {modifierBonus(mods) > 1 ? '+' : ''}{Math.round((modifierBonus(mods) - 1) * 100)}%</p>}
+              <div className="mt-4 font-display text-lg">Founder backstory</div>
+              <p className="text-xs text-ink-2">Optional. Who you were before. A small edge and a small cost, no bonus.</p>
+              <div className="mt-2 grid gap-2" role="radiogroup" aria-label="Founder backstory">
+                {ORIGINS.map((o) => {
+                  const on = origin === o.id;
+                  return (
+                    <button key={o.id} type="button" role="radio" aria-checked={on} className={`cfx-tile !p-2.5 text-left ${on ? 'ring-4 ring-[var(--coin)]' : ''}`} onClick={() => setOrigin(on ? null : o.id)}>
+                      <span className="cfx-tile__name !text-lg">{on ? '✓ ' : ''}{o.name}</span>
+                      <span className="cfx-tile__meta">{o.blurb}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <div className="mt-4 font-display text-lg">Company culture</div>
               <p className="text-xs text-ink-2">Optional. A small trade-off that gives your company a personality. It pays no bonus.</p>
               <div className="mt-2 grid gap-2" role="radiogroup" aria-label="Company culture">

@@ -7,6 +7,7 @@ import { isMusicOn, playMusic, setMusicOn, stopMusic } from '../lib/music';
 import { isDayNightOn, isWeatherOn, setDayNightOn, setWeatherOn } from '../lib/weather';
 import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
+import { FeelCard } from './Feel';
 import { NamesCard, WardrobeCard } from './Personality';
 import { LandCard, SoundtrackCard } from './Collect';
 import { DecorCard, LogoCard, ShopCard } from './Shop';
@@ -93,6 +94,7 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
         </div>
       </Card>
       <ShopCard />
+      <FeelCard />
       <DecorCard />
       <LandCard />
       {game && <LogoCard icon={game.icon} />}

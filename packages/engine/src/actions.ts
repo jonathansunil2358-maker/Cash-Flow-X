@@ -10,6 +10,11 @@ import { acceptInvestment, buyOutHolders, distributeDividend } from './model/inv
 import { resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { addFranchise, franchiseCheck } from './model/franchise';
+import { designCheck, setDesign } from './model/design';
+import { starCheck, starFeeMultiple } from './model/stars';
+import { buildingCheck, buyBuilding } from './model/property';
+import { marketCheck, openMarket } from './model/export';
+import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { BOOSTS, type BoostId } from './model/perks';
@@ -43,6 +48,11 @@ export type Action =
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
+  | { type: 'setDesign'; features: number }
+  | { type: 'hireStar'; id: string }
+  | { type: 'buyBuilding' }
+  | { type: 'openMarket'; market: string }
+  | { type: 'replyReview'; index: number }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -227,6 +237,45 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       const check = supplierCheck(s, action.supplier);
       if (!check.ok) fail(check.reason!);
       setSupplier(s, action.supplier);
+      break;
+    }
+    case 'setDesign': {
+      const check = designCheck(s, action.features);
+      if (!check.ok) fail(check.reason!);
+      requireFunds(s, check.fee, 'the redesign');
+      setDesign(s, action.features);
+      break;
+    }
+    case 'hireStar': {
+      const check = starCheck(s, action.id);
+      if (!check.ok) fail(check.reason!);
+      const c = check.candidate!;
+      const premium = recruitmentFee(s, c.role) * (starFeeMultiple(c) - 1);
+      requireFunds(s, premium + recruitmentFee(s, c.role) + industryOf(s).equipmentPerHire, `hiring ${c.name}`);
+      applyActionInPlace(s, { type: 'hire', role: c.role, count: 1 }, false);
+      post(L, m, `Headhunter fee: ${c.name}`, [dr('recruitment', premium), cr('cash', premium)], { cf: 'operating' });
+      s.stars = [...(s.stars ?? []), { id: c.id, name: c.name, role: c.role, skill: c.skill }];
+      logItem(s, 'action', `${c.name} joins the team`, `A ${c.skill}-star ${industryOf(s).roles[c.role].title.toLowerCase()} who ${c.quirk}. Perk: ${c.perk}.`);
+      break;
+    }
+    case 'buyBuilding': {
+      const check = buildingCheck(s);
+      if (!check.ok) fail(check.reason!);
+      requireFunds(s, check.price, 'the building');
+      buyBuilding(s);
+      break;
+    }
+    case 'openMarket': {
+      const check = marketCheck(s, action.market);
+      if (!check.ok) fail(check.reason!);
+      requireFunds(s, check.fee, 'the new market');
+      openMarket(s, action.market);
+      break;
+    }
+    case 'replyReview': {
+      const check = replyCheck(s, action.index);
+      if (!check.ok) fail(check.reason!);
+      replyToReview(s, action.index);
       break;
     }
     case 'addFranchise': {

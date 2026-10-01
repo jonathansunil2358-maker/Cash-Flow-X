@@ -342,6 +342,13 @@ export interface GameState {
   speedrunMonth?: number;
   /** Keys of once-a-year events already seen (see events.ts). Kept in the state so the server's checkpoints agree with the client. */
   done?: string[];
+  /** Product design (features 0-100), the hiring-market stars, export markets, building ownership and review replies: see design.ts, stars.ts, export.ts, property.ts, reviews.ts. */
+  design?: number;
+  designSince?: number;
+  stars?: { id: string; name: string; role: 'ops' | 'rnd' | 'sales'; skill: number }[];
+  markets?: string[];
+  ownsBuilding?: boolean;
+  replied?: string[];
   audits?: { year: number; findings: string[]; clean: boolean }[];
   awards?: AwardWon[];
   pay: PayLevel;

@@ -2,6 +2,8 @@ import {
   cosmeticsOf, musicMood, tracksOf, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
+import { GuideBubble } from './pages/Feel';
+import { readAccess, SHORTCUTS } from './lib/access';
 import { isMusicOn, playMusic, setTrack, stopMusic } from './lib/music';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAccount } from './lib/account';
@@ -55,6 +57,20 @@ export default function App() {
     const id = window.setInterval(() => { if (!document.hidden) void refreshAccount(); }, 60_000);
     return () => window.clearInterval(id);
   }, [signedIn, refreshAccount]);
+  // Single-key shortcuts for the bottom bar (switchable in Settings). Never while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || !readAccess().keys) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      const label = SHORTCUTS[e.key.toLowerCase()];
+      if (!label) return;
+      const btn = Array.from(document.querySelectorAll<HTMLButtonElement>('nav[aria-label="Actions"] button')).find((b) => b.textContent?.trim().startsWith(label));
+      if (btn) { e.preventDefault(); btn.click(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   return (
     <div className="min-h-screen text-ink">
       {account === 'signed-out' ? <SignIn />
@@ -271,6 +287,7 @@ function SceneArea({ game }: { game: GameState }) {
           <img src={iconUrl(game.icon)} alt="" className="h-28 w-28 drop-shadow-[0_6px_0_rgba(0,0,0,0.25)]" />
         </div>
       )}
+      <GuideBubble game={game} />
       {pet && (
         <div className="pointer-events-none absolute bottom-3 left-4 flex items-end gap-1 rounded-full border-[3px] border-outline bg-surface px-2 py-0.5 text-xs font-black shadow-[var(--edge-sm)]" role="img" aria-label={`${pet.name}, your ${pet.kind}, ${petMood(game).text}`}>
           <span className="cfx-pet text-2xl" aria-hidden>{PETS.find((x) => x.id === pet.kind)?.emoji}</span>

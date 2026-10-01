@@ -783,6 +783,100 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
       };
     },
   },
+  {
+    id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
+    when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
+    setup: (s) => {
+      const fee = sized(s, 0.015, 400_00);
+      return {
+        story: 'A friend in the trade tells you that one of your suppliers is cutting corners on safety to keep its prices low. You could report it, quietly use that to squeeze a lower price, or look the other way.',
+        params: { fee },
+        choices: [
+          { id: 'report', label: `Report them (${formatGBP(fee)})`, hint: 'The right thing, with a little cost and hassle.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'whistle'); P('Legal advice on reporting a supplier', [dr('otherCosts', p.fee), cr('cash', p.fee)]); return 'The regulator thanked you. Other firms noticed that you play it straight.'; } },
+          { id: 'exploit', label: 'Use it to cut your costs', hint: 'Cheaper supplies for six months. Secrets have a way of coming out.', impact: [{ label: 'Costs', up: true }, { label: 'Risk', up: false }],
+            apply: (st) => { markOnce(st, 'whistle'); markOnce(st, `exploit@${st.month}`); addTemporary(st, 'whistle-deal', 'A very cheap deal', 6, { unitCostMult: 0.95 }, true); return 'The supplier agreed to a bargain price. You do not ask how.'; } },
+          { id: 'ignore', label: 'Look the other way', hint: 'Nothing happens, for now.', impact: [], apply: (st) => { markOnce(st, 'whistle'); return 'You told yourself it was not your business.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'scandal', title: 'The supplier scandal breaks', polarity: 'bad', weight: 6, icon: 'flame',
+    when: (s) => !doneOnce(s, 'scandal') && (s.done ?? []).some((k) => { const m = /^exploit@(\d+)$/.exec(k); return !!m && s.month >= Number(m[1]) + 6; }),
+    setup: (s) => {
+      const fine = sized(s, 0.06, 1_200_00);
+      return {
+        story: 'The newspapers have found out about your supplier, and about the very cheap deal you took from them. Reporters are at the door.',
+        params: { fine },
+        choices: [
+          { id: 'apologise', label: `Apologise and make amends (${formatGBP(fine)})`, hint: 'Costly, but it limits the damage.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'scandal'); P('Compensation and public apology', [dr('otherCosts', p.fine), cr('cash', p.fine)]); adjustReputation(st, -4); return 'You owned up. It hurt, but people respect that.'; } },
+          { id: 'deny', label: 'Deny everything', hint: 'Free, if it works. It rarely does.', impact: [{ label: 'Reputation', up: false }],
+            apply: (st, rng) => { markOnce(st, 'scandal'); if (chance(rng, 0.3)) return 'The story fizzled out. You got away with it.'; adjustReputation(st, -12); st.brand *= 0.9; return 'Documents leaked and you were caught lying. Customers will remember.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'collab', title: 'A brand wants to team up', polarity: 'good', weight: 0.8, icon: 'star',
+    when: (s) => s.month >= 10 && lastRevenue(s) > 0 && !doneOnce(s, `collab${Math.floor(s.month / 12)}`),
+    setup: (s, rng) => {
+      const partners = ['Maple & Co', 'Neon Labs', 'The Old Mill', 'Zest Studio', 'Harbourside'];
+      const who = partners[Math.floor(rng.next() * partners.length)];
+      const share = sized(s, 0.03, 600_00);
+      return {
+        story: `${who} has a loyal following and proposes a limited-edition collaboration with you. You can split the costs evenly, bankroll a bigger launch alone, or pass.`,
+        params: { share, solo: share * 2 },
+        choices: [
+          { id: 'split', label: `Split the cost (${formatGBP(share)})`, hint: 'A solid boost, shared risk.', impact: [{ label: 'Demand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, rng2, P, p) => { markOnce(st, `collab${Math.floor(st.month / 12)}`); P('Collaboration: shared launch costs', [dr('marketing', p.share), cr('cash', p.share)]); const hit = chance(rng2, 0.7); addTemporary(st, 'collab-demand', 'Collaboration launch', 3, { demandMult: hit ? 1.06 : 1.01 }, true); st.brand *= hit ? 1.05 : 1.01; return hit ? 'The limited edition sold out in days.' : 'It was a little underwhelming, but no harm done.'; } },
+          { id: 'solo', label: `Bankroll it yourself (${formatGBP(share * 2)})`, hint: 'A bigger launch, and all the risk.', impact: [{ label: 'Demand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, rng2, P, p) => { markOnce(st, `collab${Math.floor(st.month / 12)}`); P('Collaboration: full launch costs', [dr('marketing', p.solo), cr('cash', p.solo)]); const hit = chance(rng2, 0.55); addTemporary(st, 'collab-demand', 'Collaboration launch', 4, { demandMult: hit ? 1.1 : 0.99 }, true); st.brand *= hit ? 1.09 : 1; return hit ? 'A huge hit. Everyone wants one.' : 'The launch fell flat and the money is gone.'; } },
+          { id: 'pass', label: 'Pass', hint: 'Nothing happens.', impact: [], apply: (st) => { markOnce(st, `collab${Math.floor(st.month / 12)}`); return 'You politely declined.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'recall', title: 'A product recall looms', polarity: 'bad', weight: 0.5, icon: 'flame',
+    weightOf: (s) => (s.insurance === 'full' ? 0.25 : 0.6),
+    when: (s) => s.month >= 14 && lastRevenue(s) > 0 && !doneOnce(s, 'recall'),
+    setup: (s) => {
+      const full = sized(s, 0.07, 1_500_00);
+      const part = Math.round(full / 2 / 10000) * 10000;
+      return {
+        story: 'A batch of your products may have a fault. A few customers have complained and the press is sniffing around. Stage one: how do you respond?',
+        params: { full, part },
+        choices: [
+          { id: 'full', label: `Recall everything (${formatGBP(s.insurance === 'full' ? Math.round(full / 2 / 10000) * 10000 : full)})`, hint: 'Expensive, but customers see you did the right thing.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'recall'); markOnce(st, 'recall.full'); const c = st.insurance === 'full' ? Math.round(p.full / 2 / 10000) * 10000 : p.full; P('Product recall', [dr('otherCosts', c), cr('cash', c)]); adjustReputation(st, 3); return 'You pulled the batch. People noticed how you handled it.'; } },
+          { id: 'partial', label: `Recall the risky batch only (${formatGBP(p0(sized(s, 0.035, 750_00)))})`, hint: 'Cheaper, but a risk remains.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'recall'); markOnce(st, `recall.part@${st.month}`); P('Partial product recall', [dr('otherCosts', p.part), cr('cash', p.part)]); return 'You recalled the worst batch. Everyone is holding their breath.'; } },
+          { id: 'deny', label: 'Say it is nothing', hint: 'Free today. Risky tomorrow.', impact: [{ label: 'Risk', up: false }],
+            apply: (st) => { markOnce(st, 'recall'); markOnce(st, `recall.deny@${st.month}`); return 'You issued a bland statement and hoped.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'recallFollow', title: 'The recall story is not over', polarity: 'bad', weight: 8, icon: 'flame',
+    when: (s) => !doneOnce(s, 'recallFollow') && (s.done ?? []).some((k) => { const m = /^recall\.(part|deny)@(\d+)$/.exec(k); return !!m && s.month >= Number(m[2]) + 2; }),
+    setup: (s) => {
+      const denied = (s.done ?? []).some((k) => k.startsWith('recall.deny@'));
+      const bill = sized(s, denied ? 0.1 : 0.05, 1_800_00);
+      return {
+        story: denied ? 'More faulty products have turned up, and the earlier statement is now being quoted back at you.' : 'A few more faulty items from an unchecked batch have turned up. Stage two: finish the job or ride it out?',
+        params: { bill },
+        choices: [
+          { id: 'fix', label: `Finish the recall (${formatGBP(bill)})`, hint: 'Ends it properly.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, 'recallFollow'); P('Completing the recall', [dr('otherCosts', p.bill), cr('cash', p.bill)]); adjustReputation(st, denied ? -3 : 1); return 'It ended there, at last.'; } },
+          { id: 'ride', label: 'Ride it out', hint: 'No cost, a likely hit to your name.', impact: [{ label: 'Reputation', up: false }],
+            apply: (st, rng) => { markOnce(st, 'recallFollow'); if (chance(rng, 0.4)) return 'Nothing more came of it. Lucky.'; adjustReputation(st, denied ? -12 : -7); st.brand *= 0.93; return 'A national paper ran the story. Customers drifted away.'; } },
+        ],
+      };
+    },
+  },
 ];
 
 const CHOICE_BY_ID = Object.fromEntries(CHOICE_EVENTS.map((e) => [e.id, e])) as Record<string, ChoiceEventDef>;
@@ -820,6 +914,8 @@ const REPUTATION: Record<string, number> = {
   'takeover.fight': 0, 'takeover.standstill': 0, 'takeover.ignore': -1, 'cultureParty.big': 1, 'cultureParty.small': 0, 'cultureParty.skip': 0,
   'strike.talk': 0, 'strike.mediate': 0, 'strike.hold': -2, 'fireDrill.fix': 1, 'fireDrill.gamble': 0,
   'tradeFair.big': 1, 'tradeFair.small': 0, 'tradeFair.skip': 0, 'lawsuit.settle': -1, 'lawsuit.fight': 0,
+  'collab.split': 0, 'collab.solo': 0, 'collab.pass': 0, 'recall.full': 0, 'recall.partial': 0, 'recall.deny': 0, 'recallFollow.fix': 0, 'recallFollow.ride': 0,
+  'whistle.report': 4, 'whistle.exploit': 0, 'whistle.ignore': -1, 'scandal.apologise': 0, 'scandal.deny': 0,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

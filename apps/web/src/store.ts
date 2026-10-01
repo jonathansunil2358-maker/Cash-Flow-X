@@ -2,8 +2,10 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
+  hearTip as hearTipOn, addCard as addCardOn, takeForGift as takeForGiftOn, collectCards, cardDef, recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf,
   adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, grantAwardBoxes, payPlayGems, payPrestigeGems, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
+  claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -119,6 +121,11 @@ interface Store {
   answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
   seeTerm: (id: string) => void;
   finishSprint: (day: string, points: number, gems: number) => void;
+  hearTip: (id: string) => void;
+  addCardGift: (id: string) => void;
+  claimInheritance: () => void;
+  takeSpareCard: (id: string) => boolean;
+  finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
   claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;
@@ -215,6 +222,27 @@ function progressAfter(
   const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
   if (newAwards > 0) p = grantAwardBoxes(p, day, newAwards).profile;
   if (closed > 0) p = addPassPoints(p, closed);
+  if (closed > 0) {
+    const got = collectCards(p, after);
+    p = got.profile;
+    for (const id of got.gained) celebrations.push({ id: nextId++, kind: 'milestone', title: `New card: ${cardDef(id)!.name}`, text: cardDef(id)!.text, gems: 0 });
+  }
+  // A company just ended: remember its strongest rival as your nemesis, and mark a campaign chapter done if you cleared it.
+  if (before.status === 'playing' && after.status !== 'playing') {
+    p = rememberNemesis(p, after, ownerStakeOf(after));
+    const ch = campaignChapter(after.scenarioId);
+    if (ch && after.status === 'finished' && scenarioOf(after.scenarioId).objectives!(after).every((o) => o.met) && !(p.campaign ?? []).includes(ch.n)) {
+      p = { ...p, campaign: [...(p.campaign ?? []), ch.n], gems: p.gems + 25 };
+      celebrations.push({ id: nextId++, kind: 'milestone', title: `Chapter ${ch.n} complete: ${ch.title}`, text: ch.n === 10 ? 'You finished the story. What a journey.' : 'The next chapter is unlocked on the start screen.', gems: 25 });
+    }
+  }
+  // Mastery challenges: hand-picked perfect-run goals pay once, ever.
+  if (closed > 0) {
+    for (const c of newlyMet(after, p)) {
+      p = { ...p, mchallenges: [...(p.mchallenges ?? []), c.id], gems: p.gems + CHALLENGE_GEMS };
+      celebrations.push({ id: nextId++, kind: 'milestone', title: `Challenge met: ${c.name}`, text: c.text, gems: CHALLENGE_GEMS });
+    }
+  }
   // Speedrun: remember the best time on this device.
   if (after.speedrunMonth !== undefined && before.speedrunMonth === undefined) {
     const better = !p.speedBest || after.speedrunMonth < p.speedBest;
@@ -732,6 +760,38 @@ export const useGame = create<Store>((set, get) => {
       if (r.profile === get().profile) return;
       set({ profile: persistProfile(r.profile) });
       if (r.gems) { get().toast('good', `Right! +${r.gems} gems.`); playSound('success'); }
+    },
+
+    hearTip(id) {
+      const next = hearTipOn(get().profile, id);
+      if (next !== get().profile) set({ profile: persistProfile(next) });
+    },
+
+    addCardGift(id) {
+      set({ profile: persistProfile(addCardOn(get().profile, id)) });
+      get().toast('good', `A gift arrived: ${cardDef(id)?.name ?? 'a card'}!`);
+      playSound('success');
+    },
+
+    claimInheritance() {
+      try {
+        const before = get().profile;
+        const next = claimInheritanceOn(before);
+        set({ profile: persistProfile(next) });
+        get().toast('good', `Inheritance claimed: +${next.gems - before.gems} gems.`);
+        playSound('success');
+      } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    takeSpareCard(id) {
+      try { set({ profile: persistProfile(takeForGiftOn(get().profile, id)) }); return true; } catch (e) { get().toast('error', (e as Error).message); return false; }
+    },
+
+    finishMini(kind, day, points) {
+      const r = recordMiniOn(get().profile, kind, day, points);
+      if (r.profile === get().profile) return;
+      set({ profile: persistProfile(r.profile) });
+      if (r.gems) { get().toast('good', `Well played: +${r.gems} gems.`); playSound('success'); }
     },
 
     finishSprint(day, points, gems) {

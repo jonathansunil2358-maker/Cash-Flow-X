@@ -534,7 +534,7 @@ test('titles are earned, and the island shop sells skins for gems', async ({ pag
   await page.getByRole('button', { name: /^(Menu|Settings)/ }).first().click();
   const shop = page.locator('#card-shop');
   await expect(shop.getByText('Autumn')).toBeVisible();
-  await shop.getByRole('button', { name: /Buy for 600/ }).click();
+  await shop.locator("button", { hasText: "Buy for 600" }).click();
   await expect(shop.getByRole('button', { name: 'Equipped' })).toHaveCount(1);
   await expect(shop.getByText(/You have 400 gems/)).toBeVisible();
   await shop.getByRole('button', { name: 'Equip' }).first().click();
@@ -758,7 +758,7 @@ test('Batch C: decorations, logo, photo studio, trophy hall and the year in revi
   await clearOverlays(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const decor = page.locator('#card-decor');
-  await decor.getByRole('button', { name: /Buy for 200/ }).click();
+  await decor.locator("button", { hasText: "Buy for 200" }).click();
   await expect(decor.getByRole('button', { name: 'On the island' })).toHaveCount(1);
   await decor.getByRole('button', { name: 'On the island' }).click();
   await expect(decor.getByRole('button', { name: 'Place it' })).toHaveCount(1);
@@ -1068,7 +1068,7 @@ test('V2 Batch C: pet, employee of the month, diary, newspaper, building names a
   await clearOverlays(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const st = page.getByRole('dialog', { name: 'Settings' });
-  await st.locator('#card-wardrobe').getByRole('button', { name: /15 gems/ }).click();
+  await st.locator('#card-wardrobe').getByRole('button', { name: /75 gems/ }).click();
   await expect(st.locator('#card-wardrobe').getByRole('button', { name: 'Wearing' })).toBeVisible();
   const first = st.locator('#card-names input').first();
   await first.fill('The Big Shed');
@@ -1218,4 +1218,186 @@ test('V2 Batch F: accountant\'s desk, tax sprint and the mock interview', async 
   expect(learn.journalDay).toBeTruthy();
   expect(learn.sprintDay).toBeTruthy();
   expect(learn.interviews).toHaveLength(1);
+});
+
+test('V3 Batch A: story campaign, founder backstory and the documentary', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Camp');
+  await expect(page.getByRole('button', { name: /Chapter 1: The market stall/ })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /Chapter 2: The first hire \(locked\)/ })).toBeDisabled();
+  // A backstory can be chosen for a normal company.
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('radio', { name: /Ex-banker/ }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).modifiers).toEqual(['origin-banker']);
+  await skipTour(page);
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  await expect(m.locator('#card-documentary').getByText('The beginning')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});
+
+test('V3 Batch A: chapter one of the campaign starts as its own company', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Camp1');
+  await page.getByRole('button', { name: /Chapter 1: The market stall/ }).click();
+  await page.getByRole('button', { name: 'Take the job' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText('Stall & Co');
+  expect((await savedGame(page)).scenarioId).toBe('campaign-1');
+});
+
+test('V3 Batch B: product designer, hiring market, reviews, export markets and real estate', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+
+  const design = biz.locator('#card-design');
+  await design.getByRole('button', { name: 'Open' }).click();
+  await design.getByLabel('Features').fill('70');
+  await design.getByRole('button', { name: 'Redesign' }).click();
+  await expect.poll(async () => (await savedGame(page)).design).toBe(70);
+
+  const hire = biz.locator('#card-market-hire');
+  await hire.getByRole('button', { name: 'Open' }).click();
+  await hire.getByRole('button', { name: /^Hire/ }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).stars ?? []).length).toBe(1);
+
+  const reviews = biz.locator('#card-reviews');
+  await reviews.getByRole('button', { name: 'Open' }).click();
+  await reviews.getByRole('button', { name: /^Reply to/ }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).replied ?? []).length).toBe(1);
+
+  const ex = biz.locator('#card-export');
+  await ex.getByRole('button', { name: 'Open' }).first().click();
+  await expect(ex.getByText('Europe').first()).toBeVisible();
+  const prop = biz.locator('#card-property');
+  await prop.getByRole('button', { name: 'Open' }).click();
+  await expect(prop.getByRole('button', { name: 'Buy the building' })).toBeVisible();
+});
+
+test('V3 Batch C: negotiation, pitch day, stock-take and cash-flow tetris', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+
+  const neg = m.locator('#card-negotiate');
+  await neg.getByRole('button', { name: 'Open' }).click();
+  await neg.getByRole('group', { name: 'Your offer' }).getByRole('button', { name: /Offer 100%/ }).click();
+  await expect(neg.getByRole('status')).toContainText(/You bought it for/);
+
+  const pitch = m.locator('#card-pitch');
+  await pitch.getByRole('button', { name: 'Open' }).click();
+  const boxes = pitch.getByRole('group', { name: 'Your numbers' }).getByRole('checkbox');
+  for (let i = 0; i < 3; i++) await boxes.nth(i).click();
+  await pitch.getByRole('button', { name: 'Make the pitch' }).click();
+  await expect(pitch.getByRole('status').first()).toContainText(/scored you \d+ out of 100/);
+
+  const stock = m.locator('#card-stocktake');
+  await stock.getByRole('button', { name: 'Open' }).click();
+  await stock.getByRole('checkbox').first().click();
+  await stock.getByRole('button', { name: /Hand in the count/ }).click();
+  await expect(stock.getByRole('status')).toContainText(/You found \d of 3/);
+
+  const tet = m.locator('#card-tetris');
+  await tet.getByRole('button', { name: 'Open' }).click();
+  await tet.getByRole('button', { name: 'Lock in the plan' }).click();
+  await expect(tet.getByRole('status')).toContainText(/Lowest balance/);
+
+  const minis = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).minis);
+  expect(Object.keys(minis).sort()).toEqual(['negotiate', 'pitch', 'stocktake', 'tetris']);
+});
+
+test('V3 Batch D: co-op links, trading cards, season theme and the holding-company rivalry', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Together');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await clearOverlays(page);
+  await page.getByRole('button', { name: /Holding company and leaderboards/ }).click();
+  await page.getByRole('tab', { name: 'Community' }).click();
+  await expect(page.getByRole('note', { name: /season theme/ })).toBeVisible();
+  const coop = page.locator('#card-coop');
+  await coop.getByRole('button', { name: 'New advice link' }).click();
+  await expect(coop.getByText(/advice · 0 friends/)).toBeVisible();
+  await coop.getByRole('button', { name: 'Open' }).first().click();
+  await expect(coop.getByLabel('Co-op view')).toContainText('Month');
+  await expect(page.locator('#card-cards')).toBeVisible();
+  await coop.getByRole('button', { name: 'Remove' }).click();
+  await expect(coop.getByText(/advice · 0 friends/)).toHaveCount(0);
+});
+
+test('V3 Batch E: accessibility settings, sound packs, keyboard shortcuts, the guide and the replay theatre', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  // Penny the guide speaks, and goes away when tapped.
+  const penny = page.getByRole('button', { name: /Penny the guide says/ });
+  await expect(penny).toBeVisible();
+  await penny.click();
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).tips)).length).toBeGreaterThan(0);
+
+  // Keyboard shortcut: M opens Missions.
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions).toBeVisible();
+  const theatre = missions.locator('#card-theatre');
+  await expect(theatre.getByText('What you did:')).toBeVisible();
+  await theatre.getByRole('button', { name: 'Back' }).click();
+  await expect(theatre.getByText('MONTH:')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+  await clearOverlays(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const st = page.getByRole('dialog', { name: 'Settings' });
+  await st.getByLabel('Font').selectOption('readable');
+  await st.getByLabel('Text size').selectOption('130');
+  await st.getByLabel('Colours').selectOption('safe');
+  await st.getByLabel('Calm mode').check();
+  await st.getByLabel('Sound pack').selectOption('retro');
+  expect(await page.evaluate(() => { const d = document.documentElement.dataset; return [d.font, d.size, d.colours, d.calm, localStorage.getItem('cfx:pref:sfxpack')]; })).toEqual(['readable', '130', 'safe', 'on', 'retro']);
+  await st.getByLabel('Keyboard shortcuts').uncheck();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await page.keyboard.press('m');
+  await expect(page.getByRole('dialog', { name: 'Missions' })).toHaveCount(0);
+});
+
+test('V3 Batch F: mastery challenges, dynasty and the empire venture', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.locator('#card-mastery-challenges').getByText('Twelve in the black')).toBeVisible();
+  await expect(missions.locator('#card-dynasty').getByText('Finish a company')).toBeVisible();
+  await expect(missions.locator('#card-dynasty').getByRole('button', { name: 'No inheritance waiting' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
 });
