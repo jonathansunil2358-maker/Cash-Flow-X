@@ -247,7 +247,7 @@ function missionStatusOf(t: MissionTemplate, s: GameState): boolean {
 // Daily rewards
 // ---------------------------------------------------------------------------------------------
 
-export const DAILY_REWARDS = [10, 15, 20, 25, 30, 40, 60];
+export const DAILY_REWARDS = [5, 10, 10, 15, 15, 20, 40];
 
 export interface DailyState {
   lastClaim: string | null;

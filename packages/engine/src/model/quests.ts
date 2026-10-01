@@ -30,8 +30,8 @@ export const QUESTS: QuestDef[] = [
 ];
 
 export const QUESTS_PER_DAY = 3;
-export const STREAK_BONUS_GEMS = 10;
-export const STREAK_BONUS_CAP = 7;
+export const STREAK_BONUS_GEMS = 5;
+export const STREAK_BONUS_CAP = 4;
 
 export interface QuestProgress {
   id: string;

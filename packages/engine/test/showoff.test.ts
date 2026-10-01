@@ -24,9 +24,10 @@ describe('island decorations', () => {
   });
 
   it('are bought once with gems, placed at once, and can be switched off and on', () => {
-    let p: Profile = { ...newProfile(), gems: 100 };
+    const price = DECOR.find((x) => x.id === 'fountain')!.gems;
+    let p: Profile = { ...newProfile(), gems: price + 10 };
     p = buyDecor(p, 'fountain');
-    expect(p.gems).toBe(60);
+    expect(p.gems).toBe(10);
     expect(decorOf(p)).toEqual({ owned: ['fountain'], placed: ['fountain'] });
     expect(() => buyDecor(p, 'fountain')).toThrow(/already/);
     expect(() => buyDecor(p, 'nope')).toThrow();

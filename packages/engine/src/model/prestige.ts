@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import type { PlayGems } from './economy';
 import type { LearnState } from './learn';
 import type { PassState } from './progress';
 import { modifierBonus } from './modifiers-opt';
@@ -84,10 +85,11 @@ export interface Profile {
   /** Puzzle answers and glossary terms met (see learn.ts). */
   learn?: LearnState;
   pass?: PassState;
+  /** Today's gems and boxes from repeatable play (see economy.ts). */
+  playGems?: PlayGems;
 }
 
-export const STARTER_GEMS = 50;
-export const GEMS_PER_LEGACY_POINT = 25;
+export const STARTER_GEMS = 100;
 export const FIRST_PRESTIGE_THRESHOLD: Pence = 10_000_000_00;
 export const PRESTIGE_THRESHOLD_GROWTH = 2.5;
 
@@ -176,7 +178,6 @@ export function awardPrestige(profile: Profile, points: number, stake: Pence): P
     legacyPoints: profile.legacyPoints + points,
     legacyEarned: profile.legacyEarned + points,
     prestigeCount: profile.prestigeCount + 1,
-    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
     rebirthsUsed: 0,
     lifetime: { ...(profile.lifetime ?? emptyLifetime()), bestStake: Math.max(profile.lifetime?.bestStake ?? 0, stake) },
   };
@@ -192,7 +193,6 @@ export function applyPrestige(profile: Profile, s: GameState): Profile {
     legacyPoints: profile.legacyPoints + points,
     legacyEarned: profile.legacyEarned + points,
     prestigeCount: profile.prestigeCount + 1,
-    gems: profile.gems + points * GEMS_PER_LEGACY_POINT,
     boosts: bankBoosts(profile, s),
     rebirthsUsed: 0,
     lifetime: addToLifetime(profile, s, 'prestiged', ownerStakeOf(s)),

@@ -19,14 +19,14 @@ export interface DecorState {
 }
 
 export const DECOR: DecorDef[] = [
-  { id: 'flowers', name: 'Flower beds', emoji: '🌷', gems: 15, blurb: 'A splash of colour by the road.', at: [-6.6, 4.8] },
-  { id: 'bench', name: 'Park bench', emoji: '🪑', gems: 20, blurb: 'Somewhere for the team to eat lunch.', at: [-3.8, 0.5] },
-  { id: 'fountain', name: 'Fountain', emoji: '⛲', gems: 40, blurb: 'Sparkling water outside the front door.', at: [2.7, 0.6] },
-  { id: 'flags', name: 'Flagpoles', emoji: '🚩', gems: 25, blurb: 'Three flags in your brand colours.', at: [6.9, 0.9] },
-  { id: 'statue', name: 'Founder statue', emoji: '🗿', gems: 60, blurb: 'A golden you, looking into the future.', at: [-7.1, -4.2] },
-  { id: 'windmill', name: 'Windmill', emoji: '🌬️', gems: 50, blurb: 'Turning gently in the breeze.', at: [3.6, -3.6] },
-  { id: 'gazebo', name: 'Gazebo', emoji: '🛖', gems: 45, blurb: 'A shady spot for meetings outdoors.', at: [7.0, -2.8] },
-  { id: 'fireworks', name: 'Fireworks tower', emoji: '🎆', gems: 80, blurb: 'Sparkles at night to celebrate.', at: [-1.6, -7.2] },
+  { id: 'flowers', name: 'Flower beds', emoji: '🌷', gems: 75, blurb: 'A splash of colour by the road.', at: [-6.6, 4.8] },
+  { id: 'bench', name: 'Park bench', emoji: '🪑', gems: 100, blurb: 'Somewhere for the team to eat lunch.', at: [-3.8, 0.5] },
+  { id: 'fountain', name: 'Fountain', emoji: '⛲', gems: 200, blurb: 'Sparkling water outside the front door.', at: [2.7, 0.6] },
+  { id: 'flags', name: 'Flagpoles', emoji: '🚩', gems: 125, blurb: 'Three flags in your brand colours.', at: [6.9, 0.9] },
+  { id: 'statue', name: 'Founder statue', emoji: '🗿', gems: 300, blurb: 'A golden you, looking into the future.', at: [-7.1, -4.2] },
+  { id: 'windmill', name: 'Windmill', emoji: '🌬️', gems: 250, blurb: 'Turning gently in the breeze.', at: [3.6, -3.6] },
+  { id: 'gazebo', name: 'Gazebo', emoji: '🛖', gems: 225, blurb: 'A shady spot for meetings outdoors.', at: [7.0, -2.8] },
+  { id: 'fireworks', name: 'Fireworks tower', emoji: '🎆', gems: 400, blurb: 'Sparkles at night to celebrate.', at: [-1.6, -7.2] },
 ];
 export const decorDef = (id: string): DecorDef | undefined => DECOR.find((d) => d.id === id);
 

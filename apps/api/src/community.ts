@@ -8,7 +8,7 @@ import { HttpError, newId, nowIso, type Env } from './util';
 // ---------------------------------------------------------------------------------------------
 
 export const COMMUNITY_TARGET = 600;
-export const COMMUNITY_GEMS = 30;
+export const COMMUNITY_GEMS = 75;
 
 /** Count verified months towards this week's goal (called when a run's sync is accepted). */
 export const communityStatements = (env: Env, userId: string, months: number) => {

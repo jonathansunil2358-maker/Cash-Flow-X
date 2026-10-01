@@ -29,6 +29,7 @@ export * from './model/detective';
 export * from './model/glossary';
 export * from './model/learn';
 export * from './model/prestige';
+export * from './model/economy';
 export * from './model/gamification';
 export * from './model/cosmetics';
 export * from './model/quests';
