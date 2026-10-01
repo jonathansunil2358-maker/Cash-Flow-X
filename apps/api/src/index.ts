@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { dailyBoard } from './daily';
 import { challengeView, claimWeeklyReward, createChallenge, weeklyView } from './fixed';
+import { answerPuzzle, leagueView } from './league';
 import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
@@ -200,6 +201,8 @@ app.get('/challenges/:code', requireUser, async (c) => {
 app.get('/community', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await communityView(c.env, c.get('user'))); });
 app.post('/rewards/community', requireUser, async (c) => c.json(await claimCommunity(c.env, c.get('user'))));
 app.get('/tournament', requireUser, async (c) => { c.header('cache-control', 'private, max-age=30'); return c.json(await tournamentView(c.env, c.get('user'))); });
+app.get('/league', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await leagueView(c.env, c.get('user'))); });
+app.post('/league/answer', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await answerPuzzle(c.env, c.get('user'), await c.req.json().catch(() => ({})))); });
 app.get('/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await rivalView(c.env, c.get('user'))); });
 app.get('/replays/:kind/:key', requireUser, async (c) => { c.header('cache-control', 'private, max-age=60'); return c.json(await replayOf(c.env, c.req.param('kind')!, c.req.param('key')!, Number(c.req.query('rank') ?? 1))); });
 app.get('/plans', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await listPlans(c.env, c.get('user'), c.req.query('sort'))); });

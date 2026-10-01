@@ -1,5 +1,6 @@
 import { cr, dr, post } from './ledger/journal';
 import { gbp, formatGBP } from './money';
+import { plSummary } from './ledger/statements';
 import { ratios } from './model/analysis';
 import type { IndustryId } from './model/industries';
 import { newId, type GameState } from './model/state';
@@ -110,6 +111,52 @@ export const SCENARIOS: Record<string, Scenario> = {
       'One ranked attempt per player; practise as much as you like offline.',
     ],
     months: 24,
+  },
+  speedrun: {
+    id: 'speedrun',
+    name: 'Speedrun: a £1m company, fast',
+    kind: 'sandbox',
+    industryId: null,
+    summary: 'Race to a £1m company in as few months as you can. You have five years. Your best time is saved on this device.',
+    briefing: [
+      'Pick any sector and start from scratch.',
+      'The clock stops being your enemy: the goal is to be worth £1m (equity value) as quickly as possible.',
+      'You have 60 months. Reach £1m in fewer months to beat your best time.',
+    ],
+    months: 60,
+    objectives: (s) => [
+      { id: 'speed', text: 'Reach £1m of equity value', met: s.speedrunMonth !== undefined, detail: s.speedrunMonth !== undefined ? `Reached in ${s.speedrunMonth} months` : `Month ${Math.min(s.month, 60)} of 60` },
+    ],
+  },
+  turnaround: {
+    id: 'turnaround',
+    name: 'Case study: The turnaround',
+    kind: 'case-study',
+    industryId: 'fitness',
+    summary: 'A tired gym is losing money every month. Turn it around within a year without running out of cash.',
+    briefing: [
+      'You have just bought Iron Works Gym Ltd for a pound. It has a heavy rent, few members and a tired reputation.',
+      'It loses money every month and cash is thin.',
+      'Objectives: survive 12 months, reach a monthly profit (net) of at least £1, and finish with £15k of cash.',
+      'Levers: price, marketing, staff, pay, and the offers you run.',
+    ],
+    months: 12,
+    setup: (s) => {
+      openCompany(s, { name: 'Iron Works Gym Ltd', shareCapital: gbp(55_000), loan: gbp(20_000), fitOut: gbp(45_000), label: 'Gym equipment', loanTerm: 36 });
+      s.staff = { ops: 3, rnd: 0, sales: 0 };
+      s.brand = 40;
+      s.reputation = 35;
+      s.morale = 45;
+    },
+    objectives: (s) => {
+      const last = s.history.at(-1);
+      const profit = last ? plSummary(last.period.pl).profit : null;
+      return [
+        surviveObjective(s, 12),
+        { id: 'profit', text: 'Make a profit in the final month', met: profit !== null && profit > 0, detail: profit === null ? 'Not yet measured' : `Last month ${formatGBP(profit)}` },
+        { id: 'cash', text: 'Finish with at least £15,000 of cash', met: s.ledger.balances.cash >= gbp(15_000), detail: `Cash ${formatGBP(s.ledger.balances.cash)}` },
+      ];
+    },
   },
   'cash-crunch': {
     id: 'cash-crunch',

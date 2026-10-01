@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, bracketFor, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
+  applyActionInPlace, bracketFor, journalPuzzle, spotTheMistake, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -25,11 +25,13 @@ function check(name: string, ok: boolean, detail?: unknown) {
 }
 
 async function call<T = Record<string, unknown>>(path: string, opts: { token?: string; body?: unknown; method?: string } = {}) {
-  const res = await fetch(`${base}${path}`, {
+  const init = {
     method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
     headers: { 'content-type': 'application/json', origin, ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}) },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-  });
+  };
+  // A blocking `wrangler d1 execute` in the middle of the script can outlast the server's keep-alive: retry once on a dropped socket.
+  const res = await fetch(`${base}${path}`, init).catch(() => fetch(`${base}${path}`, init));
   return { status: res.status, json: (await res.json()) as T };
 }
 
@@ -249,6 +251,26 @@ check('tournament: the bracket for last week can be fetched', tour.status === 20
 void bracketFor;
 const riv = await call<{ week: string; you: number; rival: { name: string } | null }>('/rival', { token: eve.token });
 check('rival: a rival of the week is picked from the neighbours (or none if alone)', riv.status === 200 && (riv.json.rival === null || typeof riv.json.rival.name === 'string'), riv);
+
+// The weekly puzzle league: answers are checked by the server, once per kind per day, today only.
+{
+  const today = utcDay();
+  const lg = await signUp('League');
+  const lg2 = await signUp('League2');
+  const right = spotTheMistake(today).answer;
+  const wrong = spotTheMistake(today).options.find((o) => o.id !== right)!.id;
+  const a1 = await call<{ correct: boolean }>('/league/answer', { token: lg.token, body: { kind: 'spot', day: today, answer: right } });
+  check('league: a right answer is recognised by the server', a1.status === 200 && a1.json.correct === true, a1);
+  check('league: only one answer a day per puzzle', (await call('/league/answer', { token: lg.token, body: { kind: 'spot', day: today, answer: right } })).status === 409);
+  check('league: yesterday\'s puzzle cannot be answered', (await call('/league/answer', { token: lg.token, body: { kind: 'detective', day: '2020-01-01', answer: 'debt' } })).status === 400);
+  check('league: unknown puzzles are refused', (await call('/league/answer', { token: lg.token, body: { kind: 'nope', day: today, answer: 'x' } })).status === 400);
+  const a2 = await call<{ correct: boolean }>('/league/answer', { token: lg2.token, body: { kind: 'spot', day: today, answer: wrong } });
+  check('league: a wrong answer scores nothing', a2.status === 200 && a2.json.correct === false, a2);
+  const jr = journalPuzzle(today).answer;
+  check('league: the accountant\'s desk is checked by the server too', (await call<{ correct: boolean }>('/league/answer', { token: lg.token, body: { kind: 'journal', day: today, answer: jr } })).json.correct === true);
+  const board = await call<{ rows: { name: string; points: number; me: boolean }[]; mine: { points: number } }>('/league', { token: lg.token });
+  check('league: the board lists scorers, not wrong answers, and marks you', board.status === 200 && board.json.mine.points === 2 && board.json.rows.some((r) => r.me && r.points === 2) && board.json.rows.every((r) => r.points > 0), board);
+}
 
 // The plan marketplace.
 const pubA = await signUp('PlanA');

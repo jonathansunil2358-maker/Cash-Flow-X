@@ -8,7 +8,7 @@
  * Usage: npx tsx scripts/gems.ts [minutesPerDay] [days]
  */
 import {
-  addBoxes, addPassPoints, awardPrestige, grantAwardBoxes, payPlayGems, payPrestigeGems, BOOSTS, claimAlbumPage, claimPass, SKINS, DAILY_REWARDS, DECOR, LEARN_REWARD_GEMS,
+  HATS, LAND, PETS, SOUNDTRACKS, addBoxes, addPassPoints, awardPrestige, grantAwardBoxes, payPlayGems, payPrestigeGems, BOOSTS, claimAlbumPage, claimPass, SKINS, DAILY_REWARDS, DECOR, LEARN_REWARD_GEMS,
   levelForXp, missionStatus, newAchievements, newGame, newMilestones, newProfile, openBox, prestigeCheck, QUESTS_PER_DAY, questsForDay,
   refillMissions, STREAK_BONUS_CAP, STREAK_BONUS_GEMS, tickInPlace, unlocked, XP_REWARDS, applyActionInPlace, plSummary,
   type GameState, type Profile, type Rng,
@@ -114,12 +114,12 @@ for (let d = 0; d < DAYS; d++) {
 }
 
 const total = Object.values(income).reduce((a, b) => a + b, 0);
-const shop = SKINS.reduce((a, s) => a + s.gems, 0) + DECOR.reduce((a, x) => a + x.gems, 0);
+const shop = [SKINS, DECOR, LAND, SOUNDTRACKS, HATS].reduce((t, list) => t + list.reduce((a, x) => a + x.gems, 0), 0) + Math.max(...PETS.map((x) => x.gems));
 console.log(`${MINUTES} min/day for ${DAYS} days (software, Medium). Founder level at the end: ${levelForXp(p.xp)}.\n`);
 console.log('Gems earned by source:');
 for (const [k, v] of Object.entries(income).sort((a, b) => b[1] - a[1])) console.log(`  ${k.padEnd(20)} ${String(Math.round(v)).padStart(7)}  (${((v / total) * 100).toFixed(0)}%)`);
 console.log(`  ${'TOTAL'.padEnd(20)} ${String(Math.round(total)).padStart(7)}  = ${(total / DAYS).toFixed(0)} a day\n`);
 console.log(`Prestiges: ${prestiges}; boxes opened: ${p.boxesOpened ?? 0}; missions completed: ${p.missionsCompleted}`);
 console.log('Cumulative:', checkpoints.map((c) => `day ${c.day}: ${c.gems} (lvl ${c.level})`).join(' · '));
-console.log(`\nShop: every skin and decoration together costs ${shop} gems -> cleared after ~${(shop / (total / DAYS)).toFixed(1)} days.`);
+console.log(`\nShop: every skin, decoration, plot of land, soundtrack and hat plus the dearest pet costs ${shop} gems -> cleared after ~${(shop / (total / DAYS)).toFixed(1)} days.`);
 console.log('Boosts:', Object.values(BOOSTS).map((b) => `${b.name} ${b.gems}`).join(', '), `(${(Object.values(BOOSTS)[0].gems / (total / DAYS)).toFixed(1)} days of income for the cheapest)`);

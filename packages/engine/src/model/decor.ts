@@ -12,6 +12,8 @@ export interface DecorDef {
   blurb: string;
   /** Where it stands on the island (x, z). */
   at: [number, number];
+  /** Needs this piece of extra land first. */
+  land?: string;
 }
 export interface DecorState {
   owned: string[];
@@ -27,6 +29,9 @@ export const DECOR: DecorDef[] = [
   { id: 'windmill', name: 'Windmill', emoji: '🌬️', gems: 250, blurb: 'Turning gently in the breeze.', at: [3.6, -3.6] },
   { id: 'gazebo', name: 'Gazebo', emoji: '🛖', gems: 225, blurb: 'A shady spot for meetings outdoors.', at: [7.0, -2.8] },
   { id: 'fireworks', name: 'Fireworks tower', emoji: '🎆', gems: 400, blurb: 'Sparkles at night to celebrate.', at: [-1.6, -7.2] },
+  { id: 'playground', name: 'Playground', emoji: '🛝', gems: 175, blurb: 'Swings and a slide on the west lawn.', at: [-11, -3], land: 'west' },
+  { id: 'skatepark', name: 'Skate park', emoji: '🛹', gems: 225, blurb: 'A little ramp for the lunchtime crowd.', at: [11, -3], land: 'east' },
+  { id: 'treehouse', name: 'Tree house', emoji: '🌳', gems: 275, blurb: 'A secret meeting room up a tree.', at: [0, -11], land: 'north' },
 ];
 export const decorDef = (id: string): DecorDef | undefined => DECOR.find((d) => d.id === id);
 
@@ -40,6 +45,7 @@ export function buyDecor<T extends Pick<Profile, 'decor' | 'gems'>>(p: T, id: st
   if (!def) throw new Error('Unknown decoration.');
   const d = decorOf(p);
   if (d.owned.includes(id)) throw new Error('You already own that.');
+  if (def.land && !(p as { land?: string[] }).land?.includes(def.land)) throw new Error('Buy the extra land for that first.');
   if (p.gems < def.gems) throw new Error(`You need ${def.gems} gems.`);
   return { ...p, gems: p.gems - def.gems, decor: { owned: [...d.owned, id], placed: [...d.placed, id] } };
 }

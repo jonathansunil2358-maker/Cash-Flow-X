@@ -1,9 +1,12 @@
 import {
-  answeredToday, auditOf, detectiveOf, formatGBP, learnOf, spotTheMistake, termOf, termSeen, TERMS, utcDay, type GameState,
+  answeredToday, auditOf, detectiveOf, formatGBP, interviewDone, interviewKey, interviewOf, INTERVIEW_GEMS, journalPuzzle, learnOf, SPRINT_ITEMS, SPRINT_SECONDS, sprintGems, sprintOf, sprintScore,
+  spotTheMistake, termOf, termSeen, TERMS, utcDay, type GameState, type TaxBin,
 } from '@cfx/engine';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Card } from '../components/ui';
 import { useGame } from '../store';
+import { api, ONLINE } from '../lib/api';
+import { useAccount } from '../lib/account';
 import { Fold } from './Strategy';
 
 function Choice({ label, state, onPick, disabled }: { label: string; state: 'idle' | 'right' | 'wrong'; onPick: () => void; disabled: boolean }) {
@@ -18,12 +21,13 @@ function Choice({ label, state, onPick, disabled }: { label: string; state: 'idl
 /** A trial balance with one mistake in it. Which account is wrong? */
 export function SpotCard() {
   const { profile, answerPuzzle } = useGame();
+  const signedIn = !!useAccount((s) => s.me);
   const day = utcDay();
   const puzzle = useMemo(() => spotTheMistake(day), [day]);
   const prior = answeredToday(profile, 'spot', day);
   const [picked, setPicked] = useState<string | null>(null);
   const done = prior.done || picked !== null;
-  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('spot', day, id === puzzle.answer); };
+  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('spot', day, id === puzzle.answer); if (ONLINE && signedIn) void api.answerLeague('spot', day, id).catch(() => undefined); };
   return (
     <Card id="card-spot" title="Spot the mistake" subtitle={puzzle.intro}>
       <table className="w-full text-sm" aria-label="Trial balance">
@@ -58,12 +62,13 @@ export function SpotCard() {
 /** A few ratios and a story. What is really wrong with the business? */
 export function DetectiveCard() {
   const { profile, answerPuzzle } = useGame();
+  const signedIn = !!useAccount((s) => s.me);
   const day = utcDay();
   const puzzle = useMemo(() => detectiveOf(day), [day]);
   const prior = answeredToday(profile, 'detective', day);
   const [picked, setPicked] = useState<string | null>(null);
   const done = prior.done || picked !== null;
-  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('detective', day, id === puzzle.case.answer); };
+  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('detective', day, id === puzzle.case.answer); if (ONLINE && signedIn) void api.answerLeague('detective', day, id).catch(() => undefined); };
   return (
     <Card id="card-detective" title="Ratio detective" subtitle={puzzle.case.story}>
       <table className="w-full text-sm" aria-label="Ratios">
@@ -160,5 +165,130 @@ export function TermTip({ term, game }: { term: string; game: GameState }) {
         </span>
       )}
     </span>
+  );
+}
+
+/** Which journal entry records this? A daily puzzle in the language of accountants. */
+export function JournalCard() {
+  const { profile, answerPuzzle } = useGame();
+  const signedIn = !!useAccount((s) => s.me);
+  const day = utcDay();
+  const puzzle = useMemo(() => journalPuzzle(day), [day]);
+  const prior = answeredToday(profile, 'journal', day);
+  const [picked, setPicked] = useState<string | null>(null);
+  const done = prior.done || picked !== null;
+  const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('journal', day, id === puzzle.answer); if (ONLINE && signedIn) void api.answerLeague('journal', day, id).catch(() => undefined); };
+  return (
+    <Card id="card-journal" title="Accountant's desk" subtitle="Every transaction has a debit and a credit. Which entry records this one?">
+      <p className="rounded-lg border border-line p-2.5 text-sm font-bold">{puzzle.story}</p>
+      <div className="mt-3 grid gap-2" role="group" aria-label="Which entry?">
+        {puzzle.options.map((o) => (
+          <Choice key={o.id} label={o.label} disabled={done} onPick={() => pick(o.id)}
+            state={!done ? 'idle' : o.id === puzzle.answer ? 'right' : o.id === picked ? 'wrong' : 'idle'} />
+        ))}
+      </div>
+      {done && (
+        <p role="status" className="mt-3 rounded-lg border border-line p-2.5 text-sm">
+          <b>{(picked ? picked === puzzle.answer : prior.right) ? 'Right! ' : 'Not quite. '}</b>{puzzle.tx.why}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/** An investor asks three questions about your own numbers. */
+export function InterviewCard({ game }: { game: GameState }) {
+  const { profile, finishInterview } = useGame();
+  const qs = useMemo(() => interviewOf(game), [game.month, game.seedLabel]); // eslint-disable-line react-hooks/exhaustive-deps
+  const key = interviewKey(game);
+  const already = interviewDone(profile, key);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const finished = Object.keys(answers).length === qs.length;
+  const right = qs.filter((q) => answers[q.id] === q.answer).length;
+  const pick = (qid: string, oid: string) => {
+    if (answers[qid]) return;
+    const next = { ...answers, [qid]: oid };
+    setAnswers(next);
+    if (Object.keys(next).length === qs.length) finishInterview(key, qs.filter((q) => next[q.id] === q.answer).length, INTERVIEW_GEMS);
+  };
+  return (
+    <Fold id="card-interview" title="Mock interview" summary={already ? 'Done for this year. Come back next year.' : 'An investor asks about your numbers. Open to answer.'}
+      subtitle={`An investor grills you on your own company. Three right answers earn ${INTERVIEW_GEMS} gems, once a year.`}>
+      <div className="space-y-4">
+        {qs.map((q) => (
+          <div key={q.id}>
+            <p className="text-sm font-bold">{q.ask}</p>
+            <div className="mt-2 grid gap-2" role="group" aria-label={q.id}>
+              {q.options.map((o) => (
+                <Choice key={o.id} label={o.text} disabled={!!answers[q.id]} onPick={() => pick(q.id, o.id)}
+                  state={!answers[q.id] ? 'idle' : o.id === q.answer ? 'right' : o.id === answers[q.id] ? 'wrong' : 'idle'} />
+              ))}
+            </div>
+            {answers[q.id] && <p className="mt-1 text-xs text-ink-2">{q.explain}</p>}
+          </div>
+        ))}
+        {finished && <p role="status" className="text-sm font-black">You got {right} of {qs.length}.{already ? ' (Gems for this year were already paid.)' : ''}</p>}
+      </div>
+    </Fold>
+  );
+}
+
+const BIN_LABEL: Record<TaxBin, string> = { income: 'Taxable income', allowed: 'Allowed expense', notAllowed: 'Not allowed' };
+
+/** Sort ten items for a tax return before the clock runs out. */
+export function SprintCard() {
+  const { profile, finishSprint } = useGame();
+  const day = utcDay();
+  const items = useMemo(() => sprintOf(day), [day]);
+  const doneToday = learnOf(profile).sprintDay === day;
+  const [running, setRunning] = useState(false);
+  const [i, setI] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, TaxBin>>({});
+  const [left, setLeft] = useState(SPRINT_SECONDS);
+  const [finished, setFinished] = useState(false);
+  const score = sprintScore(items, answers);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => setLeft((v) => v - 1), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+  useEffect(() => { if (running && left <= 0) finish(answers); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [left, running]);
+
+  const finish = (a: Record<string, TaxBin>) => {
+    setRunning(false);
+    setFinished(true);
+    const sc = sprintScore(items, a);
+    finishSprint(day, sc.points, sprintGems(sc.points));
+  };
+  const answer = (bin: TaxBin) => {
+    const a = { ...answers, [items[i].id]: bin };
+    setAnswers(a);
+    if (i + 1 >= items.length) finish(a); else setI(i + 1);
+  };
+  const shown = finished ? learnOf(profile).sprintPoints ?? score.points : score.points;
+  return (
+    <Card id="card-sprint" title="Tax season sprint" subtitle={`Sort ${SPRINT_ITEMS} items for a tax return in ${SPRINT_SECONDS} seconds: taxable income, allowed expense, or not allowed. Right answers score 10, wrong ones cost 5. Gems are paid once a day.`}>
+      {doneToday && !running && !finished ? (
+        <p className="text-sm">Today's sprint is done: {learnOf(profile).sprintPoints ?? 0} points. A new one tomorrow.</p>
+      ) : !running && !finished ? (
+        <Button variant="primary" onClick={() => { setRunning(true); setLeft(SPRINT_SECONDS); setI(0); setAnswers({}); }}>Start the clock</Button>
+      ) : running ? (
+        <div>
+          <div className="flex justify-between text-sm font-black"><span>Item {i + 1} of {items.length}</span><span className="tnum" aria-live="off">{Math.max(0, left)}s</span></div>
+          <p className="my-3 rounded-lg border border-line p-3 text-center text-lg font-bold">{items[i].text}</p>
+          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label="Where does it go?">
+            {(Object.keys(BIN_LABEL) as TaxBin[]).map((b) => <Button key={b} onClick={() => answer(b)}>{BIN_LABEL[b]}</Button>)}
+          </div>
+        </div>
+      ) : (
+        <div role="status" className="space-y-2 text-sm">
+          <p className="font-black">You scored {shown} out of {SPRINT_ITEMS * 10}.</p>
+          <ul className="space-y-1 text-xs text-ink-2">
+            {items.map((it) => <li key={it.id}>{answers[it.id] === it.bin ? '✓' : '✗'} {it.text}: {BIN_LABEL[it.bin]}. {it.why}</li>)}
+          </ul>
+        </div>
+      )}
+    </Card>
   );
 }

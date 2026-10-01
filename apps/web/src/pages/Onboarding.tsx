@@ -1,5 +1,5 @@
 import {
-  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
+  DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CALM_ID, IRONMAN_ID, modifierBonus, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
   rebirthsRemaining, SCENARIOS, startingCash, type DifficultyId, type EquipmentFinance, type IndustryId,
 } from '@cfx/engine';
 import { challengeField, isValidChallengeCode } from '@cfx/engine';
@@ -24,6 +24,7 @@ const CASE_STUDIES = [
   { id: 'cash-crunch', icon: 'burger', name: 'Saltwater Kitchen Ltd' },
   { id: 'growth-trap', icon: 'parcel', name: 'Parcel & Post Ltd' },
   { id: 'price-war', icon: 'laptop', name: 'Ledgerly Ltd' },
+  { id: 'turnaround', icon: 'dumbbell', name: 'Iron Works Gym Ltd' },
 ];
 const CASE_NAMES: Record<string, string> = Object.fromEntries(CASE_STUDIES.map((c) => [c.id, c.name]));
 
@@ -52,14 +53,18 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const { start, load, profile, preset } = useGame();
   const [step, setStep] = useState<Step>(preset ? 'sector' : 'home');
   const [scenarioId, setScenarioId] = useState('standard');
-  const [industry, setIndustry] = useState<IndustryId>('software');
+  const [industry, setIndustry] = useState<IndustryId>(() => {
+    try { const q = new URLSearchParams(window.location.search).get('sector'); return q && q in INDUSTRIES ? (q as IndustryId) : 'software'; } catch { return 'software'; }
+  });
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('rocket');
   const [difficulty, setDifficulty] = useState<DifficultyId>(preset?.difficulty ?? 'medium');
   const [finance, setFinance] = useState<EquipmentFinance>('lease');
   const [mods, setMods] = useState<string[]>([]);
   const [culture, setCulture] = useState<string | null>(null);
-  const [seed, setSeed] = useState(randomSeedLabel);
+  const [seed, setSeed] = useState(() => {
+    try { const q = new URLSearchParams(window.location.search).get('seed'); return q && /^[A-Za-z0-9-]{1,32}$/.test(q) ? q.toUpperCase() : randomSeedLabel(); } catch { return randomSeedLabel(); }
+  });
   const [, refresh] = useState(0);
   const signedIn = !!useAccount((s) => s.me);
   const [pending, setPending] = useState(() => { const c = readPref('challenge')?.toUpperCase() ?? ''; return isValidChallengeCode(c) ? c : ''; });
@@ -118,6 +123,9 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
               </button>
             )}
             <button type="button" className="cfx-btn is-lg w-full" onClick={() => { setScenarioId('standard'); setStep('sector'); }}>New company</button>
+            <button type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId('speedrun'); setStep('sector'); }}>
+              Speedrun: a £1m company, fast{profile.speedBest ? ` (your best: ${profile.speedBest} months)` : ''}
+            </button>
             {CASE_STUDIES.map((c) => (
               <button key={c.id} type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId(c.id); setIcon(c.icon); setStep('identity'); }}>
                 {SCENARIOS[c.id].name}
@@ -257,14 +265,26 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
                   const on = mods.includes(m.id);
                   return (
                     <button key={m.id} type="button" role="checkbox" aria-checked={on} className={`cfx-tile !p-2.5 text-left ${on ? 'ring-4 ring-[var(--coin)]' : ''}`}
-                      onClick={() => setMods(on ? mods.filter((x) => x !== m.id) : [...mods, m.id])}>
+                      onClick={() => setMods(on ? mods.filter((x) => x !== m.id) : [...mods.filter((x) => !(m.id === 'chaos-mayhem' && x === CALM_ID)), m.id])}>
                       <span className="cfx-tile__name !text-lg">{on ? '✓ ' : ''}{m.name}</span>
                       <span className="cfx-tile__meta">{m.blurb}</span>
                     </button>
                   );
                 })}
               </div>
-              {mods.length > 0 && <p className="mt-2 text-sm font-extrabold">Score and Legacy bonus: +{Math.round(MODIFIER_BONUS * mods.length * 100)}%</p>}
+              <div className="mt-2 grid gap-2">
+                <button type="button" role="checkbox" aria-checked={mods.includes(CALM_ID)} className={`cfx-tile !p-2.5 text-left ${mods.includes(CALM_ID) ? 'ring-4 ring-[var(--coin)]' : ''}`}
+                  onClick={() => setMods(mods.includes(CALM_ID) ? mods.filter((x) => x !== CALM_ID) : [...mods.filter((x) => x !== 'chaos-mayhem'), CALM_ID])}>
+                  <span className="cfx-tile__name !text-lg">{mods.includes(CALM_ID) ? '✓ ' : ''}Calm seas</span>
+                  <span className="cfx-tile__meta">Events strike 40% less often. A gentler game, but your score and Legacy are 10% lower.</span>
+                </button>
+                <button type="button" role="checkbox" aria-checked={mods.includes(IRONMAN_ID)} className={`cfx-tile !p-2.5 text-left ${mods.includes(IRONMAN_ID) ? 'ring-4 ring-[var(--coin)]' : ''}`}
+                  onClick={() => setMods(mods.includes(IRONMAN_ID) ? mods.filter((x) => x !== IRONMAN_ID) : [...mods, IRONMAN_ID])}>
+                  <span className="cfx-tile__name !text-lg">{mods.includes(IRONMAN_ID) ? '✓ ' : ''}Ironman</span>
+                  <span className="cfx-tile__meta">No undo and no rebirths: one life. A badge of honour, with no score bonus.</span>
+                </button>
+              </div>
+              {modifierBonus(mods) !== 1 && <p className="mt-2 text-sm font-extrabold">Score and Legacy {modifierBonus(mods) > 1 ? 'bonus' : 'change'}: {modifierBonus(mods) > 1 ? '+' : ''}{Math.round((modifierBonus(mods) - 1) * 100)}%</p>}
               <div className="mt-4 font-display text-lg">Company culture</div>
               <p className="text-xs text-ink-2">Optional. A small trade-off that gives your company a personality. It pays no bonus.</p>
               <div className="mt-2 grid gap-2" role="radiogroup" aria-label="Company culture">

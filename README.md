@@ -42,6 +42,11 @@ construction, and an integrity check proves it every month.
 | Progression | Company culture picked at the start (validated and replayed by the server like the extra challenges), reputation tiers, a monthly season pass, founder skills (conveniences only), sector mastery badges |
 | Mood | Optional adaptive music, island weather that follows the seasons, a different sound for each kind of news, crowd reactions and confetti for firsts |
 | Teaching | A daily "spot the mistake" trial balance, a daily ratio detective, a yearly audit day (a clean audit lifts reputation), an explain-it glossary built from your own company, and four case studies (profitable but broke, the cash crunch, the growth trap, the price war) |
+| Story & operations | A takeover approach, culture events (parties, strikes, safety inspections), a yearly trade fair, lawsuits, spy offers, office pranks and IPO day. Pick your supplier (cheap and risky, or dear and dependable), franchise your name for royalties, and see who your customers are |
+| Personality | A pet mascot, employee of the month, names for your buildings, a newspaper front page about your real numbers, a founder diary, team hats, and an island that can follow your clock. All cosmetic |
+| Challenge modes | Boss rounds every three years, a speedrun to a £1m company, the Ironman badge, a chaos dial (Calm or Mayhem), a gym turnaround case study, a weekly puzzle league checked by the server, and seed sharing |
+| Collecting | Extra island land with new decorations, achievement trails with bigger prizes, unlockable soundtracks and a museum of your past companies |
+| More learning | Accountant's desk (which journal entry?), a tax season sprint, and a mock interview where an investor quizzes you on your own ratios |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout
