@@ -43,7 +43,7 @@ export function ShopCard() {
   );
 }
 
-import { DECOR, decorOf, DEFAULT_LOGO, LOGO_COLOURS, LOGO_SHAPES, logoOf } from '@cfx/engine';
+import { DECOR, decorOf, DEFAULT_LOGO, LAND, landOf, LOGO_COLOURS, LOGO_SHAPES, logoOf } from '@cfx/engine';
 import { LogoBadge } from '../components/LogoBadge';
 
 /** Decorations for the island, bought with gems. */
@@ -64,7 +64,7 @@ export function DecorCard() {
               </div>
               <div className="mt-2">
                 {owned ? <Button variant={on ? 'primary' : 'secondary'} aria-pressed={on} onClick={() => toggleDecor(x.id)}>{on ? 'On the island' : 'Place it'}</Button>
-                  : <Button variant="gem" disabled={profile.gems < x.gems} onClick={() => buyDecor(x.id)}><span className="inline-flex items-center gap-1"><img src={CURRENCY_ICONS.gem} alt="" className="h-4 w-4" />Buy for {x.gems}</span></Button>}
+                  : <Button variant="gem" disabled={profile.gems < x.gems || (!!x.land && !landOf(profile).includes(x.land))} onClick={() => buyDecor(x.id)}>{x.land && !landOf(profile).includes(x.land) ? <span>Needs the {LAND.find((l) => l.id === x.land)!.name.toLowerCase()}</span> : <span className="inline-flex items-center gap-1"><img src={CURRENCY_ICONS.gem} alt="" className="h-4 w-4" />Buy for {x.gems}</span>}</Button>}
               </div>
             </li>
           );

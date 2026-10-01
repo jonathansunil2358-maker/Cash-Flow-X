@@ -4,9 +4,11 @@ import { useAccount } from '../lib/account';
 import { api, ONLINE } from '../lib/api';
 import { musicMood } from '@cfx/engine';
 import { isMusicOn, playMusic, setMusicOn, stopMusic } from '../lib/music';
-import { isWeatherOn, setWeatherOn } from '../lib/weather';
+import { isDayNightOn, isWeatherOn, setDayNightOn, setWeatherOn } from '../lib/weather';
 import { isHapticsOn, isSoundOn, playSound, setHapticsOn, setSoundOn } from '../lib/sfx';
 import { useGame } from '../store';
+import { NamesCard, WardrobeCard } from './Personality';
+import { LandCard, SoundtrackCard } from './Collect';
 import { DecorCard, LogoCard, ShopCard } from './Shop';
 
 export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () => void }) {
@@ -17,6 +19,7 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
   const [buzz, setBuzz] = useState(isHapticsOn());
   const [music, setMusic] = useState(isMusicOn());
   const [weather, setWeather] = useState(isWeatherOn());
+  const [dayNight, setDayNight] = useState(isDayNightOn());
   return (
     <div className="space-y-5">
       <PageTitle title="Settings" />
@@ -74,6 +77,14 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
           <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={weather} aria-label="Weather on the island"
             onChange={(e) => { setWeatherOn(e.target.checked); setWeather(e.target.checked); }} />
         </label>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <span className="block font-extrabold">Island follows your clock</span>
+            <span className="block text-xs text-ink-2">The island gets dark in the evening and bright in the morning, whatever theme you picked.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={dayNight} aria-label="Island follows your clock"
+            onChange={(e) => { setDayNightOn(e.target.checked); setDayNight(e.target.checked); }} />
+        </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button onClick={undo} disabled={!undoStack.length || game?.status !== 'playing'}>Undo last decision</Button>
           <Button onClick={cycleTheme}>Theme: {theme}</Button>
@@ -83,7 +94,11 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
       </Card>
       <ShopCard />
       <DecorCard />
+      <LandCard />
       {game && <LogoCard icon={game.icon} />}
+      <WardrobeCard />
+      <SoundtrackCard />
+      {game && <NamesCard game={game} />}
       {me && (
         <Card title="Account" subtitle={game?.server ? (game.server.flagged ? `This company failed verification: ${game.server.flagged}` : `This company is verified up to ${game.server.syncedMonth} months in.`) : undefined}>
           <label className="block text-xs font-black tracking-wider text-ink-2" htmlFor="player-name">PLAYER NAME (SHOWN ON LEADERBOARDS)</label>

@@ -3,6 +3,7 @@ import {
   MAX_HIRE_AT_ONCE, recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
+import { FranchiseCard, SegmentsCard, SupplierCard } from './Depth';
 import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle } from '../components/ui';
 import { suggestedMarketing } from '../lib/coach';
 import { useDerived } from '../lib/derived';
@@ -58,6 +59,9 @@ export function Operations({ game }: { game: GameState }) {
         <BoardCard game={game} />
         <RumourCard game={game} />
         <TeamCard game={game} />
+        <SegmentsCard game={game} />
+        <SupplierCard game={game} />
+        <FranchiseCard game={game} />
         <PressuresCard game={game} />
         <RivalsCard game={game} />
         <SitesCard game={game} />

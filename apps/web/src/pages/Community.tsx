@@ -4,7 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
-import { api, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
+import { api, type LeagueView, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
 import { useGame } from '../store';
 
@@ -237,12 +237,29 @@ function PlanMarket() {
   );
 }
 
+/** This week's puzzle league: a point for each right answer to the daily puzzles, checked by the server. */
+function PuzzleLeague() {
+  const [v, setV] = useState<LeagueView | null>(null);
+  useEffect(() => { api.league().then(setV).catch(() => setV(null)); }, []);
+  if (!v) return null;
+  return (
+    <Card id="card-league" title="Puzzle league" subtitle={`Answer the daily Spot the mistake and Ratio detective puzzles in Missions. Each right answer is a point; the server checks them. Up to ${v.maxPoints} points a week. You have ${v.mine.points}.`}>
+      {v.rows.length === 0 ? <p className="text-sm text-ink-2">Nobody has scored yet this week. Be the first.</p> : (
+        <ol className="space-y-1 text-sm">
+          {v.rows.map((r) => <li key={r.id} className={`flex justify-between rounded-lg border p-2 ${r.me ? 'border-[var(--go)]' : 'border-line'}`}><span>#{r.rank} {r.name}{r.me ? ' (you)' : ''}</span><b className="tnum">{r.points}</b></li>)}
+        </ol>
+      )}
+    </Card>
+  );
+}
+
 export function CommunityTab() {
   const signedIn = !!useAccount((s) => s.me);
   if (!signedIn) return <p className="text-sm text-ink-2">Sign in to join the community.</p>;
   return (
     <div className="space-y-4">
       <CommunityGoal />
+      <PuzzleLeague />
       <RivalOfTheWeek />
       <Tournament />
       <PlanMarket />

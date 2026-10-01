@@ -17,6 +17,18 @@ const STYLES: Record<MusicMood, Style> = {
 };
 const ROOT = 196; // G3
 
+/** How each soundtrack bends the three moods: scale, speed and sound. */
+interface Flavour { scale?: number[]; beat: number; wave?: OscillatorType; gain: number }
+const FLAVOURS: Record<string, Flavour> = {
+  gentle: { beat: 1, gain: 1 },
+  jazz: { scale: [0, 3, 5, 6, 7, 10], beat: 1.15, wave: 'triangle', gain: 1.05 },
+  chiptune: { beat: 0.75, wave: 'square', gain: 0.5 },
+  dreamy: { scale: [0, 2, 4, 7, 11], beat: 1.7, wave: 'sine', gain: 1.2 },
+};
+let flavour = FLAVOURS.gentle;
+/** Choose the soundtrack. Unknown ids fall back to the gentle one. */
+export function setTrack(id: string): void { flavour = FLAVOURS[id] ?? FLAVOURS.gentle; }
+
 let ctx: AudioContext | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let mood: MusicMood = 'calm';
@@ -53,7 +65,8 @@ function note(c: AudioContext, freq: number, at: number, len: number, wave: Osci
 function tick(): void {
   const c = context();
   if (!c) return;
-  const st = STYLES[mood];
+  const base = STYLES[mood];
+  const st: Style = { scale: flavour.scale ?? base.scale, beat: base.beat * flavour.beat, wave: flavour.wave ?? base.wave, gain: base.gain * flavour.gain };
   const degree = st.scale[(step * 3 + (step >> 2)) % st.scale.length];
   const octave = step % 8 === 0 ? 0.5 : step % 3 === 0 ? 2 : 1;
   note(c, ROOT * Math.pow(2, degree / 12) * octave, c.currentTime + 0.02, st.beat * 1.6, st.wave, st.gain);

@@ -332,6 +332,16 @@ export interface GameState {
   /** Side ventures waiting to settle: see venture.ts. */
   ventures?: Venture[];
   /** Yearly audit results (see audit.ts). */
+  /** Chosen supplier (undefined = standard) and when it was chosen, and franchises open: see suppliers.ts and franchise.ts. */
+  supplier?: 'budget' | 'premium';
+  supplierSince?: number;
+  franchises?: number;
+  /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
+  boss?: { id: string; endMonth: number };
+  bossesBeaten?: number;
+  speedrunMonth?: number;
+  /** Keys of once-a-year events already seen (see events.ts). Kept in the state so the server's checkpoints agree with the client. */
+  done?: string[];
   audits?: { year: number; findings: string[]; clean: boolean }[];
   awards?: AwardWon[];
   pay: PayLevel;

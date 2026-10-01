@@ -1,8 +1,8 @@
 import {
-  cosmeticsOf, musicMood, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, musicMood, tracksOf, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
-import { isMusicOn, playMusic, stopMusic } from './lib/music';
+import { isMusicOn, playMusic, setTrack, stopMusic } from './lib/music';
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useAccount } from './lib/account';
 import { ONLINE } from './lib/api';
@@ -171,7 +171,7 @@ function Hud({ game }: { game: GameState }) {
         {profile.logo ? <LogoBadge logo={logoOf(profile)} icon={game.icon} /> : <img src={iconUrl(game.icon)} alt="" className="h-11 w-11 shrink-0" />}
         <div className="min-w-0 flex-1">
           <div className="cfx-hud__name">{game.companyName}</div>
-          <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}{profile.prestigeCount > 0 && game.difficulty !== 'hard' ? ` · ★ ${prestigeTitle(profile.prestigeCount)}` : ''}</div>
+          <div className="cfx-hud__date">{monthLabel(game.month)} · Year {Math.floor(game.month / 12) + 1} · {DIFFICULTIES[game.difficulty].name}{game.difficulty === 'hard' ? ' ☠' : ''}{(game.modifiers ?? []).includes('ironman') ? ' · ⛓ Ironman' : ''}{game.boss ? ' · ⚔ Boss round' : ''}{profile.prestigeCount > 0 && game.difficulty !== 'hard' ? ` · ★ ${prestigeTitle(profile.prestigeCount)}` : ''}</div>
         </div>
         {ONLINE && (
           <button type="button" className="cfx-icon-btn relative !bg-[var(--gem)]" style={{ boxShadow: 'inset 0 -5px 0 0 var(--gem-edge), var(--edge-sm)' }} aria-label={`Holding company and leaderboards${offers ? `, ${offers} investment offers` : ''}`} onClick={() => openSheet('social')}>
@@ -236,6 +236,8 @@ function SkyBackdrop() {
 /** Keeps the background music in step with how the company is doing. */
 function MusicDriver({ game }: { game: GameState }) {
   const mood = musicMood(game);
+  const track = useGame((s) => tracksOf(s.profile).selected);
+  useEffect(() => { setTrack(track); }, [track]);
   useEffect(() => {
     if (isMusicOn()) playMusic(mood);
   }, [mood]);
@@ -246,6 +248,7 @@ function MusicDriver({ game }: { game: GameState }) {
 function SceneArea({ game }: { game: GameState }) {
   const { speed, setSpeed, monthProgress, pops, profile, sheet, pauseOnPanels, scene3d, tourOpen } = useGame();
   const skin = skinOf(cosmeticsOf(profile).skin);
+  const pet = petOf(profile);
   const level = levelForXp(profile.xp);
   const paused = speed === 0 || !!game.pendingEvent || tourOpen || (pauseOnPanels && !!sheet);
   const speeds: { s: Speed; label: string; locked: boolean }[] = [
@@ -266,6 +269,12 @@ function SceneArea({ game }: { game: GameState }) {
       ) : (
         <div className="relative grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]" style={skin.id === 'default' ? undefined : { background: isNight() ? skin.palette.grassNight : skin.palette.grass }}>
           <img src={iconUrl(game.icon)} alt="" className="h-28 w-28 drop-shadow-[0_6px_0_rgba(0,0,0,0.25)]" />
+        </div>
+      )}
+      {pet && (
+        <div className="pointer-events-none absolute bottom-3 left-4 flex items-end gap-1 rounded-full border-[3px] border-outline bg-surface px-2 py-0.5 text-xs font-black shadow-[var(--edge-sm)]" role="img" aria-label={`${pet.name}, your ${pet.kind}, ${petMood(game).text}`}>
+          <span className="cfx-pet text-2xl" aria-hidden>{PETS.find((x) => x.id === pet.kind)?.emoji}</span>
+          <span aria-hidden>{pet.name} {petMood(game).face}</span>
         </div>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-[22%] flex flex-col items-center gap-1" aria-hidden>

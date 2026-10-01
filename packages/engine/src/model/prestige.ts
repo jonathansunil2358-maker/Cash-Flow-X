@@ -83,6 +83,18 @@ export interface Profile {
   milestones?: string[];
   /** Puzzle answers and glossary terms met (see learn.ts). */
   learn?: LearnState;
+  /** Personality: pet, employee of the month, building names, diary, hats (see personality.ts). */
+  pet?: { kind: string; name: string; adopted: string };
+  eom?: { month: number; id: string; name: string; note: string }[];
+  names?: Record<string, string>;
+  diary?: { year: number; company: string; note: string; facts: string }[];
+  /** Fastest speedrun (months to a £1m company) on this device. */
+  speedBest?: number;
+  /** Extra island land, claimed achievement trails and soundtracks (see collect.ts). */
+  land?: string[];
+  trails?: string[];
+  tracks?: { owned: string[]; selected: string };
+  wardrobe?: { owned: string[]; equipped: string | null };
   pass?: PassState;
 }
 
