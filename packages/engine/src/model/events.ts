@@ -758,9 +758,38 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
       };
     },
   },
+  {
+    id: 'ipoDay', title: 'It is IPO day', polarity: 'good', weight: 0, icon: 'diamond',
+    when: () => false,
+    setup: (s) => {
+      const road = sized(s, 0.05, 2_000_00);
+      return {
+        story: 'The bell is about to ring and the market is watching. How do you want to open your first day as a listed company?',
+        params: { road },
+        choices: [
+          { id: 'bell', label: 'Ring the bell and smile (free)', hint: 'A little hype.', impact: [{ label: 'Share price', up: true }],
+            apply: (st) => { st.sentiment *= 1.04; return 'The cameras loved it. The price ticked up.'; } },
+          { id: 'roadshow', label: `A flashy roadshow (${formatGBP(road)})`, hint: 'More hype and a brand lift, at a cost.', impact: [{ label: 'Share price', up: true }, { label: 'Brand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('IPO roadshow and publicity', [dr('marketing', p.road), cr('cash', p.road)]); st.sentiment *= 1.1; st.brand *= 1.05; return 'Investors queued to meet you. The price jumped.'; } },
+          { id: 'quiet', label: 'Keep it low-key', hint: 'No fuss, no hype.', impact: [], apply: () => 'The listing happened quietly, and the price stayed put.' },
+        ],
+      };
+    },
+  },
 ];
 
 const CHOICE_BY_ID = Object.fromEntries(CHOICE_EVENTS.map((e) => [e.id, e])) as Record<string, ChoiceEventDef>;
+
+/** Add a short-lived effect from outside this file (suppliers, franchises). It lasts `months` full months. */
+export function addTemporaryEffect(s: GameState, type: string, title: string, months: number, effects: EventEffects): void {
+  addTemporary(s, type, title, months, effects, false);
+}
+
+/** Start a named choice event now (used for scripted moments such as IPO day). Does nothing if a decision is already waiting. */
+export function startNamedEvent(s: GameState, id: string, rng: Rng): void {
+  const def = CHOICE_BY_ID[id];
+  if (def && !s.pendingEvent) startChoiceEvent(s, def, rng);
+}
 
 /** Move founder reputation (0-100). */
 export function adjustReputation(s: GameState, delta: number): void {
@@ -784,6 +813,7 @@ const REPUTATION: Record<string, number> = {
   'takeover.fight': 0, 'takeover.standstill': 0, 'takeover.ignore': -1, 'cultureParty.big': 1, 'cultureParty.small': 0, 'cultureParty.skip': 0,
   'strike.talk': 0, 'strike.mediate': 0, 'strike.hold': -2, 'fireDrill.fix': 1, 'fireDrill.gamble': 0,
   'tradeFair.big': 1, 'tradeFair.small': 0, 'tradeFair.skip': 0, 'lawsuit.settle': -1, 'lawsuit.fight': 0,
+  'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };
 

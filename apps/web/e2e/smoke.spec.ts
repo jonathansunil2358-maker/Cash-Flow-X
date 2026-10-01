@@ -1004,3 +1004,23 @@ test('Batch H: the new case studies are on the start screen and play', async ({ 
   expect(g.scenarioId).toBe('price-war');
   expect(g.industryId).toBe('software');
 });
+
+test('V2 Batch B: customer segments, supplier choice and franchising', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const seg = biz.locator('#card-segments');
+  await seg.getByRole('button', { name: 'Open' }).click();
+  await expect(seg.getByText(/Buy on price alone/)).toBeVisible();
+  const sup = biz.locator('#card-supplier');
+  await sup.getByRole('button', { name: 'Open' }).click();
+  await sup.getByRole('button', { name: 'Switch' }).first().click();
+  await expect.poll(async () => (await savedGame(page)).supplier).toBe('budget');
+  const fr = biz.locator('#card-franchise');
+  await fr.getByRole('button', { name: 'Open' }).click();
+  await expect(fr.getByRole('button', { name: 'Open a franchise' })).toBeVisible();
+});

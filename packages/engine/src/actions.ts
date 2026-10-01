@@ -7,8 +7,10 @@ import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
-import { resolvePendingEvent } from './model/events';
+import { resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
+import { addFranchise, franchiseCheck } from './model/franchise';
+import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
@@ -39,6 +41,8 @@ export type Action =
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
+  | { type: 'setSupplier'; supplier: SupplierId }
+  | { type: 'addFranchise' }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
   | { type: 'setCreditTerms'; customerDays: number; supplierDays: number }
@@ -217,6 +221,19 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         action.level === 'above' ? 'The wage bill is 12% higher. Morale, productivity and loyalty rise.'
           : action.level === 'below' ? 'The wage bill is 10% lower, but morale and productivity will slip and people may leave.'
             : 'Standard pay. Morale settles at its normal level.');
+      break;
+    }
+    case 'setSupplier': {
+      const check = supplierCheck(s, action.supplier);
+      if (!check.ok) fail(check.reason!);
+      setSupplier(s, action.supplier);
+      break;
+    }
+    case 'addFranchise': {
+      const check = franchiseCheck(s);
+      if (!check.ok) fail(check.reason!);
+      requireFunds(s, check.fee, 'the franchise set-up');
+      addFranchise(s);
       break;
     }
     case 'startVenture': {
@@ -455,6 +472,7 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       s.sentiment = 1;
       s.priceHistory = [];
       s.guidance = { month: m + 3, target: nextGuidance(s) };
+      if (!s.pendingEvent) startNamedEvent(s, 'ipoDay', createRng(s));
       logItem(s, 'milestone', 'You are listed!', `${formatGBP(check.proceeds)} raised after costs. Your ownership fell from ${(before * 100).toFixed(1)}% to ${(ownership(s) * 100).toFixed(1)}%. Each quarter the market expects a profit: beat it and the price rises.`);
       break;
     }
