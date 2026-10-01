@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import type { LearnState } from './learn';
 import type { PassState } from './progress';
 import { modifierBonus } from './modifiers-opt';
 import { DIFFICULTIES, type DifficultyId } from './difficulty';
@@ -80,6 +81,8 @@ export interface Profile {
   skills?: string[];
   /** Milestones already celebrated (see mood.ts). */
   milestones?: string[];
+  /** Puzzle answers and glossary terms met (see learn.ts). */
+  learn?: LearnState;
   pass?: PassState;
 }
 

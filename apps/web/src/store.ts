@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  addBoxes, addPassPoints, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -106,6 +106,8 @@ interface Store {
   deletePlanAction: (id: string) => void;
   claimQuest: (id: string) => void;
   learnSkill: (id: string) => void;
+  answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
+  seeTerm: (id: string) => void;
   claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;
   claimAlbumPage: (pageId: string) => void;
@@ -698,6 +700,18 @@ export const useGame = create<Store>((set, get) => {
         get().toast('error', (e as Error).message);
         return null;
       }
+    },
+
+    answerPuzzle(kind, day, right) {
+      const r = recordAnswer(get().profile, kind, day, right);
+      if (r.profile === get().profile) return;
+      set({ profile: persistProfile(r.profile) });
+      if (r.gems) { get().toast('good', `Right! +${r.gems} gems.`); playSound('success'); }
+    },
+
+    seeTerm(id) {
+      const next = seeTermOn(get().profile, id);
+      if (next !== get().profile) set({ profile: persistProfile(next) });
     },
 
     learnSkill(id) {

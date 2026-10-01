@@ -28,6 +28,7 @@ import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure'
 import { runAutopilot } from './model/autopilot';
 import { advanceStory } from './model/story';
 import { advanceSurprise } from './model/surprise';
+import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
@@ -110,6 +111,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceStory(s, !!opts.simulation);
   advanceBoard(s, !!opts.simulation);
   advanceAwards(s, !!opts.simulation);
+  advanceAudit(s, !!opts.simulation);
 
   // 2. Economy
   runEvents(s, rng, !opts.simulation);

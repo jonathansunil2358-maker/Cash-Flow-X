@@ -5,6 +5,7 @@ import {
 import { useMemo } from 'react';
 import { CashChart, PerformanceChart, type CashPoint } from '../components/charts';
 import { Card, Meter, Stat, StatusPill } from '../components/ui';
+import { TermTip } from './Learn';
 import { ReputationTier } from './Progress';
 import { useDerived } from '../lib/derived';
 import { useGame, type BooksTab, type Sheet } from '../store';
@@ -68,19 +69,19 @@ export function Dashboard({ game }: { game: GameState }) {
       <Alerts game={game} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Cash" value={formatGBP(cash)} sub={`Overdraft limit ${formatGBP(od, { compact: true })}`} tone={cash < 0 ? 'bad' : 'neutral'}
+        <Stat label="Cash" extra={<TermTip term="cashFlow" game={game} />} value={formatGBP(cash)} sub={`Overdraft limit ${formatGBP(od, { compact: true })}`} tone={cash < 0 ? 'bad' : 'neutral'}
           help="Bank balance. You can go overdrawn up to the facility limit (50% of receivables + 25% of inventory + £10k). Beyond it the company is insolvent." />
-        <Stat label="Revenue (last month)" value={formatGBP(d.lastPL?.revenue ?? 0, { compact: true })}
+        <Stat label="Revenue (last month)" extra={<TermTip term="revenue" game={game} />} value={formatGBP(d.lastPL?.revenue ?? 0, { compact: true })}
           sub={revDelta === undefined ? 'No history yet' : `${revDelta >= 0 ? '▲' : '▼'} ${formatPct(Math.abs(revDelta))} vs prior month`} tone={revDelta === undefined ? 'neutral' : revDelta >= 0 ? 'good' : 'bad'} />
-        <Stat label="EBITDA (last month)" value={formatGBP(d.lastPL?.ebitda ?? 0, { compact: true })}
+        <Stat label="EBITDA (last month)" extra={<TermTip term="ebitda" game={game} />} value={formatGBP(d.lastPL?.ebitda ?? 0, { compact: true })}
           sub={d.lastPL && d.lastPL.revenue ? `${formatPct(d.lastPL.ebitda / d.lastPL.revenue)} margin` : '—'} tone={(d.lastPL?.ebitda ?? 0) >= 0 ? 'good' : 'bad'} />
-        <Stat label="Net profit (last month)" value={formatGBP(d.lastPL?.profit ?? 0, { compact: true })} sub="After depreciation, interest and tax" tone={(d.lastPL?.profit ?? 0) >= 0 ? 'good' : 'bad'} />
+        <Stat label="Net profit (last month)" extra={<TermTip term="netProfit" game={game} />} value={formatGBP(d.lastPL?.profit ?? 0, { compact: true })} sub="After depreciation, interest and tax" tone={(d.lastPL?.profit ?? 0) >= 0 ? 'good' : 'bad'} />
         <Stat label={subscription ? `${d.ind.unitPlural[0].toUpperCase()}${d.ind.unitPlural.slice(1)}` : `${d.ind.unitPlural[0].toUpperCase()}${d.ind.unitPlural.slice(1)} sold`}
           value={formatInt(subscription ? k?.customers ?? 0 : k?.unitsSold ?? 0)}
           sub={k ? (subscription ? `+${formatInt(k.newCustomers)} new, −${formatInt(k.churned)} lost` : `${formatInt(k.lostSales)} lost to capacity/stock`) : '—'} />
         <Stat label="Capacity used" value={k ? formatPct(k.utilisation, 0) : '—'} sub={`${k?.headcount ?? 0} staff`} tone={k && k.utilisation > 1 ? 'bad' : 'neutral'}
           help="Demand you can serve with current operations staff. Over 100% means lost sales and, for subscriptions, extra churn." />
-        <Stat label="Equity value" value={formatGBP(d.valuation.equityValue, { compact: true })} sub={canPrestige ? `${formatPct(progress, 0)} of the way to prestige` : 'Hard mode: no prestige'}
+        <Stat label="Equity value" extra={<TermTip term="equity" game={game} />} value={formatGBP(d.valuation.equityValue, { compact: true })} sub={canPrestige ? `${formatPct(progress, 0)} of the way to prestige` : 'Hard mode: no prestige'}
           help={`${d.valuation.method}. See the Valuation tab for the workings.`} />
         <Stat label="Reputation" value={<span>{Math.round(game.reputation)}</span>} sub={<ReputationTier game={game} />} help="Reputation nudges demand by up to 10%. Event decisions move it." />
         <Stat label="Financial health" value={<span>{health.grade}</span>} sub={`${Math.round(health.score * 100)}/100`} tone={health.score >= 0.6 ? 'good' : health.score < 0.35 ? 'bad' : 'neutral'}

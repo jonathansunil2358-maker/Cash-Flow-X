@@ -181,6 +181,9 @@ h1, h2, h3 {
   to { transform: translateY(0); opacity: 1; }
 }
 .cfx-anim-rise { animation: cfx-rise 1.4s ease-out forwards; }
+.cfx-info { display: inline-flex; height: 20px; width: 20px; align-items: center; justify-content: center; border-radius: 9999px; border: 2px solid var(--outline); background: var(--surface-2); font-size: 11px; font-weight: 900; line-height: 1; text-transform: none; }
+.cfx-info.is-new { background: var(--coin); box-shadow: 0 0 0 0 var(--coin); animation: cfx-info-pulse 1.8s ease-out infinite; }
+@keyframes cfx-info-pulse { 70% { box-shadow: 0 0 0 7px transparent; } }
 .cfx-confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
 .cfx-confetti i { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; opacity: 0.95; animation: cfx-confetti-fall linear infinite; }
 @keyframes cfx-confetti-fall { to { transform: translateY(105vh) rotate(540deg); } }
@@ -237,7 +240,7 @@ h1, h2, h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cfx-confetti i, .cfx-anim-rise, .cfx-anim-pop, .cfx-anim-sheet, .cfx-tour-spot { animation: none; transition: none; }
+  .cfx-info.is-new, .cfx-confetti i, .cfx-anim-rise, .cfx-anim-pop, .cfx-anim-sheet, .cfx-tour-spot { animation: none; transition: none; }
 }
 
 /*

@@ -949,3 +949,58 @@ test('Batch G: music and weather switches, and a first gets a party', async ({ p
   await expect(party).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.cfx-confetti')).toBeVisible();
 });
+
+test('Batch H: puzzles, explain cards, glossary, audit day and the new case studies', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+
+  // Books overview: an explain card. The first time a word is opened it joins the glossary.
+  await openDock(page, 'Books');
+  const books = page.getByRole('dialog', { name: /Books/ });
+  await books.getByRole('button', { name: 'Explain EBITDA' }).click();
+  await expect(books.getByRole('note').filter({ hasText: /interest, tax, depreciation/i })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).learn.terms)).toEqual(['ebitda']);
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+
+  // Missions: the two daily puzzles, audit day and the glossary.
+  await openDock(page, 'Missions');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  const spot = missions.locator('#card-spot');
+  await expect(spot.getByRole('table', { name: 'Trial balance' })).toBeVisible();
+  await spot.getByRole('group', { name: 'Which account is wrong?' }).getByRole('button').first().click();
+  await expect(spot.getByRole('status')).toContainText(/Right!|Not quite\./);
+  const detective = missions.locator('#card-detective');
+  await detective.getByRole('group', { name: 'What is the problem?' }).getByRole('button').first().click();
+  await expect(detective.getByRole('status')).toContainText(/Right!|Not quite\./);
+  const learn = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).learn);
+  expect(learn.spotDay).toBeTruthy();
+  expect(learn.detectiveDay).toBeTruthy();
+  const audit = missions.locator('#card-audit');
+  await audit.getByRole('button', { name: 'Open' }).click();
+  await expect(audit.getByText(/auditors|Nothing to report/).first()).toBeVisible();
+  const glossary = missions.locator('#card-glossary');
+  await glossary.getByRole('button', { name: 'Open' }).click();
+  await expect(glossary.getByText('EBITDA', { exact: true })).toBeVisible();
+});
+
+test('Batch H: the new case studies are on the start screen and play', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Case');
+  for (const name of ['Case study: The cash crunch', 'Case study: The growth trap', 'Case study: The price war']) {
+    await expect(page.getByRole('button', { name })).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Case study: The price war' }).click();
+  await page.getByRole('button', { name: 'Take the job' }).click();
+  await expect(page.locator('.cfx-hud__name')).toHaveText('Ledgerly Ltd');
+  await skipTour(page);
+  const g = await savedGame(page);
+  expect(g.scenarioId).toBe('price-war');
+  expect(g.industryId).toBe('software');
+});

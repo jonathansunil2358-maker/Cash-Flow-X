@@ -331,6 +331,8 @@ export interface GameState {
   rumour?: Rumour;
   /** Side ventures waiting to settle: see venture.ts. */
   ventures?: Venture[];
+  /** Yearly audit results (see audit.ts). */
+  audits?: { year: number; findings: string[]; clean: boolean }[];
   awards?: AwardWon[];
   pay: PayLevel;
   /** Monthly training budget. */

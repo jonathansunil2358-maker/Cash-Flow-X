@@ -7,6 +7,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
+import { AuditCard, DetectiveCard, GlossaryCard, SpotCard } from './Learn';
 import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
 import { TitlesCard } from './Titles';
@@ -95,6 +96,10 @@ export function Missions({ game }: { game: GameState }) {
 
       <AlbumCard />
 
+      <SpotCard />
+      <DetectiveCard />
+      <AuditCard game={game} />
+      <GlossaryCard game={game} />
       <MasteryCard />
       <TitlesCard />
 
