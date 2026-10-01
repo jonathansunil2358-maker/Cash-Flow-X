@@ -8,7 +8,8 @@ import { startLease } from './model/leases';
 import { perkEffects, type ActiveBoost, type PerkLevels } from './model/perks';
 import { ENDLESS, logItem, newId, STATE_VERSION, type GameState } from './model/state';
 import { createRng, hashSeed } from './rng';
-import { scenarioOf } from './scenarios';
+import { isFixedKind, scenarioOf } from './scenarios';
+import { twistForSeed } from './fixed';
 
 export type EquipmentFinance = 'buy' | 'lease';
 
@@ -48,7 +49,7 @@ export function newGame(opts: NewGameOptions): GameState {
   const ind = INDUSTRIES[industryId];
   if (!ind) throw new Error(`Unknown industry ${industryId}`);
   // The daily challenge is a level playing field: fixed difficulty, and no perks, boosts or prestige bonus.
-  const daily = scenario.kind === 'daily';
+  const daily = isFixedKind(scenario.kind);
   const difficulty: DifficultyId = scenario.kind === 'case-study' || daily ? 'medium' : (opts.difficulty ?? 'medium');
   const diff = DIFFICULTIES[difficulty];
   if (!diff) throw new Error(`Unknown difficulty ${difficulty}`);
@@ -147,6 +148,12 @@ export function newGame(opts: NewGameOptions): GameState {
     nextId: 1,
     objectives: [],
   };
+  if (scenario.id === 'weekly') {
+    // The week's twist is a long-lasting economic condition that lasts the whole game.
+    const twist = twistForSeed(opts.seed);
+    s.twist = twist.id;
+    s.economy.active.push({ type: 'weekly-twist', title: twist.name, startMonth: 0, remaining: 100_000, effects: twist.effects });
+  }
   recomputeEconomy(s);
 
   const capital = startingCash(difficulty, perks);

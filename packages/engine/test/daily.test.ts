@@ -43,7 +43,7 @@ describe('daily challenge', () => {
     const c = dailyChallenge('2027-05-05');
     const s = newGame({ companyName: 'D', industryId: c.industryId, seed: c.seed, scenarioId: 'daily' });
     expect(prestigeCheck(s).eligible).toBe(false);
-    expect(prestigeCheck(s).reason).toMatch(/Daily/);
+    expect(prestigeCheck(s).reason).toMatch(/Challenge companies/);
   });
 
   it('plays to the end, finishes at month 24 and replays to the same score', () => {

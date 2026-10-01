@@ -109,6 +109,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'big_team', name: 'Fifty strong', description: 'Employ 50 people.', icon: 'flame', gems: 30, title: 'Big Employer', check: (s) => headcount(s) >= 50 },
   { id: 'cash_pile', name: 'Rainy day fund', description: 'Hold £1m in cash.', icon: 'coin', gems: 25, check: (s) => s.ledger.balances.cash >= 1_000_000_00 },
   { id: 'half_million_profit', name: 'Profit machine', description: '£500k profit over 12 months.', icon: 'chart', gems: 40, title: 'Profit Machine', check: (s) => { const t = trailingPL(s, 12); return t.months === 12 && t.summary.profit >= 500_000_00; } },
+  { id: 'daily_done', name: 'Daily grind', description: 'Finish a daily challenge.', icon: 'coffee', gems: 20, title: 'Daily Driver', check: (s) => s.scenarioId === 'daily' && s.status === 'finished' },
+  { id: 'weekly_done', name: 'Weekly warrior', description: 'Finish a weekly event.', icon: 'flame', gems: 30, title: 'Event Veteran', check: (s) => s.scenarioId === 'weekly' && s.status === 'finished' },
+  { id: 'challenge_done', name: 'Friendly rivalry', description: 'Finish a challenge set by a friend.', icon: 'heart', gems: 30, title: 'Good Sport', check: (s) => s.scenarioId === 'challenge' && s.status === 'finished' },
   { id: 'hard_win', name: 'Against the odds', description: 'Reach the £10m target on Hard.', icon: 'mountain', gems: 60, title: 'Against All Odds', check: (s) => s.difficulty === 'hard' && s.wonAtMonth !== null },
 ];
 
@@ -260,3 +263,14 @@ export function claimDaily(d: DailyState, todayIso: string): { daily: DailyState
   const continues = d.lastClaim !== null && dayNumber(todayIso) - dayNumber(d.lastClaim) === 1;
   return { daily: { lastClaim: todayIso, streak: continues ? d.streak + 1 : 1 }, gems: st.gems };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Founder titles: worn on the leaderboards, earned by achievements
+// ---------------------------------------------------------------------------------------------
+
+export interface TitleDef { id: string; title: string; name: string; description: string }
+export const TITLES: TitleDef[] = ACHIEVEMENTS.filter((a) => a.title).map((a) => ({ id: a.id, title: a.title!, name: a.name, description: a.description }));
+/** The only values the server accepts for a title (it is cosmetic, so it is not checked against unlocked achievements). */
+export const TITLE_IDS: readonly string[] = TITLES.map((t) => t.id);
+export const titleText = (id: string | null | undefined): string | null => TITLES.find((t) => t.id === id)?.title ?? null;
+export const isTitleId = (id: unknown): id is string => typeof id === 'string' && TITLE_IDS.includes(id);
