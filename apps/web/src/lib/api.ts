@@ -163,7 +163,7 @@ export const api = {
   likePlan: (id: string) => request<{ liked: boolean; likes: number }>(`/plans/${id}/like`, { body: {} }),
   deleteSharedPlan: (id: string) => request<{ ok: boolean }>(`/plans/${id}/delete`, { body: {} }),
   league: () => request<LeagueView>('/league'),
-  answerLeague: (kind: 'spot' | 'detective', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),
+  answerLeague: (kind: 'spot' | 'detective' | 'journal', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),
   replay: (kind: 'daily' | 'weekly' | 'challenge', key: string, rank = 1) => request<ReplayData>(`/replays/${kind}/${encodeURIComponent(key)}?rank=${rank}`),
   challenge: (code: string) => request<ChallengeView>(`/challenges/${encodeURIComponent(code)}`),
   daily: (day?: string) => request<DailyBoard>(`/daily${day ? `?day=${encodeURIComponent(day)}` : ''}`),

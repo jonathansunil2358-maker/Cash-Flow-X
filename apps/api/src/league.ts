@@ -1,4 +1,4 @@
-import { detectiveOf, isoWeek, spotTheMistake, utcDay } from '@cfx/engine';
+import { detectiveOf, isoWeek, journalPuzzle, spotTheMistake, utcDay } from '@cfx/engine';
 import type { UserRow } from './auth';
 import { HttpError, nowIso, type Env } from './util';
 
@@ -7,7 +7,7 @@ import { HttpError, nowIso, type Env } from './util';
  * answer itself: a point is a verified right answer, only for today's puzzles, once per kind per day.
  */
 export const LEAGUE_SIZE = 20;
-const KINDS = ['spot', 'detective'] as const;
+const KINDS = ['spot', 'detective', 'journal'] as const;
 type Kind = (typeof KINDS)[number];
 
 export async function answerPuzzle(env: Env, user: UserRow, body: { kind?: unknown; day?: unknown; answer?: unknown }) {
@@ -15,8 +15,8 @@ export async function answerPuzzle(env: Env, user: UserRow, body: { kind?: unkno
   if (!KINDS.includes(kind)) throw new HttpError(400, 'Unknown puzzle.');
   const today = utcDay();
   if (body.day !== today) throw new HttpError(400, "That is not today's puzzle.");
-  if (typeof body.answer !== 'string' || body.answer.length > 60) throw new HttpError(400, 'Choose an answer.');
-  const right = kind === 'spot' ? spotTheMistake(today).answer : detectiveOf(today).case.answer;
+  if (typeof body.answer !== 'string' || body.answer.length > 80) throw new HttpError(400, 'Choose an answer.');
+  const right = kind === 'spot' ? spotTheMistake(today).answer : kind === 'journal' ? journalPuzzle(today).answer : detectiveOf(today).case.answer;
   const correct = body.answer === right ? 1 : 0;
   const res = await env.DB.prepare('INSERT OR IGNORE INTO puzzle_answers (user_id, day, kind, correct, week, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(user.id, today, kind, correct, isoWeek(), nowIso()).run();
@@ -32,7 +32,7 @@ export async function leagueView(env: Env, viewer: UserRow) {
   ).bind(week).all<{ id: string; name: string; icon: string; points: number; answered: number }>();
   const mine = await env.DB.prepare('SELECT COALESCE(SUM(correct), 0) AS points, COUNT(*) AS answered FROM puzzle_answers WHERE week = ? AND user_id = ?').bind(week, viewer.id).first<{ points: number; answered: number }>();
   return {
-    week, maxPoints: 14,
+    week, maxPoints: 21,
     mine: { points: mine?.points ?? 0, answered: mine?.answered ?? 0 },
     rows: top.results.map((r, i) => ({ rank: i + 1, id: r.id, name: r.name, icon: r.icon, points: r.points, me: r.id === viewer.id })),
   };

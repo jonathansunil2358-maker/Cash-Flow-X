@@ -1189,3 +1189,33 @@ test('V2: the 3D scene draws land, new decorations, hats, a pet and weather with
   await page.waitForTimeout(2000);
   expect(errors).toEqual([]);
 });
+
+test('V2 Batch F: accountant\'s desk, tax sprint and the mock interview', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Missions');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+
+  const desk = m.locator('#card-journal');
+  await desk.getByRole('group', { name: 'Which entry?' }).getByRole('button').first().click();
+  await expect(desk.getByRole('status')).toContainText(/Right!|Not quite\./);
+
+  const sprint = m.locator('#card-sprint');
+  await sprint.getByRole('button', { name: 'Start the clock' }).click();
+  for (let i = 0; i < 10; i++) await sprint.getByRole('group', { name: 'Where does it go?' }).getByRole('button').first().click();
+  await expect(sprint.getByRole('status')).toContainText(/You scored \d+ out of 100/);
+
+  const iv = m.locator('#card-interview');
+  await iv.getByRole('button', { name: 'Open' }).click();
+  for (const q of ['liquidity', 'margin']) await iv.getByRole('group', { name: q }).getByRole('button').first().click();
+  await iv.getByRole('group').nth(2).getByRole('button').first().click();
+  await expect(iv.getByRole('status')).toContainText(/You got \d of 3/);
+
+  const learn = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).learn);
+  expect(learn.journalDay).toBeTruthy();
+  expect(learn.sprintDay).toBeTruthy();
+  expect(learn.interviews).toHaveLength(1);
+});

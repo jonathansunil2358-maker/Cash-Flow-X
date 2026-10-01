@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, bracketFor, spotTheMistake, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
+  applyActionInPlace, bracketFor, journalPuzzle, spotTheMistake, challengeField, ownerStakeOf, replay, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -266,8 +266,10 @@ check('rival: a rival of the week is picked from the neighbours (or none if alon
   check('league: unknown puzzles are refused', (await call('/league/answer', { token: lg.token, body: { kind: 'nope', day: today, answer: 'x' } })).status === 400);
   const a2 = await call<{ correct: boolean }>('/league/answer', { token: lg2.token, body: { kind: 'spot', day: today, answer: wrong } });
   check('league: a wrong answer scores nothing', a2.status === 200 && a2.json.correct === false, a2);
+  const jr = journalPuzzle(today).answer;
+  check('league: the accountant\'s desk is checked by the server too', (await call<{ correct: boolean }>('/league/answer', { token: lg.token, body: { kind: 'journal', day: today, answer: jr } })).json.correct === true);
   const board = await call<{ rows: { name: string; points: number; me: boolean }[]; mine: { points: number } }>('/league', { token: lg.token });
-  check('league: the board lists scorers, not wrong answers, and marks you', board.status === 200 && board.json.mine.points === 1 && board.json.rows.some((r) => r.me && r.points === 1) && board.json.rows.every((r) => r.points > 0), board);
+  check('league: the board lists scorers, not wrong answers, and marks you', board.status === 200 && board.json.mine.points === 2 && board.json.rows.some((r) => r.me && r.points === 2) && board.json.rows.every((r) => r.points > 0), board);
 }
 
 // The plan marketplace.

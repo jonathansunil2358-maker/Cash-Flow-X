@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -118,6 +118,8 @@ interface Store {
   wearHat: (id: string | null) => void;
   answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
   seeTerm: (id: string) => void;
+  finishSprint: (day: string, points: number, gems: number) => void;
+  finishInterview: (key: string, right: number, gems: number) => void;
   claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;
   claimAlbumPage: (pageId: string) => void;
@@ -724,6 +726,20 @@ export const useGame = create<Store>((set, get) => {
       if (r.profile === get().profile) return;
       set({ profile: persistProfile(r.profile) });
       if (r.gems) { get().toast('good', `Right! +${r.gems} gems.`); playSound('success'); }
+    },
+
+    finishSprint(day, points, gems) {
+      const r = recordSprintOn(get().profile, day, points, gems);
+      if (r.profile === get().profile) return;
+      set({ profile: persistProfile(r.profile) });
+      if (r.gems) { get().toast('good', `Return filed: +${r.gems} gems.`); playSound('success'); }
+    },
+
+    finishInterview(key, right, gems) {
+      const r = recordInterviewOn(get().profile, key, right === 3 ? gems : right === 2 ? Math.ceil(gems / 2) : 0);
+      if (r.profile === get().profile) return;
+      set({ profile: persistProfile(r.profile) });
+      if (r.gems) { get().toast('good', `The investor is impressed: +${r.gems} gems.`); playSound('success'); }
     },
 
     seeTerm(id) {
