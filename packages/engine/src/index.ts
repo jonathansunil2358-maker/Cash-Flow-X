@@ -43,6 +43,8 @@ export * from './daily';
 export * from './fixed';
 export * from './model/migrate';
 export * from './model/sites';
+export * from './model/pressure';
+export * from './model/modifiers-opt';
 export * from './model/insurance';
 export * from './model/contracts';
 export * from './model/listing';

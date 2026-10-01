@@ -582,3 +582,37 @@ test('a sold company saved at the current version carries on too', async ({ page
   expect(saved.prestigeLevel).toBe(4);
   await expect(page.getByText(/Prestiged: \+/)).toHaveCount(0);
 });
+
+test('extra challenges can be chosen for a new company, and the pressures and rival personalities are shown', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Mods');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  const extra = page.getByLabel('Extra challenges');
+  await expect(extra.getByRole('checkbox')).toHaveCount(4);
+  await extra.getByRole('checkbox', { name: /Slow market/ }).click();
+  await extra.getByRole('checkbox', { name: /Runaway inflation/ }).click();
+  await expect(extra.getByText('Score and Legacy bonus: +20%')).toBeVisible();
+  await page.getByRole('radio', { name: /Hard/ }).click();
+  await expect(page.getByLabel('Extra challenges')).toHaveCount(0);
+  await page.getByRole('radio', { name: /Medium/ }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await skipTour(page);
+  const saved = await savedGame(page);
+  expect(saved.modifiers).toEqual(['slow-market', 'inflation']);
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Run the business' });
+  const pressures = sheet.locator('#card-pressures');
+  await pressures.getByRole('button', { name: 'Open' }).click();
+  await expect(pressures.getByText('Wages each new year')).toBeVisible();
+  await expect(pressures.getByText('+8%')).toBeVisible();
+  await expect(pressures.getByText(/Extra challenges \(\+20% score and Legacy\)/)).toBeVisible();
+  const rivals = sheet.locator('#card-rivals');
+  await rivals.getByRole('button', { name: 'Open' }).click();
+  await expect(rivals.getByText(/Price slasher/)).toBeVisible();
+  await expect(rivals.getByText(/Quality snob/)).toBeVisible();
+});

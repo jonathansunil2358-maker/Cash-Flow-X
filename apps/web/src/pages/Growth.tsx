@@ -7,6 +7,9 @@ import { useState } from 'react';
 import { Button, Field, KeyValue, MoneyInput, StatusPill } from '../components/ui';
 import { useGame } from '../store';
 import { Fold } from './Strategy';
+import {
+  complianceCost, complianceRate, OPTIONAL_MODIFIERS, rankCostMult, rivalPressure, saturationFactor, wageInflation, RENT_INFLATION, trailingPL, annualise, modifierBonus,
+} from '@cfx/engine';
 
 export function SitesCard({ game }: { game: GameState }) {
   const act = useGame((s) => s.act);
@@ -167,6 +170,42 @@ export function ListingCard({ game }: { game: GameState }) {
           </Field>
         </div>
       )}
+    </Fold>
+  );
+}
+
+/** The slow squeeze in one place: what is pushing back on the company, and how hard. */
+export function PressuresCard({ game }: { game: GameState }) {
+  const sat = saturationFactor(game);
+  const t = trailingPL(game, 12);
+  const annual = annualise(t.summary.revenue, t.months);
+  const compliance = complianceCost(game);
+  const rank = game.prestigeLevel ?? 0;
+  const mods = OPTIONAL_MODIFIERS.filter((m) => (game.modifiers ?? []).includes(m.id));
+  const share = game.history.at(-1)?.kpis.preferenceShare ?? 0;
+  const parts: string[] = [];
+  if (sat < 0.99) parts.push(`saturation −${Math.round((1 - sat) * 100)}%`);
+  if (compliance > 0) parts.push(`compliance ${formatGBP(compliance, { compact: true })}/mo`);
+  if (rank > 0) parts.push(`rank ${rank} costs`);
+  return (
+    <Fold id="card-pressures" title="Pressures"
+      summary={parts.length ? `${parts.join(' · ')}. Open for details.` : 'Nothing squeezing you yet. Open to see what is coming.'}
+      subtitle="The bigger and more successful you get, the harder the world pushes back: crowded markets, rising wages and rents, compliance, and the cost of your own prestige rank.">
+      <div className="space-y-3">
+        <KeyValue rows={[
+          ['Market saturation', sat >= 0.99 ? `None yet (you hold ${formatPct(share, 0)} of preference; it starts above 35%)` : `Demand −${Math.round((1 - sat) * 100)}% (you hold ${formatPct(share, 0)} of preference)`],
+          ['Wages each new year', `+${Math.round(wageInflation(game) * 100)}%`],
+          ['Rent each new year', `+${Math.round(RENT_INFLATION * 100)}%`],
+          ['Compliance, audit and legal', annual > 0 ? `${formatPct(complianceRate(annual), 1)} of revenue (${formatGBP(compliance, { compact: true })} a month); free below £2m a year` : 'Free below £2m a year'],
+          ['Prestige rank', rank > 0 ? `Supplier costs +${Math.round((rankCostMult(game) - 1) * 100)}%, rivals ${Math.round((rivalPressure(game) - 1) * 100)}% sharper` : 'No rank yet'],
+        ]} />
+        {mods.length > 0 && (
+          <div className="rounded-lg border border-line p-2.5 text-sm">
+            <div className="font-bold">Extra challenges (+{Math.round((modifierBonus(game.modifiers) - 1) * 100)}% score and Legacy)</div>
+            <ul className="list-disc pl-5 text-xs text-ink-2">{mods.map((m) => <li key={m.id}>{m.name}: {m.blurb}</li>)}</ul>
+          </div>
+        )}
+      </div>
     </Fold>
   );
 }

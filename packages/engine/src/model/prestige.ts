@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import { modifierBonus } from './modifiers-opt';
 import { DIFFICULTIES, type DifficultyId } from './difficulty';
 import type { DailyState, Mission } from './gamification';
 import type { IndustryId } from './industries';
@@ -114,7 +115,7 @@ export interface PrestigeCheck {
 export function prestigeCheck(s: GameState): PrestigeCheck {
   const threshold = prestigeThreshold(s.prestigeLevel);
   const stake = ownerStakeOf(s);
-  const points = legacyFor(stake);
+  const points = Math.floor(legacyFor(stake) * modifierBonus(s.modifiers));
   if (isFixedScenario(s.scenarioId)) return { eligible: false, threshold, stake, points: 0, reason: 'Challenge companies cannot prestige.' };
   if (!DIFFICULTIES[s.difficulty].canPrestige) return { eligible: false, threshold, stake, points: 0, reason: 'Hard mode runs cannot prestige.' };
   if (s.status !== 'playing') return { eligible: false, threshold, stake, points, reason: 'This run has ended.' };

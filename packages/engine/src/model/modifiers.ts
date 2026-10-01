@@ -2,6 +2,7 @@ import { DIFFICULTIES } from './difficulty';
 import { guildPerks } from './guild';
 import { boostActive, perkEffects } from './perks';
 import { prestigeBonus } from './rank';
+import { hasModifier, rankCostMult } from './pressure';
 import { projectModifiers } from './rnd';
 import type { GameState } from './state';
 import { upgradeModifiers } from './upgrades';
@@ -60,13 +61,13 @@ function computeModifiers(s: GameState): Modifiers {
     reachMult: u.reachMult,
     brandGainMult: p.brandGainMult * (megaphone ? 2 : 1),
     qualityPerMonth: u.qualityPerMonth,
-    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult,
+    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult * rankCostMult(s),
     churnMult: u.churnMult * p.churnMult,
     spoilageMult: u.spoilageMult * p.spoilageMult,
     demandMult: p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1) * (perksOn ? 1 + prestigeBonus(s.prestigeLevel ?? 0) : 1),
     recruitmentMult: p.recruitmentMult,
     upgradeCostMult: p.upgradeCostMult,
-    loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0),
+    loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0) + (hasModifier(s, 'tight-credit') ? 0.01 : 0),
     overdraftMult: p.overdraftMult,
     equityDiscountDelta: p.equityDiscountDelta,
   };

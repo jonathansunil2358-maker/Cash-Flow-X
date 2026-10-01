@@ -1,7 +1,7 @@
 import {
   formatGBP, formatPct, grossPayroll, HEADS_PER_PROJECT, leaveChance, MAX_TRAINING_SPEND, monthlyProjectCost, monthLabel, moraleProductivity,
   moraleTarget, PAY_MORALE, PAY_MULT, PROJECTS, projectCheck, projectSlots, projectSuccessChance, PROMO_DIP, PROMO_DISCOUNTS, PROMO_MAX_MONTHS,
-  promoCheck, trainingEffect, INDUSTRIES, type GameState, type PayLevel,
+  promoCheck, trainingEffect, INDUSTRIES, RIVAL_TRAITS, rivalTrait, type GameState, type PayLevel,
 } from '@cfx/engine';
 import { useState, type ReactNode } from 'react';
 import { Button, Card, Field, KeyValue, Meter, MoneyInput, StatusPill } from '../components/ui';
@@ -184,14 +184,15 @@ export function RivalsCard({ game }: { game: GameState }) {
   return (
     <Fold id="card-rivals" title="Rivals"
       summary={cutting.length ? `${cutting[0].name} is cutting prices. Open for details.` : `${game.competitors.length} rivals, none cutting prices right now.`}
-      subtitle="Rivals watch you. If your share jumps, the strongest one may cut prices for a few months, and now and then one launches a better product.">
+      subtitle="Rivals watch you, and each has a personality. If your share jumps, one may cut prices for a few months, and now and then one launches a better product.">
       <ul className="space-y-2 text-sm">
-        {game.competitors.map((c) => {
+        {game.competitors.map((c, i) => {
           const gap = c.normalPrice > 0 ? c.price / c.normalPrice - 1 : 0;
           return (
             <li key={c.name} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2.5">
               <div>
-                <div className="font-medium text-ink">{c.name}</div>
+                <div className="font-medium text-ink">{c.name} <span className="text-xs font-bold text-ink-2">· {RIVAL_TRAITS[rivalTrait(i)].name}</span></div>
+                <div className="text-[11px] text-ink-2">{RIVAL_TRAITS[rivalTrait(i)].blurb}</div>
                 <div className="text-xs text-ink-2">Quality {Math.round(c.quality)} · price {formatGBP(c.price, { pence: true })}</div>
               </div>
               {c.cutMonths > 0

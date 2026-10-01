@@ -5,6 +5,7 @@ import { moraleProductivity } from './morale';
 import { listedDemandMult } from './listing';
 import { siteCapacityMult, siteDemandMult, siteProductivity } from './sites';
 import { effectivePrice, promoDemandMult, seasonFactor } from './promotions';
+import { rivalPressure } from './pressure';
 import { DIFFICULTIES } from './difficulty';
 import { logItem, yearOf, type GameState } from './state';
 
@@ -54,6 +55,18 @@ export function supplierCostMultiplier(s: GameState, ind: IndustryConfig): numbe
 /** Demand while the founder is away (offline progress): nobody is out hustling. */
 export const AWAY_DEMAND = 0.75;
 
+/**
+ * Market saturation: once you hold a big share of the people who prefer a brand, each extra point is
+ * harder to win. Demand shrinks by `SATURATION_SLOPE` for every point of preference share above the start.
+ */
+export const SATURATION_START = 0.35;
+export const SATURATION_SLOPE = 0.8;
+export const SATURATION_MAX = 0.4;
+export function saturationFactor(s: GameState): number {
+  const share = s.history.at(-1)?.kpis.preferenceShare ?? 0;
+  return 1 - Math.min(SATURATION_MAX, Math.max(0, share - SATURATION_START) * SATURATION_SLOPE);
+}
+
 /** Reputation 0-100 moves demand between -10% and +10%. */
 export const reputationFactor = (s: GameState): number => 0.9 + (0.2 * Math.min(100, Math.max(0, s.reputation))) / 100;
 
@@ -69,7 +82,7 @@ export interface DemandInfo {
 
 export function demandFor(s: GameState, ind: IndustryConfig): DemandInfo {
   const mods = modifiersOf(s);
-  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * seasonFactor(s, ind) * promoDemandMult(s) * siteDemandMult(s) * listedDemandMult(s) * (s.away ? AWAY_DEMAND : 1);
+  const potential = s.marketSize * s.economy.demandMult * mods.marketMult * mods.demandMult * reputationFactor(s) * seasonFactor(s, ind) * promoDemandMult(s) * saturationFactor(s) * siteDemandMult(s) * listedDemandMult(s) * (s.away ? AWAY_DEMAND : 1);
   const playerAttractiveness = attractiveness(s.quality, effectivePrice(s), ind.basePrice, ind.priceElasticity);
   const competitorAttractiveness = s.competitors.reduce(
     (a, c) => a + attractiveness(c.quality, c.price, ind.basePrice, ind.priceElasticity, c.strength),
@@ -106,13 +119,26 @@ const clampPrice = (ind: IndustryConfig, p: number): number => Math.round(Math.m
  *  - now and then a rival launches a better product (at most once a year each).
  * How readily they do this scales with the difficulty.
  */
+export type RivalTrait = 'slasher' | 'snob' | 'copycat';
+export const RIVAL_TRAITS: Record<RivalTrait, { name: string; blurb: string }> = {
+  slasher: { name: 'Price slasher', blurb: 'Cuts prices fast and deep when you grow, but improves its product slowly.' },
+  snob: { name: 'Quality snob', blurb: 'Charges a premium and out-innovates you, but never starts a price war.' },
+  copycat: { name: 'Copycat', blurb: 'Follows your price and your quality, always a step behind you.' },
+};
+const TRAIT_ORDER: RivalTrait[] = ['slasher', 'snob', 'copycat'];
+/** Each rival has a fixed personality, set by its place in the sector's list (so old games get them too). */
+export const rivalTrait = (index: number): RivalTrait => TRAIT_ORDER[index % TRAIT_ORDER.length];
+
 export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, lastShare: number): void {
-  const aggression = DIFFICULTIES[s.difficulty].rivalAggression;
-  for (const c of s.competitors) {
-    const catchUp = 0.02 * Math.max(0, s.quality - c.quality);
+  const aggression = DIFFICULTIES[s.difficulty].rivalAggression * rivalPressure(s);
+  s.competitors.forEach((c, i) => {
+    const trait = rivalTrait(i);
+    const catchUp = 0.02 * Math.max(0, s.quality - c.quality) * (trait === 'snob' ? 1.8 : trait === 'copycat' ? 2 : trait === 'slasher' ? 0.5 : 1);
     c.quality = Math.min(100, Math.max(10, c.quality + 0.1 + catchUp + (rng.next() - 0.5) * 0.4));
     const drift = 1 + (rng.next() - 0.5) * 0.02;
     c.normalPrice = clampPrice(ind, c.normalPrice * drift);
+    if (trait === 'snob') c.normalPrice = clampPrice(ind, Math.min(c.normalPrice * 1.004, ind.basePrice * 1.3));
+    if (trait === 'copycat') c.normalPrice = clampPrice(ind, c.normalPrice + (effectivePrice(s) - c.normalPrice) * 0.1);
     if (c.cutMonths > 0) {
       c.cutMonths -= 1;
       c.price = clampPrice(ind, c.price * drift);
@@ -121,27 +147,33 @@ export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, l
       const gap = c.normalPrice - c.price;
       c.price = Math.abs(gap) < ind.basePrice * 0.005 ? c.normalPrice : clampPrice(ind, c.price + gap * 0.3);
     }
-  }
+  });
 
   const earlier = s.history.at(-3)?.kpis.marketShare ?? lastShare;
   const rising = lastShare - earlier > RIVAL_TRIGGER_RISE;
   const dominating = lastShare > 0.3 && chance(rng, 0.15);
-  if ((rising || dominating) && !s.competitors.some((c) => c.cutMonths > 0) && chance(rng, Math.min(1, 0.5 * aggression))) {
-    const rival = s.competitors.reduce((best, c) => (c.strength * c.quality > best.strength * best.quality ? c : best));
-    const cut = 0.04 + rng.next() * 0.04;
+  const hasSlasher = s.competitors.length > 0;
+  if ((rising || dominating) && !s.competitors.some((c) => c.cutMonths > 0) && chance(rng, Math.min(1, 0.5 * aggression * (hasSlasher ? 1 : 1)))) {
+    // Snobs never start price wars; slashers are first in line.
+    const eligible = s.competitors.map((c, i) => ({ c, trait: rivalTrait(i) })).filter((x) => x.trait !== 'snob');
+    const pool = eligible.length ? eligible : s.competitors.map((c, i) => ({ c, trait: rivalTrait(i) }));
+    const best = pool.reduce((b, x) => ((x.trait === 'slasher' ? 1.3 : 1) * x.c.strength * x.c.quality > (b.trait === 'slasher' ? 1.3 : 1) * b.c.strength * b.c.quality ? x : b));
+    const rival = best.c;
+    const slasher = best.trait === 'slasher';
+    const cut = (slasher ? 0.07 : 0.04) + rng.next() * (slasher ? 0.06 : 0.04);
     rival.cutMonths = 3 + Math.min(3, Math.floor(rng.next() * 4));
-    rival.price = Math.max(Math.round(rival.price * (1 - cut)), Math.round(rival.normalPrice * RIVAL_PRICE_FLOOR));
+    rival.price = Math.max(Math.round(rival.price * (1 - cut)), Math.round(rival.normalPrice * (slasher ? 0.78 : RIVAL_PRICE_FLOOR)));
     logItem(s, 'event', `${rival.name} cuts prices`,
       `${rival.name} dropped prices by about ${Math.round(cut * 100)}% for the next ${rival.cutMonths} months to win back customers from you.`);
   }
 
   const year = yearOf(s.month);
-  for (const c of s.competitors) {
-    if (c.lastLaunchYear !== year && chance(rng, 0.03 * aggression)) {
+  s.competitors.forEach((c, i) => {
+    if (c.lastLaunchYear !== year && chance(rng, 0.03 * aggression * (rivalTrait(i) === 'snob' ? 2 : 1))) {
       const step = 3 + Math.min(3, Math.floor(rng.next() * 4));
       c.quality = Math.min(100, c.quality + step);
       c.lastLaunchYear = year;
       logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. Time to look at your own product.`);
     }
-  }
+  });
 }

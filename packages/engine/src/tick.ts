@@ -24,6 +24,7 @@ import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapit
 import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './model/contracts';
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
 import { premiumFor } from './model/insurance';
+import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
 import { advanceSites, rentedExtraSites } from './model/sites';
 import { advanceProjects } from './model/rnd';
 import { advanceMorale, grossPayroll, leaverCost, moraleProductivity, rollLeavers } from './model/morale';
@@ -87,11 +88,12 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
 
   // 1. Year start
   if (m > 0 && m % 12 === 0) {
-    s.salaryIndex *= 1.03;
+    s.salaryIndex *= 1 + wageInflation(s);
+    s.rentIndex *= 1 + RENT_INFLATION;
     for (const c of s.competitors) { c.price = Math.round(c.price * 1.02); c.normalPrice = Math.round(c.normalPrice * 1.02); }
     if (!opts.simulation) {
       s.targets = generateTargets(s, rng);
-      logItem(s, 'notice', 'New financial year', 'Salaries rose 3% with inflation. New acquisition targets are available in the M&A tab.');
+      logItem(s, 'notice', 'New financial year', `Salaries rose ${Math.round(wageInflation(s) * 100)}% and rents 2% with inflation. New acquisition targets are available in the M&A tab.`);
     }
   }
 
@@ -154,6 +156,9 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   if (m % 3 === 0) P('Quarterly rent paid in advance', [dr('prepayments', rent * 3), cr('cash', rent * 3)]);
   const fromPrepaid = Math.min(rent, Math.max(0, L.balances.prepayments));
   P('Rent for the month', [dr('rent', rent), cr('prepayments', fromPrepaid), cr('cash', rent - fromPrepaid)]);
+
+  const compliance = complianceCost(s);
+  if (compliance > 0) P('Compliance, audit and legal', [dr('otherCosts', compliance), cr('cash', compliance)]);
 
   const premium = premiumFor(s);
   if (premium > 0) P('Insurance premium', [dr('insurance', premium), cr('cash', premium)]);

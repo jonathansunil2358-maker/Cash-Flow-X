@@ -107,6 +107,7 @@ export interface RunStart {
   perks: PerkLevels;
   boosts: ActiveBoost[];
   prestigeLevel: number;
+  modifiers?: string[];
   companyName: string;
   icon: string;
 }
@@ -133,7 +134,7 @@ export const api = {
   me: () => request<Me>('/me'),
   updateMe: (patch: { name?: string; icon?: string; title?: string | null; visibility?: Visibility; client?: unknown }) => request('/me', { method: 'PUT', body: patch }),
   buyPerk: (perkId: string) => request<{ perks: PerkLevels; legacyPoints: number }>('/me/perks', { body: { perkId } }),
-  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean; weekly?: boolean; challenge?: string }) =>
+  createRun: (b: { seed: string; industryId: IndustryId; difficulty: DifficultyId; equipmentFinance: EquipmentFinance; companyName: string; icon: string; boosts: ActiveBoost[]; rulesVersion: number; daily?: boolean; weekly?: boolean; challenge?: string; modifiers?: string[] }) =>
     request<RunStart>('/runs', { body: b }),
   carryOver: (runId: string, b: { state: unknown; actions: number }) =>
     request<{ actionsVerified: number; month: number; status: string }>(`/runs/${runId}/carryover`, { body: b }),

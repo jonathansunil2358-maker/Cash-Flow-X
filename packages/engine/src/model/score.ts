@@ -1,4 +1,5 @@
 import type { Pence } from '../money';
+import { modifierBonus } from './modifiers-opt';
 import { annualise, currentBalanceSheet, trailingPL } from './metrics';
 import { valuationOf } from './valuation';
 import { loanPrincipal, ownership, type GameState } from './state';
@@ -63,6 +64,6 @@ export function finalScore(s: GameState): FinalScore {
   const multiplier = s.status === 'insolvent' ? 0.5 : 0.75 + 0.5 * health.score;
   return {
     equityValue, ownership: own, ownerStake, ownerDividends: s.ownerDividends, ownerWealth, health,
-    score: Math.round((ownerWealth / 100) * multiplier),
+    score: Math.round((ownerWealth / 100) * multiplier * modifierBonus(s.modifiers)),
   };
 }

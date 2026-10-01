@@ -257,10 +257,10 @@ export const useGame = create<Store>((set, get) => {
         try {
           const r = await api.createRun({
             seed: opts.seed, industryId: opts.industryId, difficulty: opts.difficulty ?? 'medium', equipmentFinance: opts.equipmentFinance ?? 'buy',
-            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION,
+            companyName: opts.companyName, icon: opts.icon ?? 'rocket', boosts: profile.boosts, rulesVersion: RULES_VERSION, modifiers: opts.modifiers,
             ...(opts.scenarioId === 'daily' ? { daily: true } : opts.scenarioId === 'weekly' ? { weekly: true } : opts.scenarioId === 'challenge' ? { challenge: opts.challengeCode } : {}),
           });
-          game = newGame({ ...opts, companyName: r.companyName, perks: r.perks, boosts: r.boosts, prestigeLevel: r.prestigeLevel });
+          game = newGame({ ...opts, companyName: r.companyName, perks: r.perks, boosts: r.boosts, prestigeLevel: r.prestigeLevel, modifiers: r.modifiers });
           game.server = { runId: r.runId, synced: 0, syncedMonth: 0 };
         } catch (e) {
           get().toast('error', (e as Error).message);
