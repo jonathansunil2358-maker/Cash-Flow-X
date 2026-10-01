@@ -12,6 +12,7 @@ import { modifiersOf } from './model/modifiers';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck } from './model/prestige';
 import { MAX_TRAINING_SPEND, PAY_LEVELS } from './model/morale';
+import { monthlyProjectCost, projectCheck, projectDef } from './model/rnd';
 import { PROMO_DISCOUNTS, PROMO_MAX_MONTHS, promoCheck } from './model/promotions';
 import { logItem, newId, ownership, type GameState, type PayLevel } from './model/state';
 import { UPGRADES, upgradeCost, type UpgradeDef } from './model/upgrades';
@@ -26,6 +27,8 @@ export type Action =
   | { type: 'setPrice'; price: Pence }
   | { type: 'startPromo'; discountPct: number; months: number }
   | { type: 'setPay'; level: PayLevel }
+  | { type: 'startProject'; projectId: string }
+  | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
   | { type: 'setMarketing'; amount: Pence }
   | { type: 'setStockCover'; months: number }
@@ -160,6 +163,23 @@ export function applyActionInPlace(s: GameState, action: Action): void {
       post(L, m, `Redundancy: ${action.count} × ${role.title}`, [dr('restructuring', cost), cr('cash', cost)], { cf: 'operating' });
       s.staff[action.role] -= action.count;
       logItem(s, 'action', `Made ${action.count} × ${role.title} redundant`, `Redundancy cost ${formatGBP(cost)}.`);
+      break;
+    }
+    case 'startProject': {
+      const check = projectCheck(s, action.projectId);
+      if (!check.allowed) fail(check.reason!);
+      const def = projectDef(action.projectId)!;
+      requireFunds(s, monthlyProjectCost(def), `the first month of ${def.name}`);
+      s.projects.push({ id: def.id, monthsLeft: def.months });
+      logItem(s, 'action', `Started: ${def.name}`, `${def.months} months, ${formatGBP(def.cost)} in total (${formatGBP(monthlyProjectCost(def))} a month). It can fail, and the money is spent either way.`);
+      break;
+    }
+    case 'cancelProject': {
+      const i = s.projects.findIndex((p) => p.id === action.projectId);
+      if (i < 0) fail('That project is not running.');
+      const def = projectDef(action.projectId)!;
+      s.projects.splice(i, 1);
+      logItem(s, 'action', `Cancelled: ${def.name}`, 'Nothing is refunded. Your R&D team is free for something else.');
       break;
     }
     case 'setPay': {

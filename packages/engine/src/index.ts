@@ -35,3 +35,4 @@ export * from './model/guild';
 export * from './sync';
 export * from './model/promotions';
 export * from './model/morale';
+export * from './model/rnd';

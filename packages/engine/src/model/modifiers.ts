@@ -1,6 +1,7 @@
 import { DIFFICULTIES } from './difficulty';
 import { guildPerks } from './guild';
 import { boostActive, perkEffects } from './perks';
+import { projectModifiers } from './rnd';
 import type { GameState } from './state';
 import { upgradeModifiers } from './upgrades';
 
@@ -30,6 +31,7 @@ function cacheKey(s: GameState): string {
   for (const id in s.upgrades) k += `|${id}${s.upgrades[id]}`;
   for (const id in s.perks) k += `|${id}${s.perks[id]}`;
   for (const b of s.boosts) k += `|${b.id}${b.monthsRemaining > 0 ? 1 : 0}`;
+  for (const id of s.projectsDone) k += `|r${id}`;
   k += `|g${s.guildLevel ?? 0}`;
   return k;
 }
@@ -45,6 +47,7 @@ export function modifiersOf(s: GameState): Modifiers {
 
 function computeModifiers(s: GameState): Modifiers {
   const u = upgradeModifiers(s.industryId, s.upgrades);
+  const r = projectModifiers(s.projectsDone);
   const perksOn = DIFFICULTIES[s.difficulty].perksApply;
   const p = perkEffects(perksOn ? s.perks : {});
   const g = perksOn ? guildPerks(s.guildLevel ?? 0) : null;
@@ -52,11 +55,11 @@ function computeModifiers(s: GameState): Modifiers {
   const megaphone = perksOn && boostActive(s.boosts, 'megaphone');
   return {
     capacityMult: u.capacityMult * p.capacityMult,
-    marketMult: u.marketMult * p.marketMult,
+    marketMult: u.marketMult * p.marketMult * r.marketMult,
     reachMult: u.reachMult,
     brandGainMult: p.brandGainMult * (megaphone ? 2 : 1),
     qualityPerMonth: u.qualityPerMonth,
-    unitCostMult: u.unitCostMult * p.unitCostMult,
+    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult,
     churnMult: u.churnMult * p.churnMult,
     spoilageMult: u.spoilageMult * p.spoilageMult,
     demandMult: p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1),

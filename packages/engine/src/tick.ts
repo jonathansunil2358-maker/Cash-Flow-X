@@ -21,6 +21,7 @@ import {
 import { effectiveTaxRate, TAX_PAYMENT_LAG } from './model/tax';
 import { valuationOf } from './model/valuation';
 import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapital';
+import { advanceProjects } from './model/rnd';
 import { advanceMorale, grossPayroll, leaverCost, moraleProductivity, rollLeavers } from './model/morale';
 import { advancePromo, effectivePrice } from './model/promotions';
 import { createRng, neutralRng, noise, roundProb, type Rng } from './rng';
@@ -142,6 +143,8 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
     s.staff[leaver.role] -= leaver.count;
     if (!opts.simulation) logItem(s, 'warning', 'Staff have left', `${leaver.count} × ${ind.roles[leaver.role].title} resigned. Morale is ${Math.round(s.morale)}: pay, training and a calm balance sheet keep people.`);
   }
+
+  advanceProjects(s, rng, P, !!opts.simulation);
 
   const rent = Math.round((ind.rentBase + ind.rentPerHead * headcount(s)) * s.rentIndex);
   if (m % 3 === 0) P('Quarterly rent paid in advance', [dr('prepayments', rent * 3), cr('cash', rent * 3)]);
