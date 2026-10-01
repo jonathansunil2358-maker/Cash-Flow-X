@@ -99,6 +99,39 @@ export function adviserTip(game: GameState): Tip | null {
       action: 'Pricing', target: { sheet: 'team', scrollTo: 'card-pricing' },
     };
   }
+  // The new mechanics: seasons, morale, rivals and R&D.
+  const nextFactor = ind.seasonality[game.month % 12] ?? 1;
+  if (nextFactor >= 1.1) {
+    return {
+      text: `A busy month is coming: demand runs about ${Math.round((nextFactor - 1) * 100)}% above normal. ${ind.model === 'unit' ? 'Raise your stock cover so shelves stay full.' : 'Make sure you have the capacity to serve everyone who turns up.'}`,
+      action: ind.model === 'unit' ? 'Stock policy' : 'Capacity', target: { sheet: 'team', scrollTo: ind.model === 'unit' ? 'card-inventory' : 'card-team' },
+    };
+  }
+  if (nextFactor <= 0.93 && !game.promo && game.promoCooldown === 0) {
+    return {
+      text: `A quiet month is coming: demand runs about ${Math.round((1 - nextFactor) * 100)}% below normal. A short promotion can fill the empty capacity.`,
+      action: 'Promotions', target: { sheet: 'team', scrollTo: 'card-promo' },
+    };
+  }
+  if (game.morale < 45 && game.staff.ops + game.staff.rnd + game.staff.sales > 0) {
+    return {
+      text: `Your team is unhappy (morale ${Math.round(game.morale)}). Productivity is down and people may start to leave. Better pay or some training would help.`,
+      action: 'Morale & pay', target: { sheet: 'team', scrollTo: 'card-morale' },
+    };
+  }
+  const cutting = game.competitors.find((c) => c.cutMonths > 0);
+  if (cutting) {
+    return {
+      text: `${cutting.name} has cut its prices for ${cutting.cutMonths} more month${cutting.cutMonths === 1 ? '' : 's'}. Check your share before you react: a short promotion of your own may be cheaper than losing customers.`,
+      action: 'Rivals', target: { sheet: 'team', scrollTo: 'card-rivals' },
+    };
+  }
+  if (game.staff.rnd >= 3 && game.projects.length === 0 && game.projectsDone.length < 3) {
+    return {
+      text: 'Your R&D team has no project. A project costs a little each month but can lift your market, cut your costs or sharpen your product for good.',
+      action: 'R&D projects', target: { sheet: 'team', scrollTo: 'card-projects' },
+    };
+  }
   const cash = game.ledger.balances.cash;
   const affordable = upgradeOptions(game).filter((o) => !o.maxed && !o.locked && o.cost * 2 <= cash).sort((a, b) => a.cost - b.cost)[0];
   if (profit > 0 && affordable) {

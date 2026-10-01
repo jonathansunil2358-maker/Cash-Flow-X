@@ -16,7 +16,10 @@ construction, and an integrity check proves it every month.
 | Accounting | Accruals (PAYE/NI), prepayments (quarterly rent), deferred revenue (IFRS 15 annual subscriptions), weighted-average inventory, straight-line depreciation, bad debts, UK corporation tax with marginal relief and losses carried forward, goodwill and IAS 36 impairment, FVTPL investments |
 | Finance | Amortising loans priced on leverage, quarterly covenants (debt/EBITDA, interest cover) with penalty rate and recall, asset-based overdraft, equity raises with dilution, dividends capped at distributable reserves |
 | Operations | 6 data-driven industries, 3 staff roles, price elasticity, brand/reach, capacity, stock cover, customer and supplier credit terms, automation capex |
-| Market | Named competitors that respond to you, price wars, 9 seeded economic events (recession, rate rise, credit crunch, and more) |
+| Market | Named competitors that react to you (price cuts when your share jumps, now and then a product launch), 9 seeded economic events (recession, rate rise, credit crunch, and more) |
+| Seasons & promotions | Each sector has a seasonal demand curve (restaurants peak in December, gyms in January, shops before Christmas). Run a 10/20/30% promotion for 1 to 3 months: it lifts sales through price elasticity, costs margin, and leaves a quiet month and a cooldown |
+| Morale, pay & training | One team morale number (0-100) set by pay level (below / market / above), a training budget and money worries. It drives productivity, and low morale makes people leave and raises the poaching risk |
+| R&D projects | Point three R&D staff at a named multi-month project (new product line, cost cutting, quality leap). It costs money every month, can fail, and pays off permanently through the same modifiers as upgrades |
 | Analysis | 16 ratios with definitions and industry benchmarks, profit bridge (waterfall), 12-month forecast using the real engine, EV/EBITDA vs revenue multiple vs 5-year DCF |
 | M&A | Acquisition targets with seller-adjusted EBITDA, paid due diligence, consolidation, goodwill |
 | Modes | Endless sandbox on Easy / Medium / Hard, plus the "Profitable but broke" working-capital case study |
@@ -25,6 +28,9 @@ construction, and an integrity check proves it every month.
 | Upgrades | Eight levelled upgrades per sector (capacity, market, reach, quality, churn, spoilage, costs), each capitalised as PP&E, with prerequisite chains; each stands as its own building on the island |
 | Leasing | Start-up equipment can be bought or leased (IFRS 16 right-of-use asset, lease liability, interest/principal split) |
 | Prestige | At a £10m owner stake (2.5x higher each time) sell up for Legacy points = floor(√(stake ÷ £1m)) and gems; spend points in a 15-perk tree. Perks, gems and banked boosts survive; cash and upgrades reset. Reach it from the Prestige button in the bottom bar |
+| Prestige rank | Every prestige is a permanent rank (Operator, Director, Executive, up to Legend): +2% demand on every new company per rank, capped at +30%, on Easy and Medium. The server supplies your rank from its own records, so it cannot be claimed from the client |
+| Daily challenge | One shared company per UTC day for 24 months with no perks, boosts or prestige. The server picks the company, allows one ranked attempt a day, and scores only finished, replay-verified companies. Practise offline as often as you like |
+| Stats, sharing & sound | Lifetime stats and company history, a shareable picture of any finished company, and synthesized sound effects and haptics (switchable in Settings) |
 | Boosts | Gem-bought timed boosts (Rush hour, Lucky charm, Megaphone) that carry over between runs |
 | Online | Google sign-in; runs verified in chunks by the Worker (same engine, compact checkpoints, checksums); server-owned Legacy points, perks and prestiges |
 | Holding companies | Open join, 30 members, visibility (full / summary / hidden), level perks from combined valuation, weekly goals, members investing in each other (new shares, 49% cap, dividends, buy-outs) |

@@ -24,6 +24,8 @@ app.use('*', async (c, next) => {
 
 async function limit(c: Context<AppEnv>, key: string) {
   if (!c.env.SUBMIT_LIMITER) return;
+  // Local development only (DEV_AUTH is never set in production): automated test runs start many companies a minute.
+  if (c.env.DEV_AUTH === 'true') return;
   const ip = c.req.header('cf-connecting-ip') ?? 'unknown';
   const { success } = await c.env.SUBMIT_LIMITER.limit({ key: `${key}:${ip}` });
   if (!success) throw new HttpError(429, 'Too many requests, try again in a minute.');
