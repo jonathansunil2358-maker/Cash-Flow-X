@@ -18,9 +18,21 @@ export function migrateState(raw: unknown): GameState | null {
   if (s.version === 3 || s.version === 4) {
     if (s.version === 3) fromV3(s);
     fromV4(s);
+    resumePrestiged(s);
     return raw as GameState;
   }
   return null;
+}
+
+/**
+ * Prestige used to end the company. It no longer does: a company saved at that final screen simply
+ * carries on, one rank higher (the points were banked when the player prestiged).
+ */
+function resumePrestiged(s: Record<string, any>): void {
+  if (s.status !== 'prestiged') return;
+  s.status = 'playing';
+  s.endReason = null;
+  s.prestigeLevel = (s.prestigeLevel ?? 0) + 1;
 }
 
 /** Add every ledger account the state does not know yet, at zero. */

@@ -548,3 +548,18 @@ async function skipTourIfShown(page: Page) {
   const skip = page.getByRole('button', { name: 'Skip tutorial' });
   if (await skip.isVisible().catch(() => false)) await skip.click();
 }
+
+test('a company saved at the old prestige screen just carries on', async ({ page }) => {
+  const sold = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  sold.status = 'prestiged';
+  sold.endReason = 'You sold it.';
+  sold.prestigeAward = 9;
+  await openWithOldGame(page, sold);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(sold.companyName);
+  await expect(page.getByText(/The company has failed|Prestiged: \+/)).toHaveCount(0);
+  const saved = await savedGame(page);
+  expect(saved.status).toBe('playing');
+  expect(saved.version).toBe(5);
+  expect(saved.prestigeLevel).toBe((sold.prestigeLevel ?? 0) + 1);
+  expect(saved.month).toBe(sold.month);
+});

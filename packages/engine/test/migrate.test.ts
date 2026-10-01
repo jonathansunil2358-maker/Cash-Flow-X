@@ -184,3 +184,26 @@ describe('upgrading version 4 games (before sites, insurance, contracts and list
     }
   });
 });
+
+describe('a company saved at the old prestige screen', () => {
+  it('simply carries on, one rank higher, with nothing lost', () => {
+    for (const f of ['state-v4-software', 'state-v3-software']) {
+      const raw = fixture(f);
+      raw.status = 'prestiged';
+      raw.endReason = 'You sold it.';
+      raw.prestigeAward = 12;
+      raw.prestigeLevel = 1;
+      const before = fixture(f);
+      const s = migrateState(raw)!;
+      expect(s.status).toBe('playing');
+      expect(s.endReason).toBeNull();
+      expect(s.prestigeLevel).toBe(2);
+      expect(s.prestigeAward).toBe(12);
+      expect(s.ledger.balances.cash).toBe(before.ledger.balances.cash);
+      expect(s.month).toBe(before.month);
+      for (let i = 0; i < 12 && s.status === 'playing'; i++) { answer(s); applyPolicy(s); answer(s); tickInPlace(s); }
+      expect(s.month).toBeGreaterThan(before.month);
+      expect(checkIntegrity(s)).toEqual([]);
+    }
+  });
+});

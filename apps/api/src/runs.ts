@@ -246,11 +246,14 @@ export interface CarryOverBody {
  */
 export async function carryOverRun(env: Env, user: UserRow, runId: string, b: CarryOverBody) {
   const run = await env.DB.prepare(
-    `SELECT id, is_active, status, checkpoint, actions_verified, month, equity_value, owner_dividends FROM game_runs WHERE id = ? AND user_id = ?`,
-  ).bind(runId, user.id).first<{ id: string; is_active: number; status: string; checkpoint: ArrayBuffer; actions_verified: number; month: number; equity_value: number; owner_dividends: number }>();
+    `SELECT id, is_active, status, checkpoint, actions_verified, month, equity_value, owner_dividends, stats_json FROM game_runs WHERE id = ? AND user_id = ?`,
+  ).bind(runId, user.id).first<{ id: string; is_active: number; status: string; checkpoint: ArrayBuffer; actions_verified: number; month: number; equity_value: number; owner_dividends: number; stats_json: string }>();
   if (!run) throw new HttpError(404, 'That company is not registered to your account.');
-  if (run.status !== 'playing' || !run.is_active) throw new HttpError(409, 'This company is not running.');
+  // A company that was sold under the old prestige rules may be reopened once: it carries on, a rank higher.
+  const reopening = run.status === 'prestiged' && !!run.is_active;
+  if ((run.status !== 'playing' && !reopening) || !run.is_active) throw new HttpError(409, 'This company is not running.');
   const old = await gunzipJson<Record<string, any>>(run.checkpoint);
+  if (reopening && old.status !== 'prestiged') throw new HttpError(409, 'This company is not running.');
   if (old.version === STATE_VERSION) throw new HttpError(409, 'This company is already on the current version.');
   if (typeof old.version !== 'number' || old.version < 3) throw new HttpError(409, 'This company is too old to carry over.');
 
@@ -261,6 +264,9 @@ export async function carryOverRun(env: Env, user: UserRow, runId: string, b: Ca
     return refuse('it is not the company the server has on record.');
   }
   if (st.status !== 'playing') return refuse('it has already ended.');
+  if (reopening && ((st.prestigeLevel ?? 0) !== (old.prestigeLevel ?? 0) + 1 || (st.prestigeAward ?? 0) !== (old.prestigeAward ?? 0))) {
+    return refuse('it does not match the company that was sold.');
+  }
   if (!Number.isInteger(st.month) || st.month < old.month || st.month > old.month + MAX_SYNC_MONTHS) return refuse('its month is out of range.');
   if (!Number.isInteger(b.actions) || (b.actions as number) < run.actions_verified || (b.actions as number) > run.actions_verified + MAX_SYNC_ACTIONS) return refuse('its decision count is out of range.');
   if (!st.ledger?.balances || !Object.values(st.ledger.balances).every((v) => Number.isInteger(v))) return refuse('its accounts are malformed.');
@@ -277,12 +283,14 @@ export async function carryOverRun(env: Env, user: UserRow, runId: string, b: Ca
   const clean = compactForServer(st);
   let equity: number;
   try { equity = valuationOf(clean).equityValue; } catch { return refuse('its value could not be worked out.'); }
-  if (!Number.isFinite(equity) || equity > Math.max(run.equity_value * CARRYOVER_MAX_GROWTH, CARRYOVER_EQUITY_FLOOR)) return refuse('it has grown more than real play could explain.');
+  // A sold company has its value zeroed in the database; use what was recorded when it was last verified.
+  const baseline = reopening ? Number((JSON.parse(run.stats_json) as { equityValue?: number }).equityValue ?? 0) : run.equity_value;
+  if (!Number.isFinite(equity) || equity > Math.max(baseline * CARRYOVER_MAX_GROWTH, CARRYOVER_EQUITY_FLOOR)) return refuse('it has grown more than real play could explain.');
 
   const now = nowIso();
   await env.DB.prepare(
     `UPDATE game_runs SET checkpoint = ?, actions_verified = ?, month = ?, stats_json = ?, equity_value = ?, owner_stake = ?,
-       owner_dividends = ?, shares_total = ?, updated_at = ? WHERE id = ? AND status = 'playing'`,
+       owner_dividends = ?, shares_total = ?, status = 'playing', updated_at = ? WHERE id = ? AND status IN ('playing', 'prestiged')`,
   ).bind(await gzipJson(clean), b.actions as number, clean.month, JSON.stringify(statsOf(clean)), equity, ownerStakeOf(clean), clean.ownerDividends, clean.shares.total, now, run.id).run();
   return { actionsVerified: b.actions as number, month: clean.month, status: 'playing' };
 }

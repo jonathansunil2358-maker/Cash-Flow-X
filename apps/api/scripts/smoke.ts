@@ -314,6 +314,23 @@ check('carry-over: play after it is verified by replay as normal', after.status 
 const meF = await call<{ activeRun: { month: number } }>('/me', { token: fay.token });
 check('carry-over: the server tracks the new position', meF.json.activeRun?.month === legacy.game.month, meF.json.activeRun);
 
+// A company sold under the old prestige rules is reopened and carries on, a rank higher.
+const hope = await signUp('Hope');
+const sold = await startRun('Hope', hope.token, 'software');
+await play(sold, 14);
+const asSold = (g: GameState) => { const o = asV4Checkpoint(g); o.status = 'prestiged'; o.prestigeAward = 7; o.prestigeLevel = (o.prestigeLevel ?? 0); return o; };
+storeOldCheckpoint(sold.runId, sold.game, asSold);
+execFileSync('npx', ['wrangler', 'd1', 'execute', 'cash-flow-x', '--local', '--command', `UPDATE game_runs SET status = 'prestiged' WHERE id = '${sold.runId}'`], { stdio: 'ignore' });
+sold.game.prestigeAward = 7;
+sold.game.prestigeLevel += 1;
+const wrongRank = await carry(sold, tamper(sold.game, (o) => { o.prestigeLevel += 1; }));
+check('reopen: a rank that does not match the sale is refused', wrongRank.status === 422, wrongRank);
+const reopened = await carry(sold);
+check('reopen: the sold company carries on', reopened.status === 200 && reopened.json.month === sold.game.month, reopened);
+sold.synced = reopened.json.actionsVerified ?? 0;
+check('reopen: it can only happen once', (await carry(sold)).status === 409);
+check('reopen: play afterwards is verified by replay', (await play(sold, 14)).status === 200 && sold.synced === sold.game.actionLog.length);
+
 // The same, for a company stored by the version just before this one (state version 4).
 const gus = await signUp('Gus');
 const v4 = await startRun('Gus', gus.token, 'ecommerce');
