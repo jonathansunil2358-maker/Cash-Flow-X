@@ -1324,3 +1324,29 @@ test('V3 Batch C: negotiation, pitch day, stock-take and cash-flow tetris', asyn
   const minis = await page.evaluate(() => JSON.parse(localStorage.getItem('cfx:profile')!).minis);
   expect(Object.keys(minis).sort()).toEqual(['negotiate', 'pitch', 'stocktake', 'tetris']);
 });
+
+test('V3 Batch D: co-op links, trading cards, season theme and the holding-company rivalry', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Together');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await clearOverlays(page);
+  await page.getByRole('button', { name: /Holding company and leaderboards/ }).click();
+  await page.getByRole('tab', { name: 'Community' }).click();
+  await expect(page.getByRole('note', { name: /season theme/ })).toBeVisible();
+  const coop = page.locator('#card-coop');
+  await coop.getByRole('button', { name: 'New advice link' }).click();
+  await expect(coop.getByText(/advice · 0 friends/)).toBeVisible();
+  await coop.getByRole('button', { name: 'Open' }).first().click();
+  await expect(coop.getByLabel('Co-op view')).toContainText('Month');
+  await expect(page.locator('#card-cards')).toBeVisible();
+  await coop.getByRole('button', { name: 'Remove' }).click();
+  await expect(coop.getByText(/advice · 0 friends/)).toHaveCount(0);
+});

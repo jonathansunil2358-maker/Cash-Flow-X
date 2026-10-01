@@ -272,6 +272,48 @@ check('rival: a rival of the week is picked from the neighbours (or none if alon
   check('league: the board lists scorers, not wrong answers, and marks you', board.status === 200 && board.json.mine.points === 2 && board.json.rows.some((r) => r.me && r.points === 2) && board.json.rows.every((r) => r.points > 0), board);
 }
 
+// Co-op links, suggestions, card gifts and the holding-company rivalry.
+{
+  const own = await signUp('CoopOwner');
+  const pal = await signUp('CoopPal');
+  const stranger = await signUp('CoopStranger');
+  const adv = await call<{ code: string; role: string }>('/coop/create', { token: own.token, body: { role: 'advise' } });
+  check('co-op: an owner can make an advice link', adv.status === 200 && adv.json.code.length >= 6, adv);
+  check('co-op: a bad role is refused', (await call('/coop/create', { token: own.token, body: { role: 'god' } })).status === 400);
+  check('co-op: you cannot join your own link', (await call('/coop/join', { token: own.token, body: { code: adv.json.code } })).status === 409);
+  check('co-op: a wrong code is refused', (await call('/coop/join', { token: pal.token, body: { code: 'ZZZZZZZ' } })).status === 404);
+  check('co-op: a friend joins with the code', (await call('/coop/join', { token: pal.token, body: { code: adv.json.code.toLowerCase() } })).status === 200);
+  check('co-op: a stranger cannot look at the company', (await call(`/coop/${adv.json.code}/view`, { token: stranger.token })).status === 403);
+  const view = await call<{ isOwner: boolean; snapshot: { owner: string } }>(`/coop/${adv.json.code}/view`, { token: pal.token });
+  check('co-op: a member sees a live snapshot', view.status === 200 && view.json.isOwner === false && view.json.snapshot.owner.startsWith('CoopOwner'), view);
+  const okS = await call<{ id: string }>(`/coop/${adv.json.code}/suggest`, { token: pal.token, body: { action: { type: 'setPrice', price: 4200 }, note: 'Try a bit higher <b>now</b>' } });
+  check('co-op: a member can suggest a price change', okS.status === 200, okS);
+  check('co-op: dangerous suggestions are refused', (await call(`/coop/${adv.json.code}/suggest`, { token: pal.token, body: { action: { type: 'dividend', amount: 100 } } })).status === 422);
+  check('co-op: a non-member cannot suggest', (await call(`/coop/${adv.json.code}/suggest`, { token: stranger.token, body: { action: { type: 'setPrice', price: 100 } } })).status === 403);
+  const ownerView = await call<{ suggestions: { id: string; note: string; status: string }[] }>(`/coop/${adv.json.code}/view`, { token: own.token });
+  check('co-op: the owner sees the suggestion, cleaned of markup', ownerView.json.suggestions.length === 1 && !/[<>]/.test(ownerView.json.suggestions[0].note) && ownerView.json.suggestions[0].status === 'open', ownerView);
+  check('co-op: only the owner can resolve it', (await call(`/coop/suggestion/${okS.json.id}/resolve`, { token: pal.token, body: { status: 'done' } })).status === 404);
+  check('co-op: the owner resolves it', (await call(`/coop/suggestion/${okS.json.id}/resolve`, { token: own.token, body: { status: 'done' } })).status === 200);
+  const watch = await call<{ code: string }>('/coop/create', { token: own.token, body: { role: 'watch' } });
+  await call('/coop/join', { token: pal.token, body: { code: watch.json.code } });
+  check('co-op: a watch-only link takes no suggestions', (await call(`/coop/${watch.json.code}/suggest`, { token: pal.token, body: { action: { type: 'setPrice', price: 100 } } })).status === 403);
+  await call('/coop/create', { token: own.token, body: { role: 'watch' } });
+  check('co-op: at most three links', (await call('/coop/create', { token: own.token, body: { role: 'watch' } })).status === 429);
+  const mine = await call<{ mine: unknown[]; joined: unknown[] }>('/coop/mine', { token: pal.token });
+  check('co-op: a friend lists what they joined', mine.json.joined.length === 2, mine);
+  check('co-op: the owner can remove a link, and it stops working', (await call(`/coop/${adv.json.code}/revoke`, { token: own.token, body: {} })).status === 200 && (await call(`/coop/${adv.json.code}/view`, { token: pal.token })).status === 404);
+
+  const gift = await call<{ code: string }>('/cards/gift', { token: own.token, body: { card: 'mentor0' } });
+  check('cards: a gift code is made for a real card', gift.status === 200 && gift.json.code.length >= 6, gift);
+  check('cards: unknown cards are refused', (await call('/cards/gift', { token: own.token, body: { card: 'dragon' } })).status === 400);
+  check('cards: you cannot claim your own gift', (await call('/cards/claim', { token: own.token, body: { code: gift.json.code } })).status === 409);
+  const got = await call<{ card: string }>('/cards/claim', { token: pal.token, body: { code: gift.json.code } });
+  check('cards: a friend claims it', got.status === 200 && got.json.card === 'mentor0', got);
+  check('cards: a gift can only be claimed once', (await call('/cards/claim', { token: stranger.token, body: { code: gift.json.code } })).status === 404);
+  const gr = await call<{ mine: unknown }>('/guild/rival', { token: stranger.token });
+  check('guild rival: someone with no holding company gets nothing', gr.status === 200 && gr.json.mine === null, gr);
+}
+
 // The plan marketplace.
 const pubA = await signUp('PlanA');
 const pubB = await signUp('PlanB');

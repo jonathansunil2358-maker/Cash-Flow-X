@@ -137,6 +137,12 @@ export interface GuildDetail {
 }
 export interface BoardEntry { id: string; name: string; icon: string; title?: string | null; value: number; sub: string | null; hardcore?: boolean; me?: boolean }
 
+export interface CoopSnapshot { owner: string; company: string | null; sector: string | null; difficulty: string | null; month: number; status: string; equityValue: number; ownerStake: number; profitToDate: number; icon: string | null }
+export interface CoopSuggestion { id: string; action: Action; note: string; status: string; from: string; createdAt: string }
+export interface CoopView { code: string; role: 'advise' | 'watch'; isOwner: boolean; snapshot: CoopSnapshot; suggestions: CoopSuggestion[] }
+export interface CoopList { mine: { code: string; role: string; members: number; open: number }[]; joined: { code: string; role: string; owner: string }[] }
+export interface GuildRivalView { week: string; rank?: number; of?: number; mine: { name: string; icon: string; value: number; members: number } | null; rival: { name: string; icon: string; value: number; members: number; above: boolean } | null }
+
 export interface LeagueView { week: string; maxPoints: number; mine: { points: number; answered: number }; rows: { rank: number; id: string; name: string; icon: string; points: number; me: boolean }[] }
 
 export const api = {
@@ -162,6 +168,16 @@ export const api = {
   publishPlan: (plan: unknown) => request<{ id: string }>('/plans', { body: { plan } }),
   likePlan: (id: string) => request<{ liked: boolean; likes: number }>(`/plans/${id}/like`, { body: {} }),
   deleteSharedPlan: (id: string) => request<{ ok: boolean }>(`/plans/${id}/delete`, { body: {} }),
+  coopCreate: (role: 'advise' | 'watch') => request<{ code: string; role: string }>('/coop/create', { body: { role } }),
+  coopJoin: (code: string) => request<{ code: string; role: string }>('/coop/join', { body: { code } }),
+  coopMine: () => request<CoopList>('/coop/mine'),
+  coopView: (code: string) => request<CoopView>(`/coop/${encodeURIComponent(code)}/view`),
+  coopSuggest: (code: string, action: unknown, note: string) => request<{ id: string }>(`/coop/${encodeURIComponent(code)}/suggest`, { body: { action, note } }),
+  coopResolve: (id: string, status: 'done' | 'dismissed') => request<{ ok: boolean }>(`/coop/suggestion/${id}/resolve`, { body: { status } }),
+  coopRevoke: (code: string) => request<{ ok: boolean }>(`/coop/${encodeURIComponent(code)}/revoke`, { body: {} }),
+  giftCard: (card: string) => request<{ code: string; card: string }>('/cards/gift', { body: { card } }),
+  claimCard: (code: string) => request<{ card: string }>('/cards/claim', { body: { code } }),
+  guildRival: () => request<GuildRivalView>('/guild/rival'),
   league: () => request<LeagueView>('/league'),
   answerLeague: (kind: 'spot' | 'detective' | 'journal', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),
   replay: (kind: 'daily' | 'weekly' | 'challenge', key: string, rank = 1) => request<ReplayData>(`/replays/${kind}/${encodeURIComponent(key)}?rank=${rank}`),

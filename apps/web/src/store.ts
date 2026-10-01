@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf, adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  addCard as addCardOn, takeForGift as takeForGiftOn, collectCards, cardDef, recordMini as recordMiniOn, rememberNemesis, campaignChapter, scenarioOf, adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -119,6 +119,8 @@ interface Store {
   answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
   seeTerm: (id: string) => void;
   finishSprint: (day: string, points: number, gems: number) => void;
+  addCardGift: (id: string) => void;
+  takeSpareCard: (id: string) => boolean;
   finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
   claimPass: () => void;
@@ -213,6 +215,11 @@ function progressAfter(
   const newAwards = (after.awards?.length ?? 0) - (before.awards?.length ?? 0);
   if (newAwards > 0) p = addBoxes(p, newAwards);
   if (closed > 0) p = addPassPoints(p, closed);
+  if (closed > 0) {
+    const got = collectCards(p, after);
+    p = got.profile;
+    for (const id of got.gained) celebrations.push({ id: nextId++, kind: 'milestone', title: `New card: ${cardDef(id)!.name}`, text: cardDef(id)!.text, gems: 0 });
+  }
   // A company just ended: remember its strongest rival as your nemesis, and mark a campaign chapter done if you cleared it.
   if (before.status === 'playing' && after.status !== 'playing') {
     p = rememberNemesis(p, after, ownerStakeOf(after));
@@ -736,6 +743,16 @@ export const useGame = create<Store>((set, get) => {
       if (r.profile === get().profile) return;
       set({ profile: persistProfile(r.profile) });
       if (r.gems) { get().toast('good', `Right! +${r.gems} gems.`); playSound('success'); }
+    },
+
+    addCardGift(id) {
+      set({ profile: persistProfile(addCardOn(get().profile, id)) });
+      get().toast('good', `A gift arrived: ${cardDef(id)?.name ?? 'a card'}!`);
+      playSound('success');
+    },
+
+    takeSpareCard(id) {
+      try { set({ profile: persistProfile(takeForGiftOn(get().profile, id)) }); return true; } catch (e) { get().toast('error', (e as Error).message); return false; }
     },
 
     finishMini(kind, day, points) {
