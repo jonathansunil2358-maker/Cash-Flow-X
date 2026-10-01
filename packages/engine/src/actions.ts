@@ -82,7 +82,8 @@ export const EQUITY_COOLDOWN_MONTHS = 6;
 export const EQUITY_DISCOUNT = 0.85;
 export const EQUITY_FEE = 0.04;
 export const LOAN_ARRANGEMENT_FEE = 0.01;
-export const MAX_HEADS_PER_ROLE = 400;
+/** Most people hired in one action (there is no limit on the size of the team). */
+export const MAX_HIRE_AT_ONCE = 1000;
 export const MAX_BOOSTS_PER_YEAR = 4;
 
 /** Cash plus undrawn overdraft. */
@@ -165,8 +166,7 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
   switch (action.type) {
     case 'hire': {
       if (!ROLE_IDS.includes(action.role)) fail('Unknown role.');
-      if (!isCount(action.count, 50)) fail('Hire between 1 and 50 people at a time.');
-      if (s.staff[action.role] + action.count > MAX_HEADS_PER_ROLE) fail(`Maximum ${MAX_HEADS_PER_ROLE} staff per role.`);
+      if (!isCount(action.count, MAX_HIRE_AT_ONCE)) fail(`Hire between 1 and ${MAX_HIRE_AT_ONCE} people at a time.`);
       const role = ind.roles[action.role];
       const recruitment = recruitmentFee(s, action.role) * action.count;
       const equipment = ind.equipmentPerHire * action.count;

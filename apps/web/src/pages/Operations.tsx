@@ -1,6 +1,6 @@
 import {
   attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, INDUSTRIES, reachOf,
-  recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
+  MAX_HIRE_AT_ONCE, recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle } from '../components/ui';
@@ -103,7 +103,7 @@ function RoleRow({ game, role }: { game: GameState; role: RoleId }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-end gap-2">
-        <div className="w-20"><NumberInput aria-label={`Number of ${def.title}`} min={1} max={50} value={count} onChange={(n) => setCount(Math.max(1, Math.min(50, Math.round(n) || 1)))} /></div>
+        <div className="w-20"><NumberInput aria-label={`Number of ${def.title}`} min={1} max={MAX_HIRE_AT_ONCE} value={count} onChange={(n) => setCount(Math.max(1, Math.min(MAX_HIRE_AT_ONCE, Math.round(n) || 1)))} /></div>
         <Button variant="primary" disabled={!playing} onClick={() => act({ type: 'hire', role, count }, `Hired ${count} × ${def.title}.`)}>Hire</Button>
         <Button variant="danger" disabled={!playing || game.staff[role] < count} onClick={() => act({ type: 'fire', role, count }, `${count} × ${def.title} made redundant.`)}>Let go</Button>
         <span className="text-xs text-muted">Hiring: {formatGBP(oneOff)} now, then {formatGBP(monthly)}/month. Redundancy: 1 month's salary each.</span>
