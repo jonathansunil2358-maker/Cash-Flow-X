@@ -563,3 +563,17 @@ test('a company saved at the old prestige screen just carries on', async ({ page
   expect(saved.prestigeLevel).toBe((sold.prestigeLevel ?? 0) + 1);
   expect(saved.month).toBe(sold.month);
 });
+
+test('a sold company saved at the current version carries on too', async ({ page }) => {
+  const sold = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  // Same company, but stamped as the current version and sold, as a save made just before the change would be.
+  sold.status = 'prestiged';
+  sold.prestigeLevel = 3;
+  sold.prestigeAward = 15;
+  await openWithOldGame(page, sold);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(sold.companyName);
+  const saved = await savedGame(page);
+  expect(saved.status).toBe('playing');
+  expect(saved.prestigeLevel).toBe(4);
+  await expect(page.getByText(/Prestiged: \+/)).toHaveCount(0);
+});

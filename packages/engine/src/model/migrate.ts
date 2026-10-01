@@ -14,7 +14,10 @@ import { STATE_VERSION, type GameState } from './state';
 export function migrateState(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const s = raw as Record<string, any>;
-  if (s.version === STATE_VERSION) return raw as GameState;
+  if (s.version === STATE_VERSION) {
+    resumePrestiged(s);
+    return raw as GameState;
+  }
   if (s.version === 3 || s.version === 4) {
     if (s.version === 3) fromV3(s);
     fromV4(s);

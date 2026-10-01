@@ -207,3 +207,16 @@ describe('a company saved at the old prestige screen', () => {
     }
   });
 });
+
+describe('a sold company saved at the current version', () => {
+  it('also carries on, and doing it twice changes nothing more', () => {
+    const raw = fixture('state-v4-software');
+    const once = migrateState(raw)!;
+    once.status = 'prestiged' as never;
+    once.prestigeLevel = 3;
+    const s = migrateState(once)!;
+    expect(s.status).toBe('playing');
+    expect(s.prestigeLevel).toBe(4);
+    expect(migrateState(s)!.prestigeLevel).toBe(4);
+  });
+});
