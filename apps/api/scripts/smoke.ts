@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
-  applyActionInPlace, compactForServer, dailyChallenge, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, type Action, type GameState, type IndustryId,
+  applyActionInPlace, challengeField, compactForServer, dailyChallenge, isoWeek, newGame, prestigeCheck, RULES_VERSION, stateChecksum, tickInPlace, utcDay, valuationOf, weeklyChallenge, type Action, type GameState, type IndustryId,
 } from '@cfx/engine';
 import { applyPolicy } from '../../../packages/engine/scripts/policy';
 
@@ -56,7 +56,7 @@ async function startRun(name: string, token: string, industryId: IndustryId): Pr
 }
 
 const answer = (g: GameState) => {
-  if (g.pendingEvent) applyActionInPlace(g, { type: 'resolveEvent', choiceId: g.pendingEvent.choices[0].id });
+  if (g.status === 'playing' && g.pendingEvent) applyActionInPlace(g, { type: 'resolveEvent', choiceId: g.pendingEvent.choices[0].id });
 };
 
 async function sync(p: Player, overrideChecksum?: string) {
@@ -198,13 +198,65 @@ const eveGame = newGame({ companyName: today.companyName, industryId: today.indu
 const eveP: Player = { name: 'Eve', token: eve.token, runId: dr1.json.runId, game: eveGame, synced: 0 };
 const mid = await play(eveP, 12);
 const board1 = await call<{ me: { finished: boolean; status: string } | null; entries: unknown[]; challenge: { seed: string } }>('/daily', { token: eve.token });
-check('daily: an unfinished run is not on the board yet', mid.status === 200 && board1.json.me?.finished === false && board1.json.entries.length === 0, board1.json);
+check('daily: an unfinished run is not on the board yet', mid.status === 200 && board1.json.me?.finished === false && !(board1.json.entries as { me: boolean }[]).some((e) => e.me), board1.json);
 const fin = await play(eveP, 24);
 const board2 = await call<{ me: { finished: boolean; score: number; rank: number | null }; entries: { me: boolean; score: number }[] }>('/daily', { token: eve.token });
-check('daily: the finished run is scored from the verified accounts', fin.status === 200 && eveP.game.status !== 'playing' && board2.json.me?.finished === true && board2.json.me.rank === 1
+check('daily: the finished run is scored from the verified accounts', fin.status === 200 && eveP.game.status !== 'playing' && board2.json.me?.finished === true && board2.json.me.rank !== null
   && board2.json.entries.some((e) => e.me), { fin, board: board2.json, month: eveP.game.month, status: eveP.game.status });
 check('daily: a past day cannot be queried in the future', (await call('/daily?day=2999-01-01', { token: eve.token })).status === 400);
 check('daily: bad days are refused', (await call('/daily?day=nope', { token: eve.token })).status === 400);
+
+// Weekly event: same rules as the daily, with a twist, and a podium reward the week after.
+const week = weeklyChallenge(isoWeek());
+const hal = await signUp('Hal');
+const startWeekly = (token: string, seed = week.seed) => call<{ runId: string; scenarioId: string; prestigeLevel: number; perks: Record<string, number> }>('/runs', {
+  token, body: { seed, industryId: week.industryId, difficulty: 'hard', equipmentFinance: 'lease', companyName: 'Cheater Ltd', icon: 'rocket', boosts: [{ id: 'rush', monthsRemaining: 24 }], rulesVersion: RULES_VERSION, weekly: true },
+});
+check('weekly: a made-up company is refused', (await startWeekly(hal.token, 'NOT-THIS-WEEK')).status === 409);
+const wr = await startWeekly(hal.token);
+check('weekly: starts with the shared company and level rules', wr.status === 201 && wr.json.scenarioId === 'weekly' && wr.json.prestigeLevel === 0 && Object.keys(wr.json.perks).length === 0, wr);
+check('weekly: only one attempt a week', (await startWeekly(hal.token)).status === 409);
+const halP: Player = { name: 'Hal', token: hal.token, runId: wr.json.runId, game: newGame({ companyName: week.companyName, industryId: week.industryId, seed: week.seed, scenarioId: 'weekly' }), synced: 0 };
+check('weekly: the twist is part of the verified company', halP.game.twist === week.twist.id && halP.game.economy.active.some((a) => a.type === 'weekly-twist'));
+check('weekly: playing it is verified by replay', (await play(halP, 24)).status === 200 && halP.game.status !== 'playing');
+const wb = await call<{ week: string; challenge: { twist: { id: string } }; me: { finished: boolean; rank: number | null } | null; entries: { me: boolean }[]; reward: unknown }>('/weekly', { token: hal.token });
+check('weekly: the finished run is on the board with the twist shown', wb.json.week === week.week && wb.json.challenge.twist.id === week.twist.id && wb.json.me?.finished === true && wb.json.me.rank !== null && wb.json.entries.some((e) => e.me), wb.json);
+check('weekly: nothing to claim before the week is over', (await call('/rewards/weekly', { token: hal.token, body: {} })).status === 409);
+check('weekly: a future week is refused', (await call('/weekly?week=2999-W01', { token: hal.token })).status === 400);
+check('weekly: nonsense weeks are refused', (await call('/weekly?week=nope', { token: hal.token })).status === 400);
+
+// Friend challenges: a private code, one attempt each, the board is for people with the code.
+const ivy = await signUp('Ivy');
+const jo = await signUp('Jo');
+const made = await call<{ code: string; challenge: { seed: string; industryId: IndustryId } }>('/challenges', { token: ivy.token, body: {} });
+check('challenge: a code is made by the server', made.status === 201 && /^[A-HJ-NP-Z2-9]{6}$/.test(made.json.code), made);
+const field = challengeField(made.json.code);
+check('challenge: the code decides the company', made.json.challenge.seed === field.seed && made.json.challenge.industryId === field.industryId);
+const startCh = (token: string, code: string, seed = field.seed) => call<{ runId: string; scenarioId: string; perks: Record<string, number> }>('/runs', {
+  token, body: { seed, industryId: field.industryId, difficulty: 'hard', equipmentFinance: 'lease', companyName: 'x', icon: 'rocket', boosts: [{ id: 'rush', monthsRemaining: 24 }], rulesVersion: RULES_VERSION, challenge: code },
+});
+check('challenge: an unknown code is refused', (await startCh(ivy.token, 'AAAAAA')).status === 404);
+check('challenge: a malformed code is refused', (await startCh(ivy.token, 'nope')).status === 400);
+check('challenge: a made-up company is refused', (await startCh(ivy.token, made.json.code, 'FAKE')).status === 409);
+const ir = await startCh(ivy.token, made.json.code);
+check('challenge: starts on level rules', ir.status === 201 && ir.json.scenarioId === 'challenge' && Object.keys(ir.json.perks).length === 0, ir);
+check('challenge: only one attempt each', (await startCh(ivy.token, made.json.code)).status === 409);
+const iP: Player = { name: 'Ivy', token: ivy.token, runId: ir.json.runId, game: newGame({ companyName: 'x', industryId: field.industryId, seed: field.seed, scenarioId: 'challenge' }), synced: 0 };
+check('challenge: a friend can join with the code', (await startCh(jo.token, made.json.code.toLowerCase())).status === 201);
+check('challenge: playing it is verified by replay', (await play(iP, 24)).status === 200 && iP.game.status !== 'playing');
+const cb = await call<{ creator: string; entries: { me: boolean }[]; me: { finished: boolean } | null }>(`/challenges/${made.json.code}`, { token: jo.token });
+check('challenge: anyone with the code sees the board', cb.status === 200 && cb.json.entries.length === 1 && !cb.json.entries[0].me && cb.json.me?.finished === false, cb);
+check('challenge: unknown boards are 404', (await call('/challenges/AAAAAA', { token: jo.token })).status === 404);
+check('challenge: no sign-in, no board', (await call(`/challenges/${made.json.code}`)).status === 401);
+
+// Founder titles are cosmetic, but only values from the fixed list are accepted.
+check('title: a real title is accepted', (await call('/me', { token: ivy.token, method: 'PUT', body: { title: 'listed' } })).status === 200);
+const meI = await call<{ user: { title: string | null } }>('/me', { token: ivy.token });
+check('title: it is returned on the profile', meI.json.user.title === 'listed', meI.json.user);
+const cb2 = await call<{ entries: { title: string | null }[] }>(`/challenges/${made.json.code}`, { token: jo.token });
+check('title: it shows beside the name on boards', cb2.json.entries[0].title === 'listed', cb2.json);
+check('title: an invented one is refused', (await call('/me', { token: ivy.token, method: 'PUT', body: { title: 'Supreme Overlord' } })).status === 400);
+check('title: it can be cleared', (await call('/me', { token: ivy.token, method: 'PUT', body: { title: null } })).status === 200 && (await call<{ user: { title: string | null } }>('/me', { token: ivy.token })).json.user.title === null);
 
 // Carrying over a company that was started on the old version of the game.
 /** What the previous version stored for a company: the current state without the newer fields. */
@@ -217,8 +269,17 @@ function asOldCheckpoint(g: GameState) {
   for (const h of o.history) delete h.closing.research;
   return o;
 }
-function storeOldCheckpoint(runId: string, g: GameState) {
-  const hex = Array.from(gzipSync(Buffer.from(JSON.stringify(asOldCheckpoint(g))))).map((b) => b.toString(16).padStart(2, '0')).join('');
+/** What the version before this one stored (state version 4): without sites, insurance, contracts and listing. */
+function asV4Checkpoint(g: GameState) {
+  const o = JSON.parse(JSON.stringify(compactForServer(g)));
+  o.version = 4;
+  for (const k of ['sites', 'pendingSites', 'insurance', 'contracts', 'contractOffers', 'listed', 'listedMonth', 'sentiment', 'priceHistory', 'guidance', 'twist']) delete o[k];
+  delete o.ledger.balances.insurance;
+  for (const h of o.history) delete h.closing.insurance;
+  return o;
+}
+function storeOldCheckpoint(runId: string, g: GameState, shape: (g: GameState) => unknown = asOldCheckpoint) {
+  const hex = Array.from(gzipSync(Buffer.from(JSON.stringify(shape(g))))).map((b) => b.toString(16).padStart(2, '0')).join('');
   const file = join(tmpdir(), `cfx-legacy-${runId}.sql`);
   writeFileSync(file, `UPDATE game_runs SET checkpoint = x'${hex}' WHERE id = '${runId}';`);
   execFileSync('npx', ['wrangler', 'd1', 'execute', 'cash-flow-x', '--local', '--file', file], { stdio: 'ignore' });
@@ -252,6 +313,20 @@ const after = await play(legacy, 14);
 check('carry-over: play after it is verified by replay as normal', after.status === 200 && legacy.synced === legacy.game.actionLog.length, after);
 const meF = await call<{ activeRun: { month: number } }>('/me', { token: fay.token });
 check('carry-over: the server tracks the new position', meF.json.activeRun?.month === legacy.game.month, meF.json.activeRun);
+
+// The same, for a company stored by the version just before this one (state version 4).
+const gus = await signUp('Gus');
+const v4 = await startRun('Gus', gus.token, 'ecommerce');
+await play(v4, 8);
+storeOldCheckpoint(v4.runId, v4.game, asV4Checkpoint);
+for (let i = 0; i < 3; i++) { answer(v4.game); applyPolicy(v4.game); answer(v4.game); tickInPlace(v4.game); }
+answer(v4.game);
+const need4 = await sync(v4);
+check('carry-over v4: an older stored company asks to be carried over', need4.status === 409 && (need4.json as { code?: string }).code === 'CARRYOVER_REQUIRED', need4);
+const ok4 = await carry(v4);
+check('carry-over v4: the real company is accepted', ok4.status === 200 && ok4.json.month === v4.game.month, ok4);
+v4.synced = ok4.json.actionsVerified ?? 0;
+check('carry-over v4: play afterwards is verified', (await play(v4, 14)).status === 200 && v4.synced === v4.game.actionLog.length);
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;

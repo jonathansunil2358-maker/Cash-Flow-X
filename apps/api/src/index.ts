@@ -1,7 +1,8 @@
-import { perkPurchase, type PerkLevels } from '@cfx/engine';
+import { isTitleId, perkPurchase, type PerkLevels } from '@cfx/engine';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { dailyBoard } from './daily';
+import { challengeView, claimWeeklyReward, createChallenge, weeklyView } from './fixed';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
 import { claimSeasonReward, leaderboard, seasonRewards, type Board, type Period } from './boards';
 import { claimWeekly, createGuild, guildDetail, joinGuild, leaveGuild, listGuilds } from './guilds';
@@ -84,7 +85,7 @@ async function meView(c: Context<AppEnv>, user: UserRow) {
     .bind(user.id).first<{ id: string; status: string; actions_verified: number; month: number; flagged_reason: string | null }>();
   return {
     user: {
-      id: fresh.id, name: fresh.name, icon: fresh.icon, visibility: fresh.visibility, legacyPoints: fresh.legacy_points, legacyEarned: fresh.legacy_earned,
+      id: fresh.id, name: fresh.name, icon: fresh.icon, title: fresh.title ?? null, visibility: fresh.visibility, legacyPoints: fresh.legacy_points, legacyEarned: fresh.legacy_earned,
       prestigeCount: fresh.prestige_count, perks: JSON.parse(fresh.perks_json) as PerkLevels, personalCash: fresh.personal_cash,
       client: JSON.parse(fresh.client_json),
     },
@@ -100,16 +101,19 @@ app.get('/me', requireUser, async (c) => c.json(await meView(c, c.get('user'))))
 
 app.put('/me', requireUser, async (c) => {
   const user = c.get('user');
-  const b = await body<{ name?: unknown; icon?: unknown; visibility?: unknown; client?: unknown }>(c);
+  const b = await body<{ name?: unknown; icon?: unknown; visibility?: unknown; client?: unknown; title?: unknown }>(c);
   const name = b.name === undefined ? user.name : cleanName(b.name);
   if (!name) throw new HttpError(400, 'Enter a name.');
   const icon = b.icon === undefined ? user.icon : cleanIcon(b.icon);
   const visibility = b.visibility === undefined ? user.visibility : b.visibility;
   if (!['full', 'summary', 'hidden'].includes(visibility as string)) throw new HttpError(400, 'Visibility must be full, summary or hidden.');
+  // A founder title is cosmetic: it only has to be one of the fixed list (or none).
+  if (b.title !== undefined && b.title !== null && !isTitleId(b.title)) throw new HttpError(400, 'Unknown title.');
+  const title = b.title === undefined ? user.title : (b.title as string | null);
   const client = b.client === undefined ? user.client_json : JSON.stringify(b.client);
   if (client.length > 60_000) throw new HttpError(400, 'Saved progress is too large.');
-  await c.env.DB.prepare('UPDATE users SET name = ?, icon = ?, visibility = ?, client_json = ?, updated_at = ? WHERE id = ?')
-    .bind(name, icon, visibility, client, nowIso(), user.id).run();
+  await c.env.DB.prepare('UPDATE users SET name = ?, icon = ?, visibility = ?, client_json = ?, title = ?, updated_at = ? WHERE id = ?')
+    .bind(name, icon, visibility, client, title, nowIso(), user.id).run();
   return c.json({ ok: true });
 });
 
@@ -177,6 +181,19 @@ app.get('/daily', requireUser, async (c) => {
   // Never cached: the player's own status changes the moment they start or finish an attempt.
   c.header('cache-control', 'private, no-store');
   return c.json(await dailyBoard(c.env, c.get('user'), c.req.query('day')));
+});
+app.get('/weekly', requireUser, async (c) => {
+  c.header('cache-control', 'private, no-store');
+  return c.json(await weeklyView(c.env, c.get('user'), c.req.query('week')));
+});
+app.post('/rewards/weekly', requireUser, async (c) => c.json(await claimWeeklyReward(c.env, c.get('user'))));
+app.post('/challenges', requireUser, async (c) => {
+  await limit(c, 'challenges');
+  return c.json(await createChallenge(c.env, c.get('user')), 201);
+});
+app.get('/challenges/:code', requireUser, async (c) => {
+  c.header('cache-control', 'private, no-store');
+  return c.json(await challengeView(c.env, c.get('user'), c.req.param('code')!));
 });
 app.post('/rewards/season/:board', requireUser, async (c) => c.json(await claimSeasonReward(c.env, c.get('user'), c.req.param('board') as Board)));
 

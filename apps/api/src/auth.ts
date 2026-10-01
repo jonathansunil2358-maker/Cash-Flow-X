@@ -14,6 +14,7 @@ export interface UserRow {
   guild_id: string | null;
   guild_role: string | null;
   visibility: string;
+  title: string | null;
 }
 
 export type AppEnv = { Bindings: Env; Variables: { user: UserRow } };

@@ -14,7 +14,7 @@ const STAKES_SQL = `
   GROUP BY i.investor_id`;
 
 export const NET_WORTH_SQL = `
-  SELECT u.id, u.name, COALESCE(r.icon, u.icon) AS icon, u.guild_id, g.name AS guild_name, u.prestige_count,
+  SELECT u.id, u.name, u.title, COALESCE(r.icon, u.icon) AS icon, u.guild_id, g.name AS guild_name, u.prestige_count,
          r.difficulty, r.company_name, r.industry_id,
          CAST(COALESCE(r.owner_stake, 0) + u.personal_cash + COALESCE(st.v, 0) AS INTEGER) AS net_worth
   FROM users u
@@ -25,6 +25,7 @@ export const NET_WORTH_SQL = `
 export interface NetWorthRow {
   id: string;
   name: string;
+  title: string | null;
   icon: string;
   guild_id: string | null;
   guild_name: string | null;

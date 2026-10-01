@@ -10,6 +10,7 @@ export interface BoardEntry {
   id: string;
   name: string;
   icon: string;
+  title?: string | null;
   value: number;
   sub: string | null;
   hardcore?: boolean;
@@ -22,15 +23,15 @@ async function rows(env: Env, board: Board, period: Period, season: string): Pro
   if (board === 'networth') {
     if (period === 'all') {
       const r = await env.DB.prepare(`SELECT * FROM (${NET_WORTH_SQL}) ORDER BY net_worth DESC LIMIT ${LIMIT}`).all<NetWorthRow>();
-      return r.results.map((x) => ({ id: x.id, name: x.name, icon: x.icon, value: x.net_worth, sub: x.company_name ?? x.guild_name, hardcore: x.difficulty === 'hard' }));
+      return r.results.map((x) => ({ id: x.id, name: x.name, icon: x.icon, title: x.title, value: x.net_worth, sub: x.company_name ?? x.guild_name, hardcore: x.difficulty === 'hard' }));
     }
     const r = await env.DB.prepare(
-      `SELECT u.id, u.name, u.icon, s.peak_net_worth AS v, g.name AS guild, gr.difficulty
+      `SELECT u.id, u.name, u.icon, u.title, s.peak_net_worth AS v, g.name AS guild, gr.difficulty
        FROM season_stats s JOIN users u ON u.id = s.user_id LEFT JOIN guilds g ON g.id = u.guild_id
        LEFT JOIN game_runs gr ON gr.user_id = u.id AND gr.is_active = 1
        WHERE s.season = ? AND s.peak_net_worth > 0 ORDER BY s.peak_net_worth DESC LIMIT ${LIMIT}`,
-    ).bind(season).all<{ id: string; name: string; icon: string; v: number; guild: string | null; difficulty: string | null }>();
-    return r.results.map((x) => ({ id: x.id, name: x.name, icon: x.icon, value: x.v, sub: x.guild, hardcore: x.difficulty === 'hard' }));
+    ).bind(season).all<{ id: string; name: string; icon: string; title: string | null; v: number; guild: string | null; difficulty: string | null }>();
+    return r.results.map((x) => ({ id: x.id, name: x.name, icon: x.icon, title: x.title, value: x.v, sub: x.guild, hardcore: x.difficulty === 'hard' }));
   }
   if (board === 'prestige') {
     const r = period === 'all'

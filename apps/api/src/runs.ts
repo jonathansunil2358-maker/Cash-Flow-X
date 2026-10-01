@@ -1,8 +1,9 @@
 import {
-  BOOSTS, checkIntegrity, compactForServer, continueRun, currentBalanceSheet, dailyChallenge, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, STATE_VERSION, utcDay,
+  BOOSTS, checkIntegrity, compactForServer, continueRun, currentBalanceSheet, DIFFICULTIES, DIFFICULTY_IDS, INDUSTRIES, INDUSTRY_IDS, newGame, ownerStakeOf, STATE_VERSION,
   ownership, plSummary, RULES_VERSION, stateChecksum, trailingPL, valuationOf, type Action, type ActiveBoost, type GameState, type PerkLevels,
 } from '@cfx/engine';
 import type { UserRow } from './auth';
+import { claimInsert, flagStatements, resolveFixed, scoreStatement } from './fixed';
 import { guildLevelOfUser, guildValuation, netWorthOf } from './social';
 import { cleanIcon, cleanName, gunzipJson, gzipJson, HttpError, newId, nowIso, seasonOf, weekOf, type Env } from './util';
 
@@ -21,6 +22,8 @@ interface RunRow {
   owner_dividends: number;
   difficulty: string;
   daily_day: string | null;
+  weekly_week: string | null;
+  challenge_code: string | null;
 }
 
 export interface CreateRunBody {
@@ -34,6 +37,10 @@ export interface CreateRunBody {
   rulesVersion: unknown;
   /** true to start today's daily challenge (the server decides the company). */
   daily?: unknown;
+  /** true to start this week's event. */
+  weekly?: unknown;
+  /** A friend challenge code. */
+  challenge?: unknown;
 }
 
 /** Summary shown to holding company members and on leaderboards, computed from verified state. */
@@ -63,13 +70,8 @@ export async function createRun(env: Env, user: UserRow, b: CreateRunBody) {
   if (!DIFFICULTY_IDS.includes(b.difficulty as never)) throw new HttpError(400, 'Unknown difficulty.');
   if (b.equipmentFinance !== 'buy' && b.equipmentFinance !== 'lease') throw new HttpError(400, 'Invalid equipment choice.');
 
-  // The daily challenge: the server decides the company, and each player gets one attempt a day.
-  const challenge = b.daily === true ? dailyChallenge(utcDay()) : null;
-  if (challenge) {
-    if (b.seed !== challenge.seed || b.industryId !== challenge.industryId) throw new HttpError(409, "Today's challenge has changed. Reload the page to get the new one.");
-    const played = await env.DB.prepare('SELECT 1 FROM daily_scores WHERE day = ? AND user_id = ?').bind(challenge.day, user.id).first();
-    if (played) throw new HttpError(409, "You have already played today's challenge. A new one starts at midnight UTC.");
-  }
+  // Daily, weekly and friend challenges: the server decides the company, and each player gets one attempt.
+  const challenge = await resolveFixed(env, user, b, b.seed, b.industryId);
 
   const current = await env.DB.prepare(`SELECT id, status FROM game_runs WHERE user_id = ? AND is_active = 1`).bind(user.id).first<{ id: string; status: string }>();
   if (current?.status === 'playing') {
@@ -88,21 +90,22 @@ export async function createRun(env: Env, user: UserRow, b: CreateRunBody) {
   const game = newGame({
     companyName: challenge ? challenge.companyName : cleanName(b.companyName, 40) || `${INDUSTRIES[b.industryId as keyof typeof INDUSTRIES].name.split(' ')[0]} Co Ltd`,
     industryId: b.industryId as never, seed: b.seed, difficulty, equipmentFinance: challenge ? 'buy' : b.equipmentFinance, perks, boosts,
-    prestigeLevel: challenge ? 0 : user.prestige_count, icon: cleanIcon(b.icon), scenarioId: challenge ? 'daily' : undefined,
+    prestigeLevel: challenge ? 0 : user.prestige_count, icon: cleanIcon(b.icon), scenarioId: challenge ? challenge.scenarioId : undefined,
   });
   const id = newId();
   const now = nowIso();
-  const start = { seed: game.seedLabel, industryId: game.industryId, difficulty, equipmentFinance: game.start.equipmentFinance, perks, boosts: game.start.boosts, prestigeLevel: game.prestigeLevel, companyName: game.companyName, icon: game.icon, ...(challenge ? { scenarioId: 'daily', daily: challenge.day } : {}) };
+  const start = { seed: game.seedLabel, industryId: game.industryId, difficulty, equipmentFinance: game.start.equipmentFinance, perks, boosts: game.start.boosts, prestigeLevel: game.prestigeLevel, companyName: game.companyName, icon: game.icon, ...(challenge ? { scenarioId: challenge.scenarioId, [challenge.kind]: challenge.key } : {}) };
   await env.DB.batch([
     // The latest company icon becomes the player's icon on leaderboards and in holding companies.
     env.DB.prepare('UPDATE users SET icon = ?, updated_at = ? WHERE id = ?').bind(game.icon, now, user.id),
     env.DB.prepare(`UPDATE game_runs SET is_active = 0, status = CASE WHEN status = 'playing' THEN 'abandoned' ELSE status END, updated_at = ? WHERE user_id = ? AND is_active = 1`).bind(now, user.id),
     env.DB.prepare(
-      `INSERT INTO game_runs (id, user_id, seed, industry_id, difficulty, scenario_id, company_name, icon, start_json, checkpoint, stats_json, equity_value, owner_stake, created_at, updated_at, daily_day)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(id, user.id, game.seedLabel, game.industryId, difficulty, challenge ? 'daily' : 'standard', game.companyName, game.icon, JSON.stringify(start),
-      await gzipJson(compactForServer(game)), JSON.stringify(statsOf(game)), valuationOf(game).equityValue, ownerStakeOf(game), now, now, challenge?.day ?? null),
-    ...(challenge ? [env.DB.prepare(`INSERT INTO daily_scores (day, user_id, run_id, updated_at) VALUES (?, ?, ?, ?)`).bind(challenge.day, user.id, id, now)] : []),
+      `INSERT INTO game_runs (id, user_id, seed, industry_id, difficulty, scenario_id, company_name, icon, start_json, checkpoint, stats_json, equity_value, owner_stake, created_at, updated_at, daily_day, weekly_week, challenge_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(id, user.id, game.seedLabel, game.industryId, difficulty, challenge ? challenge.scenarioId : 'standard', game.companyName, game.icon, JSON.stringify(start),
+      await gzipJson(compactForServer(game)), JSON.stringify(statsOf(game)), valuationOf(game).equityValue, ownerStakeOf(game), now, now,
+      challenge?.kind === 'daily' ? challenge.key : null, challenge?.kind === 'weekly' ? challenge.key : null, challenge?.kind === 'challenge' ? challenge.key : null),
+    ...(challenge ? [claimInsert(env, challenge, user.id, id, now)] : []),
   ]);
   return { runId: id, ...start };
 }
@@ -197,12 +200,8 @@ export async function syncRun(env: Env, user: UserRow, runId: string, b: SyncBod
     stmts.push(env.DB.prepare(`INSERT INTO season_stats (user_id, season, prestiges) VALUES (?, ?, 1)
       ON CONFLICT (user_id, season) DO UPDATE SET prestiges = prestiges + 1`).bind(user.id, season));
   }
-  if (run.daily_day) {
-    // Scored from the verified accounts only, and only counted once the 24 months are done.
-    const finished = state.status !== 'playing' ? 1 : 0;
-    stmts.push(env.DB.prepare(`UPDATE daily_scores SET score = ?, months = ?, finished = ?, status = ?, updated_at = ? WHERE day = ? AND user_id = ? AND run_id = ?`)
-      .bind(state.status === 'insolvent' ? 0 : ownerStakeOf(state), state.month, finished, state.status, now, run.daily_day, user.id, run.id));
-  }
+  const score = scoreStatement(env, run, state, user.id, now);
+  if (score) stmts.push(score);
   if (user.guild_id && profitDelta !== 0) {
     stmts.push(env.DB.prepare(`INSERT INTO guild_weekly (guild_id, week, profit) VALUES (?, ?, ?)
       ON CONFLICT (guild_id, week) DO UPDATE SET profit = profit + excluded.profit`).bind(user.guild_id, weekOf(), profitDelta));
@@ -286,7 +285,7 @@ export async function carryOverRun(env: Env, user: UserRow, runId: string, b: Ca
 
 async function flag(env: Env, run: RunRow, reason: string) {
   await env.DB.batch([
-    env.DB.prepare(`UPDATE daily_scores SET finished = 0, status = 'flagged' WHERE run_id = ?`).bind(run.id),
+    ...flagStatements(env, run.id),
     env.DB.prepare(`UPDATE game_runs SET status = 'flagged', flagged_reason = ?, equity_value = 0, owner_stake = 0, updated_at = ? WHERE id = ?`).bind(reason.slice(0, 300), nowIso(), run.id),
     // Offers into a flagged company are refunded.
     env.DB.prepare(`UPDATE users SET personal_cash = personal_cash + COALESCE((SELECT SUM(amount) FROM investments i WHERE i.run_id = ? AND i.status = 'offered' AND i.investor_id = users.id), 0)
