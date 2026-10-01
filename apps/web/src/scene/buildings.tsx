@@ -520,6 +520,202 @@ const UPGRADE_MODELS: Record<string, Model> = {
       <Lamp x={1.1} z={0.8} />
     </group>
   ),
+
+  // ---- Second wave of upgrades ----
+  // Software
+  ai: (lvl) => (
+    <group>
+      <Shed w={1.5} d={1.2} h={0.6 + lvl * 0.15} wall="#e8f1ff" roof={C.teal} />
+      <Bob y={1.35 + lvl * 0.15} amp={0.1}>
+        <Ball r={0.3} c={C.teal} e={C.teal} />
+        <Blk w={0.7} h={0.06} d={0.06} y={0} c={C.white} rad={0.02} />
+      </Bob>
+      {range(lvl).map((i) => <Ball key={i} r={0.07} x={-0.6 + i * 0.3} y={0.4 + lvl * 0.15} z={0.62} c="#9fffff" e="#2fd0de" />)}
+    </group>
+  ),
+  sre: (lvl) => (
+    <group>
+      <Blk w={1.9} h={0.2} d={1.3} c={C.grey} />
+      {range(3).map((i) => (
+        <group key={i}>
+          <Blk w={0.5} h={0.9 + lvl * 0.1} d={0.55} x={-0.6 + i * 0.6} y={0.2} c={C.dark} />
+          <Blink x={-0.6 + i * 0.6} y={0.55 + lvl * 0.1} z={0.3} c={i % 2 ? C.green : C.yellow} />
+          <Blk w={0.4} h={0.04} d={0.05} x={-0.6 + i * 0.6} y={0.8 + lvl * 0.1} z={0.29} c={C.steel} rad={0.01} />
+        </group>
+      ))}
+      <Blk w={0.9} h={0.08} d={0.5} x={0} y={1.3 + lvl * 0.1} z={0} c={C.blue} />
+    </group>
+  ),
+  enterprise: (lvl) => (
+    <group>
+      <Blk w={1.6} h={1.0 + lvl * 0.3} d={1.3} c={C.white} />
+      <Windows w={1.6} d={1.3} floors={Math.max(1, Math.floor((0.8 + lvl * 0.3) / 0.6))} y0={0.3} floorH={0.6} cols={2} sideCols={2} />
+      <Blk w={1.7} h={0.14} d={1.4} y={1.0 + lvl * 0.3} c={C.blue} />
+      <Blk w={0.5} h={0.7} d={0.06} x={0} y={0} z={0.66} c={C.woodDark} rad={0.03} />
+      <Flag x={0.6} z={0.45} y={1.14 + lvl * 0.3} h={0.9} c={C.yellow} />
+    </group>
+  ),
+
+  // Clothing
+  sustain: (lvl) => (
+    <group>
+      <Blk w={1.7} h={0.7 + lvl * 0.1} d={1.3} c={C.glass} o={0.5} />
+      <Gable w={1.8} d={1.4} h={0.5} y={0.7 + lvl * 0.1} c={C.green} />
+      {range(Math.min(lvl, 4)).map((i) => <Bush key={i} x={-0.6 + i * 0.4} z={0.95} c={i % 2 ? '#7ccf52' : '#2f9420'} />)}
+      <Crate x={0.5} y={0} z={0.1} s={0.35} c="#c7e8a5" />
+    </group>
+  ),
+  automation: (lvl) => (
+    <group>
+      <Blk w={2.0} h={0.7 + lvl * 0.1} d={1.3} c="#e9e1d6" />
+      {range(Math.min(lvl, 4)).map((i) => <Gable key={i} w={0.5} d={1.35} h={0.3} x={-0.75 + i * 0.5} y={0.7 + lvl * 0.1} c={C.steel} />)}
+      <Blk w={2.1} h={0.1} d={0.28} y={0} z={0.86} c={C.dark} />
+      {range(lvl).map((i) => <Crate key={i} x={-0.75 + i * 0.4} y={0.1} z={0.86} s={0.22} c={C.orange} />)}
+      <Cyl r={0.1} h={1.3 + lvl * 0.1} x={-0.85} y={0} z={-0.45} c={C.red} />
+      <Smoke x={-0.85} y={1.4 + lvl * 0.1} z={-0.45} />
+    </group>
+  ),
+  wholesale: (lvl) => (
+    <group>
+      <Blk w={2.0} h={0.8} d={1.2} c={C.cream} />
+      <Blk w={2.1} h={0.14} d={1.3} y={0.8} c={C.orange} />
+      <RollDoor w={0.6} h={0.55} x={-0.5} z={0.61} />
+      <RollDoor w={0.6} h={0.55} x={0.5} z={0.61} />
+      {range(Math.min(lvl, 3)).map((i) => <Container key={i} x={-0.55 + i * 0.6} y={0} z={1.15} c={[C.blue, C.red, C.green][i]} ry={Math.PI / 2} />)}
+    </group>
+  ),
+
+  // Restaurant
+  loyalty: (lvl) => (
+    <group>
+      <Shed w={1.3} d={1.0} h={0.6 + lvl * 0.1} wall={C.cream} roof={C.pink} />
+      <Spin speed={1.0} y={1.1 + lvl * 0.1}>
+        <Ball r={0.16} x={-0.1} c={C.red} /><Ball r={0.16} x={0.1} c={C.red} />
+        <mesh position={[0, -0.14, 0]} rotation={[0, 0, Math.PI / 4]}><boxGeometry args={[0.24, 0.24, 0.24]} /><meshStandardMaterial color={C.red} /></mesh>
+      </Spin>
+      {range(Math.min(lvl, 4)).map((i) => <Blk key={i} w={0.2} h={0.03} d={0.14} x={-0.5 + i * 0.3} y={0.5} z={0.58} c={[C.yellow, C.pink, C.teal, C.orange][i]} rad={0.01} />)}
+    </group>
+  ),
+  local: (lvl) => (
+    <group>
+      <Blk w={1.8} h={0.1} d={1.3} c={C.sand} />
+      <Awning w={1.6} y={0.95} z={0.1} a={C.green} b={C.white} stripes={6} />
+      <Blk w={1.5} h={0.45} d={0.5} x={0} y={0.1} z={0.1} c={C.wood} />
+      {range(Math.min(lvl + 1, 5)).map((i) => <Ball key={i} r={0.12} x={-0.6 + i * 0.3} y={0.68} z={0.1} c={[C.red, C.orange, C.green, C.yellow, C.red][i]} />)}
+      <Crate x={-0.7} y={0.1} z={0.75} s={0.3} />
+      <Crate x={0.7} y={0.1} z={0.75} s={0.3} c="#c9d96a" />
+    </group>
+  ),
+  catering: (lvl) => (
+    <group>
+      <Car x={-0.3} y={0} z={0.5} c={C.white} s={1.4} />
+      <Blk w={0.9} h={0.5} d={0.6} x={-0.55} y={0.3} z={0.5} c={C.white} />
+      <Blk w={0.92} h={0.08} d={0.62} x={-0.55} y={0.8} z={0.5} c={C.red} />
+      {range(Math.min(lvl, 3)).map((i) => <Parasol key={i} x={0.5} z={-0.5 + i * 0.55} c={[C.red, C.yellow, C.teal][i]} />)}
+    </group>
+  ),
+
+  // Fitness
+  trainers: (lvl) => (
+    <group>
+      <Blk w={1.8} h={0.2} d={1.8} c={C.blue} />
+      {[[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]].map(([a, b], i) => <Cyl key={i} r={0.05} h={0.9 + lvl * 0.05} x={a} y={0.2} z={b} c={C.red} seg={6} />)}
+      {[0.5, 0.75, 1.0].map((y) => (
+        <group key={y}>
+          <Blk w={1.6} h={0.03} d={0.03} y={y} z={0.8} c={C.white} rad={0.01} />
+          <Blk w={1.6} h={0.03} d={0.03} y={y} z={-0.8} c={C.white} rad={0.01} />
+        </group>
+      ))}
+      <Person x={-0.3} z={0} c={C.red} y={0.2} /><Person x={0.3} z={0} c={C.yellow} y={0.2} />
+    </group>
+  ),
+  community: (lvl) => (
+    <group>
+      <Blk w={1.8} h={0.25} d={1.2} c={C.wood} />
+      <Blk w={1.8} h={0.9} d={0.1} y={0.25} z={-0.55} c={C.dark} />
+      {range(Math.min(lvl + 1, 5)).map((i) => <Flag key={i} x={-0.7 + i * 0.35} z={0.5} h={0.8} c={[C.red, C.yellow, C.teal, C.pink, C.orange][i]} y={0.25} />)}
+      {range(Math.min(lvl, 4)).map((i) => <Person key={i} x={-0.6 + i * 0.4} z={1.2} c={[C.blue, C.pink, C.green, C.purple][i]} />)}
+    </group>
+  ),
+  spa: (lvl) => (
+    <group>
+      <Blk w={1.5} h={0.8 + lvl * 0.1} d={1.2} c={C.wood} />
+      <Gable w={1.6} d={1.3} h={0.45} y={0.8 + lvl * 0.1} c={C.woodDark} />
+      <Blk w={0.4} h={0.6} d={0.06} x={-0.3} y={0} z={0.61} c={C.cream} rad={0.03} />
+      <Cyl r={0.45} h={0.35} x={0.95} y={0} z={0.6} c={C.teal} seg={12} />
+      <Cyl r={0.36} h={0.05} x={0.95} y={0.34} z={0.6} c="#bff3f7" seg={12} />
+      <Smoke x={0.95} y={0.4} z={0.6} />
+    </group>
+  ),
+
+  // E-commerce
+  sameday: (lvl) => (
+    <group>
+      <Blk w={1.6} h={0.7} d={1.1} c={C.white} />
+      <Blk w={1.7} h={0.12} d={1.2} y={0.7} c={C.blue} />
+      <RollDoor w={0.7} h={0.5} x={0} z={0.56} />
+      {range(Math.min(lvl, 3)).map((i) => (
+        <Bob key={i} x={-0.5 + i * 0.5} y={1.4 + (i % 2) * 0.2} amp={0.12} speed={2 + i * 0.4}>
+          <Blk w={0.34} h={0.06} d={0.34} c={C.dark} />
+          <Blk w={0.2} h={0.14} d={0.2} y={-0.14} c={C.orange} rad={0.03} />
+          <Ball r={0.05} x={0.17} y={0.06} z={0.17} c={C.red} e={C.red} />
+        </Bob>
+      ))}
+      <Car x={0.1} y={0} z={1.0} c={C.orange} s={0.9} />
+    </group>
+  ),
+  dropship: (lvl) => (
+    <group>
+      <Blk w={1.9} h={0.1} d={1.4} c={C.grey} />
+      {range(Math.min(lvl, 4)).map((i) => <Container key={i} x={-0.3} y={0.1 + (i % 2) * 0.46} z={-0.35 + Math.floor(i / 2) * 0.5} c={[C.green, C.red, C.blue, C.yellow][i]} />)}
+      <Blk w={0.08} h={1.4} d={0.08} x={0.8} y={0.1} z={0.3} c={C.yellow} />
+      <Blk w={1.2} h={0.08} d={0.08} x={0.3} y={1.4} z={0.3} c={C.yellow} />
+      <Blk w={0.04} h={0.5} d={0.04} x={-0.1} y={0.9} z={0.3} c={C.dark} rad={0.01} />
+    </group>
+  ),
+  subscribe: (lvl) => (
+    <group>
+      <Blk w={1.8} h={0.1} d={1.4} c={C.sand} />
+      {range(Math.min(lvl + 1, 4)).map((i) => (
+        <group key={i} position={[-0.6 + (i % 2) * 0.55, 0.1, -0.3 + Math.floor(i / 2) * 0.6]}>
+          <Crate s={0.45} c={[C.orange, C.blue, C.pink, C.green][i]} />
+          <Blk w={0.47} h={0.05} d={0.1} y={0.43} c={C.white} rad={0.01} />
+          <Blk w={0.1} h={0.05} d={0.47} y={0.43} c={C.white} rad={0.01} />
+        </group>
+      ))}
+      <Spin speed={0.8} y={1.0} x={0.6} z={0.1}>
+        <Ball r={0.28} c={C.yellow} e="#ffe27a" /><Blk w={0.5} h={0.05} d={0.05} c={C.white} />
+      </Spin>
+    </group>
+  ),
+
+  // Automotive
+  paint: (lvl) => (
+    <group>
+      <Shed w={1.8} d={1.3} h={0.7 + lvl * 0.08} wall={C.white} roof={C.purple} gable />
+      {range(4).map((i) => <Blk key={i} w={0.18} h={0.5} d={0.04} x={-0.7 + i * 0.2} y={0.15} z={0.7} c={[C.red, C.yellow, C.blue, C.green][i]} rad={0.01} />)}
+      <Spin speed={0.7} x={0.5} y={0} z={1.0}><Car c={[C.red, C.purple, C.teal, C.orange][lvl % 4]} s={0.8} /></Spin>
+    </group>
+  ),
+  tooling: (lvl) => (
+    <group>
+      <Blk w={1.9} h={0.75 + lvl * 0.06} d={1.3} c="#e9e1d6" />
+      <Blk w={2.0} h={0.14} d={1.4} y={0.75 + lvl * 0.06} c={C.steel} />
+      <Spin speed={1.1} y={1.2 + lvl * 0.06} x={0.4}>
+        <Cyl r={0.4} h={0.12} rx={Math.PI / 2} c={C.yellow} seg={10} />
+        {range(8).map((i) => <Blk key={i} w={0.14} h={0.14} d={0.14} x={Math.cos((i * Math.PI) / 4) * 0.47} y={Math.sin((i * Math.PI) / 4) * 0.47} c={C.yellow} />)}
+      </Spin>
+      <RollDoor w={0.8} h={0.55} x={-0.5} z={0.66} />
+      <Smoke x={-0.8} y={1.0} z={-0.5} />
+    </group>
+  ),
+  fleet: (lvl) => (
+    <group>
+      <Blk w={2.0} h={0.08} d={1.8} c={C.dark} />
+      {range(Math.min(lvl * 2, 6)).map((i) => <Car key={i} x={-0.5 + (i % 2) * 1.0} y={0.08} z={-0.6 + Math.floor(i / 2) * 0.6} ry={Math.PI / 2} c={[C.white, C.blue, C.red, C.yellow, C.teal, C.orange][i]} s={0.8} />)}
+      <Shed w={0.7} d={0.6} h={0.55} wall={C.cream} roof={C.red} />
+    </group>
+  ),
 };
 
 export function UpgradeModel({ id, level }: { id: string; level: number }) {

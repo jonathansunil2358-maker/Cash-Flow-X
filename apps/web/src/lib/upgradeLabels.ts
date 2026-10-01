@@ -8,6 +8,10 @@ const SHORT: Record<string, string> = {
   equipment: 'Equipment', classes: 'Class studio', app: 'Booking app', referral: 'Referrals', pool: 'Pool',
   robots: 'Robots', channels: 'Marketplaces', recs: 'Recs engine', freight: 'Freight', ads: 'Ads',
   bay: 'Workshop bay', battery: 'Batteries', lab: 'Eng. lab', dealers: 'Dealers', showroom: 'Showroom',
+  ai: 'AI assistant', sre: 'Reliability', enterprise: 'Enterprise', sustain: 'Eco fabrics', automation: 'Auto line',
+  wholesale: 'Wholesale', loyalty: 'Loyalty card', local: 'Local supply', catering: 'Catering', trainers: 'Trainers',
+  community: 'Community', spa: 'Spa', sameday: 'Same-day', dropship: 'Dropship', subscribe: 'Subscribe', paint: 'Paint shop',
+  tooling: 'Tooling', fleet: 'Fleet',
 };
 
 export const shortUpgradeName = (def: Pick<UpgradeDef, 'id' | 'name'>): string => SHORT[def.id] ?? def.name;

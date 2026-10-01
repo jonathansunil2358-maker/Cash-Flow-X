@@ -22,9 +22,9 @@ construction, and an integrity check proves it every month.
 | Modes | Endless sandbox on Easy / Medium / Hard, plus the "Profitable but broke" working-capital case study |
 | Difficulty | Easy £100k (70% good events, unlimited rebirths), Medium £50k (60%, 3 rebirths per prestige), Hard £25k (35%, one life, no prestige, no perks) |
 | Events | ~20% chance a month. Automatic events (booms, rate moves, grants, break-ins) plus choice cards that pause the game (client terms, poached staff, breakdowns, tax inspections, rent reviews, angel investors, bulk deals, grants) |
-| Upgrades | Five levelled upgrades per sector (capacity, market, reach, quality, costs), each capitalised as PP&E |
+| Upgrades | Eight levelled upgrades per sector (capacity, market, reach, quality, churn, spoilage, costs), each capitalised as PP&E, with prerequisite chains; each stands as its own building on the island |
 | Leasing | Start-up equipment can be bought or leased (IFRS 16 right-of-use asset, lease liability, interest/principal split) |
-| Prestige | At a £10m owner stake (2.5x higher each time) sell up for Legacy points = floor(√(stake ÷ £1m)) and gems; spend points in a 15-perk tree. Perks, gems and banked boosts survive; cash and upgrades reset |
+| Prestige | At a £10m owner stake (2.5x higher each time) sell up for Legacy points = floor(√(stake ÷ £1m)) and gems; spend points in a 15-perk tree. Perks, gems and banked boosts survive; cash and upgrades reset. Reach it from the Prestige button in the bottom bar |
 | Boosts | Gem-bought timed boosts (Rush hour, Lucky charm, Megaphone) that carry over between runs |
 | Online | Google sign-in; runs verified in chunks by the Worker (same engine, compact checkpoints, checksums); server-owned Legacy points, perks and prestiges |
 | Holding companies | Open join, 30 members, visibility (full / summary / hidden), level perks from combined valuation, weekly goals, members investing in each other (new shares, 49% cap, dividends, buy-outs) |

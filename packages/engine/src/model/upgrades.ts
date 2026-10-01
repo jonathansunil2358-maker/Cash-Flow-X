@@ -41,6 +41,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('devtools', 'Developer tooling', '+0.4 product quality a month per level.', 'gear', 5, 10_000, { quality: 0.4 }),
     U('success', 'Customer success platform', '8% less churn per level.', 'heart', 4, 8_000, { churn: -0.08 }, { id: 'crm', level: 1 }),
     U('marketplace', 'App marketplace listing', '+10% market size per level.', 'rocket', 3, 25_000, { market: 0.1 }, { id: 'crm', level: 2 }),
+    U('ai', 'AI assistant', '+0.5 product quality a month per level.', 'bolt', 4, 30_000, { quality: 0.5 }, { id: 'devtools', level: 2 }),
+    U('sre', 'Reliability engineering', '+10% customer capacity and 6% less churn per level.', 'shield', 4, 18_000, { capacity: 0.1, churn: -0.06 }, { id: 'cloud', level: 2 }),
+    U('enterprise', 'Enterprise sales team', '+12% market size per level.', 'crown', 3, 40_000, { market: 0.12 }, { id: 'crm', level: 3 }),
   ],
   clothing: [
     U('cutting', 'Cutting machines', '+20% production capacity per level.', 'gear', 5, 10_000, { capacity: 0.2 }),
@@ -48,6 +51,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('studio', 'Design studio', '+0.4 collection quality a month per level.', 'star', 5, 8_000, { quality: 0.4 }),
     U('supplier', 'Bulk supplier deal', 'Unit costs 4% lower per level.', 'key', 4, 15_000, { unitCost: -0.04 }, { id: 'cutting', level: 1 }),
     U('warehouse', 'Warehouse system', '25% less stock written off per level.', 'parcel', 3, 9_000, { spoilage: -0.25 }, { id: 'webshop', level: 1 }),
+    U('sustain', 'Sustainable fabrics', '+0.5 collection quality a month per level.', 'leaf', 4, 14_000, { quality: 0.5 }, { id: 'studio', level: 2 }),
+    U('automation', 'Automated sewing line', '+15% production capacity and unit costs 2% lower per level.', 'bolt', 4, 24_000, { capacity: 0.15, unitCost: -0.02 }, { id: 'cutting', level: 2 }),
+    U('wholesale', 'Wholesale accounts', '+12% market size per level.', 'tshirt', 3, 28_000, { market: 0.12 }, { id: 'webshop', level: 2 }),
   ],
   restaurant: [
     U('kitchen', 'Second kitchen line', '+20% covers per level.', 'flame', 5, 12_000, { capacity: 0.2 }),
@@ -55,6 +61,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('chefs', "Chef's table", '+0.4 food quality a month per level.', 'star', 5, 8_000, { quality: 0.4 }),
     U('fridge', 'Walk-in fridge', '25% less food spoiled per level.', 'diamond', 3, 7_000, { spoilage: -0.25 }, { id: 'kitchen', level: 1 }),
     U('truck', 'Food truck', '+10% market size per level.', 'car', 3, 20_000, { market: 0.1 }, { id: 'delivery', level: 1 }),
+    U('loyalty', 'Loyalty card', '+10% reach per level.', 'heart', 4, 7_000, { reach: 0.1 }, { id: 'delivery', level: 2 }),
+    U('local', 'Local suppliers', 'Unit costs 3% lower and 15% less food spoiled per level.', 'leaf', 4, 12_000, { unitCost: -0.03, spoilage: -0.15 }, { id: 'fridge', level: 1 }),
+    U('catering', 'Catering contracts', '+12% market size per level.', 'coffee', 3, 26_000, { market: 0.12 }, { id: 'truck', level: 1 }),
   ],
   fitness: [
     U('equipment', 'More equipment', '+20% member capacity per level.', 'dumbbell', 5, 10_000, { capacity: 0.2 }),
@@ -62,6 +71,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('app', 'Booking app', '8% less churn per level.', 'laptop', 4, 8_000, { churn: -0.08 }),
     U('referral', 'Referral scheme', '+12% reach per level.', 'heart', 4, 6_000, { reach: 0.12 }, { id: 'app', level: 1 }),
     U('pool', 'Swimming pool', '+12% market size per level.', 'globe', 3, 35_000, { market: 0.12 }, { id: 'equipment', level: 2 }),
+    U('trainers', 'Personal training', '+0.5 member experience a month per level.', 'star', 4, 14_000, { quality: 0.5 }, { id: 'classes', level: 2 }),
+    U('community', 'Community events', '+10% reach and 5% less churn per level.', 'flame', 4, 9_000, { reach: 0.1, churn: -0.05 }, { id: 'referral', level: 1 }),
+    U('spa', 'Spa and sauna', '+10% market size per level.', 'diamond', 3, 32_000, { market: 0.1 }, { id: 'pool', level: 1 }),
   ],
   ecommerce: [
     U('robots', 'Warehouse robots', '+20% order capacity per level.', 'gear', 5, 14_000, { capacity: 0.2 }),
@@ -69,6 +81,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('recs', 'Recommendation engine', '+0.4 site quality a month per level.', 'chart', 5, 10_000, { quality: 0.4 }),
     U('freight', 'Freight contract', 'Unit costs 3% lower per level.', 'parcel', 4, 15_000, { unitCost: -0.03 }, { id: 'robots', level: 1 }),
     U('ads', 'Ad optimisation', '+12% reach per level.', 'bolt', 4, 8_000, { reach: 0.12 }, { id: 'channels', level: 1 }),
+    U('sameday', 'Same-day fulfilment', '+12% order capacity and +0.2 site quality a month per level.', 'rocket', 4, 20_000, { capacity: 0.12, quality: 0.2 }, { id: 'robots', level: 2 }),
+    U('dropship', 'Dropship partners', 'Unit costs 3% lower per level.', 'key', 4, 18_000, { unitCost: -0.03 }, { id: 'freight', level: 1 }),
+    U('subscribe', 'Subscribe and save', '+10% market size and +5% reach per level.', 'star', 3, 24_000, { market: 0.1, reach: 0.05 }, { id: 'channels', level: 2 }),
   ],
   automotive: [
     U('bay', 'Second workshop bay', '+20% build capacity per level.', 'car', 5, 30_000, { capacity: 0.2 }),
@@ -76,6 +91,9 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('lab', 'Engineering lab', '+0.4 conversion quality a month per level.', 'gear', 5, 25_000, { quality: 0.4 }),
     U('dealers', 'Dealer network', '+10% market size per level.', 'key', 3, 35_000, { market: 0.1 }, { id: 'bay', level: 1 }),
     U('showroom', 'Showroom', '+12% reach per level.', 'star', 3, 20_000, { reach: 0.12 }, { id: 'lab', level: 1 }),
+    U('paint', 'Custom paint shop', '+0.4 conversion quality a month per level.', 'diamond', 4, 18_000, { quality: 0.4 }, { id: 'lab', level: 1 }),
+    U('tooling', 'Precision tooling', '+12% build capacity and parts costs 3% lower per level.', 'gear', 4, 35_000, { capacity: 0.12, unitCost: -0.03 }, { id: 'bay', level: 2 }),
+    U('fleet', 'Fleet contracts', '+12% market size per level.', 'parcel', 3, 45_000, { market: 0.12 }, { id: 'dealers', level: 1 }),
   ],
 };
 
