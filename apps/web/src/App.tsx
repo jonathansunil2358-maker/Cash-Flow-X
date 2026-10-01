@@ -19,6 +19,7 @@ import { Social } from './pages/Social';
 import { Missions } from './pages/Missions';
 import { Onboarding } from './pages/Onboarding';
 import { Operations, UpgradesPanel } from './pages/Operations';
+import { Coach } from './pages/Coach';
 import { CelebrationModal, OfflineModal } from './pages/Overlays';
 import { Settings } from './pages/Settings';
 import { Tutorial } from './pages/Tutorial';
@@ -72,7 +73,7 @@ const ICONS = {
 };
 
 const SHEET_TITLES: Record<Sheet, string> = {
-  team: 'Team', upgrades: 'Upgrades', finance: 'Finance', missions: 'Missions', books: 'The Books', legacy: 'Prestige & Legacy', social: 'Holding company & leaderboards', settings: 'Settings',
+  team: 'Run the business', upgrades: 'Upgrades', finance: 'Finance', missions: 'Missions', books: 'The Books', legacy: 'Prestige & Legacy', social: 'Holding company & leaderboards', settings: 'Settings',
 };
 
 function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string; cycleTheme: () => void }) {
@@ -111,9 +112,10 @@ function GameShell({ game, theme, cycleTheme }: { game: GameState; theme: string
         {!playing && <GameOver game={game} />}
         <Alerts game={game} />
         <QuickStats game={game} />
+        <Coach game={game} />
         <nav className="cfx-dock fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] lg:static lg:rounded-[32px] lg:shadow-[var(--edge)]" aria-label="Actions"
           style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-          <DockCard tour="dock-team" label="Team" tone="" icon={ICONS.team} active={sheet === 'team'} onClick={() => openSheet(sheet === 'team' ? null : 'team')} />
+          <DockCard tour="dock-team" label="Business" tone="" icon={ICONS.team} active={sheet === 'team'} onClick={() => openSheet(sheet === 'team' ? null : 'team')} />
           <DockCard tour="dock-upgrades" label="Upgrades" tone="is-go" icon={ICONS.upgrades} badge={affordable} active={sheet === 'upgrades'} onClick={() => openSheet(sheet === 'upgrades' ? null : 'upgrades')} />
           <DockCard tour="dock-finance" label="Finance" tone="is-coin" icon={ICONS.finance} active={sheet === 'finance'} onClick={() => openSheet(sheet === 'finance' ? null : 'finance')} />
           <DockCard tour="dock-missions" label="Missions" tone="is-gem" icon={ICONS.missions} badge={missionBadge} active={sheet === 'missions'} onClick={() => openSheet(sheet === 'missions' ? null : 'missions')} />
@@ -240,7 +242,8 @@ function SceneArea({ game }: { game: GameState }) {
           <circle cx="18" cy="18" r={r} fill="none" stroke={paused ? 'var(--danger)' : 'var(--go)'} strokeWidth="5" strokeLinecap="round"
             strokeDasharray={circ} strokeDashoffset={circ * (1 - monthProgress)} transform="rotate(-90 18 18)" />
         </svg>
-        <span className="text-sm font-black" aria-live="polite">{monthLabel(game.month)}{paused && game.status === 'playing' ? ' · paused' : ''}</span>
+        {/* On narrow screens the red ring shows the pause; the word stays for screen readers. */}
+        <span className="text-sm font-black" aria-live="polite">{monthLabel(game.month)}{paused && game.status === 'playing' && <span className="max-[420px]:sr-only"> · paused</span>}</span>
       </div>
       <div className="cfx-speed absolute right-1 top-1" data-tour="clock" role="group" aria-label="Game speed">
         {speeds.map((o) => (
@@ -289,9 +292,10 @@ function DockCard({ tour, label, tone, icon, badge, active, onClick }: { tour: s
 }
 
 function Toasts() {
-  const { toasts, dismissToast } = useGame();
+  const { toasts, dismissToast, sheet } = useGame();
+  const where = sheet ? 'top-[max(12px,env(safe-area-inset-top))]' : 'bottom-[calc(env(safe-area-inset-bottom)+112px)] lg:bottom-6';
   return (
-    <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+112px)] left-1/2 z-[60] flex w-[min(94vw,440px)] -translate-x-1/2 flex-col gap-2 lg:bottom-6" aria-live="polite">
+    <div className={`pointer-events-none fixed left-1/2 z-[60] flex w-[min(94vw,440px)] -translate-x-1/2 flex-col gap-2 ${where}`} aria-live="polite">
       {toasts.map((t) => {
         const icon = t.kind === 'good' ? CURRENCY_ICONS.coin : t.kind === 'bad' || t.kind === 'error' ? iconUrl('flame') : t.kind === 'success' ? iconUrl('star') : CURRENCY_ICONS.xp;
         return (

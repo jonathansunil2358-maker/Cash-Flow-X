@@ -33,7 +33,10 @@ describe('loans', () => {
     const s = newGame({ companyName: 'Loan', industryId: 'software', seed: 'LOAN' });
     applyActionInPlace(s, { type: 'takeLoan', amount: 24_000_00, termMonths: 12 });
     const interestBefore = s.ledger.balances.interestExpense;
-    for (let i = 0; i < 12 && s.status === 'playing'; i++) tickInPlace(s);
+    for (let i = 0; i < 12 && s.status === 'playing'; i++) {
+      if (s.pendingEvent) applyActionInPlace(s, { type: 'resolveEvent', choiceId: s.pendingEvent.choices[0].id });
+      tickInPlace(s);
+    }
     expect(s.loans).toHaveLength(0);
     expect(s.ledger.balances.loans).toBe(0);
     expect(s.integrityErrors).toEqual([]);

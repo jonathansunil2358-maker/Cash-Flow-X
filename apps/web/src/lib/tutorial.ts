@@ -1,4 +1,5 @@
 import { DIFFICULTIES, formatGBP, INDUSTRIES, prestigeThreshold, UPGRADES, type GameState, type IndustryId } from '@cfx/engine';
+import { startingMarketing } from './coach';
 
 /** Where a tutorial step points: matches a `data-tour` attribute in the game screen. */
 export type TourTarget = 'scene' | 'clock' | 'cash' | 'stats' | 'dock-team' | 'dock-upgrades' | 'dock-finance' | 'dock-missions' | 'dock-books';
@@ -32,7 +33,7 @@ const GUIDES: Record<IndustryId, SectorGuide> = {
     place: 'glass office tower',
     cash: '30% of customers pay for a year up front. That cash lands now, but it is deferred revenue: a liability you earn month by month. Cash in the bank is not the same as profit.',
     team: 'Customer success staff look after more customers, Developers keep the product ahead of rivals like Stackly, and Sales reps multiply the reach of your marketing.',
-    upgrade: { id: 'success', why: '3% of customers cancel every month, and churn quietly eats recurring revenue. It cuts churn by 8% a level.' },
+    upgrade: { id: 'crm', why: 'Each level lets 12% more of the market hear about you, and it unlocks the Customer success platform, which cuts churn.' },
     finance: 'SaaS rarely needs heavy debt: customers prepay and there is no stock. If you raise equity, do it when your valuation is high so you give away less.',
     watch: 'Watch customers and churn: recurring revenue compounds when you keep more than you lose.',
     paid: 'Monthly, 30% yearly',
@@ -42,7 +43,7 @@ const GUIDES: Record<IndustryId, SectorGuide> = {
     place: 'boutique',
     cash: 'Wholesale customers take 45 days to pay, but your suppliers want paying sooner. You can be profitable on paper and still run out of cash: working capital is the whole game.',
     team: 'Warehouse & production staff raise output, Designers improve the collection, and Wholesale reps open more accounts.',
-    upgrade: { id: 'warehouse', why: '2% of your stock is written off every month. It cuts write-offs by 25% a level.' },
+    upgrade: { id: 'webshop', why: 'Selling online grows your market by 10% a level, and it unlocks the Warehouse system, which cuts stock write-offs.' },
     finance: 'Stock needs funding. Your overdraft limit grows with receivables and inventory, and a term loan can carry you through a big season.',
     watch: 'Keep an eye on stock cover in Team › Inventory policy: too little loses sales, too much ties up cash.',
     paid: 'Wholesale on 45 days',
@@ -52,7 +53,7 @@ const GUIDES: Record<IndustryId, SectorGuide> = {
     place: 'restaurant',
     cash: 'Cash comes in straight away, which helps. But most costs are fixed, so a few covers more or less swings profit hard. That is operating leverage.',
     team: 'Kitchen & floor staff set how many covers you can serve, Chefs raise food quality, and Events & partnerships fill the tables.',
-    upgrade: { id: 'fridge', why: 'A quarter of leftover food spoils every month. It cuts that waste by 25% a level.' },
+    upgrade: { id: 'kitchen', why: 'More covers from the same rent: operating leverage working for you. It also unlocks the Walk-in fridge, which cuts food waste.' },
     finance: 'The kitchen fit-out is depreciated over 7 years, so it reaches profit slowly even though the cash has already gone.',
     watch: 'Keep stock cover low (it is perishable) and fill every table you can.',
     paid: 'On the spot',
@@ -72,7 +73,7 @@ const GUIDES: Record<IndustryId, SectorGuide> = {
     place: 'fulfilment warehouse',
     cash: 'Card payments settle in 3 days and suppliers give you 30. Sell stock quickly and it pays for itself before the invoice is due: a negative cash conversion cycle.',
     team: 'Fulfilment staff pack more orders, Product & UX improves the site, and Growth marketers stretch your ad spend further.',
-    upgrade: { id: 'freight', why: 'On a thin 40% margin, every 3% off unit costs goes straight to gross profit.' },
+    upgrade: { id: 'robots', why: 'Each fulfilment worker packs 20% more orders a level, spreading your fixed costs, and it unlocks the Freight contract, which cuts unit costs.' },
     finance: 'Brand decays 10% a month when you stop spending, so budget for marketing like rent: it never really stops.',
     watch: 'Watch gross margin and how much marketing it takes to win each order.',
     paid: 'Card, settles in 3 days',
@@ -97,7 +98,7 @@ export function tourSteps(game: GameState, prestigeCount: number): TourStep[] {
   const ind = INDUSTRIES[game.industryId];
   const g = GUIDES[game.industryId];
   const diff = DIFFICULTIES[game.difficulty];
-  const upgrade = UPGRADES[game.industryId].find((u) => u.id === g.upgrade.id);
+  const upgrade = UPGRADES[game.industryId].find((u) => u.id === g.upgrade.id && !u.requires);
   const sub = ind.model === 'subscription';
   const good = Math.round(diff.positiveShare * 100);
   return [
@@ -129,11 +130,11 @@ export function tourSteps(game: GameState, prestigeCount: number): TourStep[] {
     },
     {
       target: 'dock-team',
-      title: 'Build your team',
-      body: g.team,
+      title: 'Run the business',
+      body: `Business is where you hire and set your price, marketing, ${sub ? '' : 'stock and '}credit terms. ${g.team}`,
       tip: sub
         ? `On your own you can serve about ${ind.founderCapacity} ${ind.unitPlural}. Hire before you hit the cap, or new sign-ups are turned away.`
-        : `Team is also where you set your price, marketing budget, stock cover and credit terms.`,
+        : `We've started you on ${money(startingMarketing(ind))} a month of marketing. Watch the adviser under your scoreboard for what to change next.`,
     },
     {
       target: 'dock-upgrades',

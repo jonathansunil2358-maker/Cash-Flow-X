@@ -205,6 +205,9 @@ h1, h2, h3 {
 .cfx-scene-tag:hover { transform: translateY(-1px); box-shadow: 0 3px 0 #4a2c17; }
 .cfx-scene-tag:active { transform: translateY(2px); box-shadow: 0 0 0 #4a2c17; }
 .cfx-scene-tag:focus-visible { outline: 3px solid #ffc633; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .cfx-scene-tag { font-size: 10px; line-height: 14px; padding: 0 6px; }
+}
 .cfx-scene-tag.is-ghost { border-style: dashed; background: rgb(255 243 220 / 0.82); box-shadow: none; }
 .cfx-scene-tag__badge {
   display: inline-grid;

@@ -7,6 +7,7 @@ import { CURRENCY_ICONS, ICON_LABELS, ICON_ORDER, iconUrl } from '../lib/icons';
 import { deleteSlot, slotMeta, SLOTS } from '../lib/save';
 import { useGame } from '../store';
 import { PerkTree } from './Legacy';
+import { HowItWorks, SeasonPreview } from './MenuExtras';
 
 type Step = 'home' | 'sector' | 'identity' | 'difficulty';
 
@@ -15,6 +16,8 @@ const SECTOR_ICON: Record<IndustryId, string> = {
 };
 
 const DIFF_TAG: Record<string, string> = { Standard: 'is-good', Challenging: 'is-warn', Hard: 'is-bad' };
+/** Sector badges describe how many moving parts the business has, so they don't clash with game difficulty. */
+const COMPLEXITY: Record<string, string> = { Standard: 'Simple', Challenging: 'Moderate', Hard: 'Complex' };
 
 function StepHeader({ step, title, subtitle }: { step: number; title: string; subtitle?: string }) {
   return (
@@ -98,6 +101,8 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
             <p className="mt-2 text-center text-xs text-ink-2">{perkCount} perk levels · next prestige at a {formatGBP(prestigeThreshold(profile.prestigeCount), { compact: true })} stake</p>
           </section>
           {(profile.legacyPoints > 0 || perkCount > 0) && <PerkTree />}
+          <SeasonPreview />
+          {profile.prestigeCount === 0 && <HowItWorks />}
 
           {saves.filter((m) => m!.slot !== 'autosave').length > 0 && (
             <section className="cfx-panel !pt-7">
@@ -120,7 +125,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
         <>
           {preset?.reason === 'rebirth' && <div className="cfx-toast !max-w-none"><img src={iconUrl('shield')} alt="" /><span>Rebirth: your perks, gems and boosts are safe. Pick any sector and go again on {DIFFICULTIES[difficulty].name}.</span></div>}
           {preset?.reason === 'prestige' && <div className="cfx-toast !max-w-none"><img src={CURRENCY_ICONS.legacy} alt="" /><span>Prestige {profile.prestigeCount}! You have {profile.legacyPoints} Legacy points to spend on perks (main menu).</span></div>}
-          <StepHeader step={1} title="What will you build?" subtitle="Each sector has real economics: margins, stock, credit terms and how fast cash comes in." />
+          <StepHeader step={1} title="What will you build?" subtitle="Each sector has real economics: margins, stock, credit terms and how fast cash comes in. The badge shows how complex it is to run." />
           <div role="radiogroup" aria-label="Sector" className="grid grid-cols-2 gap-3">
             {INDUSTRY_IDS.map((id) => {
               const i = INDUSTRIES[id];
@@ -128,7 +133,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
                 <button key={id} type="button" role="radio" aria-checked={industry === id} aria-pressed={industry === id} className="cfx-tile !p-2.5" onClick={() => setIndustry(id)}>
                   <span className="flex items-center justify-between">
                     <img src={iconUrl(SECTOR_ICON[id])} alt="" className="h-12 w-12" />
-                    <span className={`cfx-tag ${DIFF_TAG[i.difficulty]} !px-1.5 !py-0.5`}>{i.difficulty}</span>
+                    <span className={`cfx-tag ${DIFF_TAG[i.difficulty]} !px-1.5 !py-0.5`} title="How many moving parts the business has">{COMPLEXITY[i.difficulty]}</span>
                   </span>
                   <span className="cfx-tile__name">{i.name.replace(' (SaaS)', '').replace(' (EV conversions)', '')}</span>
                   <span className="cfx-tile__meta">{i.tagline}</span>

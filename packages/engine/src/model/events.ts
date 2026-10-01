@@ -17,6 +17,8 @@ export const BASE_BAD_DEBT_RATE = 0.003;
 export const EVENT_CHANCE = 0.2;
 /** Of those, the share that are decisions (choice cards) rather than automatic. */
 export const CHOICE_SHARE = 0.5;
+/** The month every company gets its first (good-news) decision. */
+export const FIRST_EVENT_MONTH = 2;
 
 const posterFor = (s: GameState): Poster => (memo, lines, cf = 'operating', cfLabel) => {
   post(s.ledger, s.month, memo, lines, { cf, cfLabel });
@@ -480,13 +482,15 @@ export function runEvents(s: GameState, rng: Rng, enabled: boolean): void {
   s.economy.active = s.economy.active.filter((a) => a.remaining > 0);
   for (const a of ended) logItem(s, 'event', `${a.title} ends`, 'Conditions return to normal.');
 
-  if (enabled && !s.pendingEvent && chance(rng, EVENT_CHANCE)) {
-    const polarity: Polarity = chance(rng, positiveShare(s)) ? 'good' : 'bad';
+  // Every company meets a friendly decision early, so players learn choice cards before the bad news.
+  const first = s.month === FIRST_EVENT_MONTH;
+  if (enabled && !s.pendingEvent && (first || chance(rng, EVENT_CHANCE))) {
+    const polarity: Polarity = first || chance(rng, positiveShare(s)) ? 'good' : 'bad';
     const shielded = polarity === 'bad' && ((boostActive(s.boosts, 'shield') && DIFFICULTIES[s.difficulty].perksApply) || s.away);
     if (!shielded) {
       const activeTypes = new Set(s.economy.active.map((a) => a.type));
       // While away, nothing can wait for a decision: only automatic events happen.
-      const wantChoice = chance(rng, CHOICE_SHARE) && !s.away;
+      const wantChoice = (first || chance(rng, CHOICE_SHARE)) && !s.away;
       const choices = CHOICE_EVENTS.filter((e) => e.polarity === polarity && e.when(s));
       const autos = AUTO_EVENTS.filter(
         (e) => e.polarity === polarity && !activeTypes.has(e.type) && !e.excludes?.some((t) => activeTypes.has(t)) && (e.when?.(s) ?? true),
