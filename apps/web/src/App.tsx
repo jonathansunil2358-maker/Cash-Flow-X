@@ -1,5 +1,5 @@
 import {
-  cosmeticsOf, musicMood, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
+  cosmeticsOf, musicMood, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
 } from '@cfx/engine';
 import { isMusicOn, playMusic, stopMusic } from './lib/music';
@@ -246,6 +246,7 @@ function MusicDriver({ game }: { game: GameState }) {
 function SceneArea({ game }: { game: GameState }) {
   const { speed, setSpeed, monthProgress, pops, profile, sheet, pauseOnPanels, scene3d, tourOpen } = useGame();
   const skin = skinOf(cosmeticsOf(profile).skin);
+  const pet = petOf(profile);
   const level = levelForXp(profile.xp);
   const paused = speed === 0 || !!game.pendingEvent || tourOpen || (pauseOnPanels && !!sheet);
   const speeds: { s: Speed; label: string; locked: boolean }[] = [
@@ -266,6 +267,12 @@ function SceneArea({ game }: { game: GameState }) {
       ) : (
         <div className="relative grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]" style={skin.id === 'default' ? undefined : { background: isNight() ? skin.palette.grassNight : skin.palette.grass }}>
           <img src={iconUrl(game.icon)} alt="" className="h-28 w-28 drop-shadow-[0_6px_0_rgba(0,0,0,0.25)]" />
+        </div>
+      )}
+      {pet && (
+        <div className="pointer-events-none absolute bottom-3 left-4 flex items-end gap-1 rounded-full border-[3px] border-outline bg-surface px-2 py-0.5 text-xs font-black shadow-[var(--edge-sm)]" role="img" aria-label={`${pet.name}, your ${pet.kind}, ${petMood(game).text}`}>
+          <span className="cfx-pet text-2xl" aria-hidden>{PETS.find((x) => x.id === pet.kind)?.emoji}</span>
+          <span aria-hidden>{pet.name} {petMood(game).face}</span>
         </div>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-[22%] flex flex-col items-center gap-1" aria-hidden>

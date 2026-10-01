@@ -1,9 +1,9 @@
-import { cosmeticsOf, decorDef, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
+import { buildingNames, cosmeticsOf, decorDef, HATS, wardrobeOf, decorOf, formatGBP, headcount, skinOf, weatherFor, type SkinPalette, INDUSTRIES, totalCustomers, upgradeOptions, UPGRADES, type GameState } from '@cfx/engine';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react';
 import { Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from 'three';
 import { Headquarters, HQ_DOOR, UpgradeModel } from './buildings';
-import { isWeatherOn } from '../lib/weather';
+import { isDayNightOn, isEveningNow, isWeatherOn } from '../lib/weather';
 import { iconUrl } from '../lib/icons';
 import { shortUpgradeName } from '../lib/upgradeLabels';
 import { useGame } from '../store';
@@ -334,9 +334,10 @@ function Mover({ route, offset, forward, bob = false, cheer = false, children }:
   return <group ref={ref}>{children}</group>;
 }
 
-function Person({ color }: { color: string }) {
+function Person({ color, hat = null }: { color: string; hat?: string | null }) {
   return (
     <group>
+      {hat && <mesh position={[0, 0.76, 0]} castShadow><coneGeometry args={[0.13, 0.2, 10]} /><meshStandardMaterial color={hat} /></mesh>}
       <mesh position={[0, 0.28, 0]} castShadow><capsuleGeometry args={[0.13, 0.22, 4, 8]} /><meshStandardMaterial color={color} /></mesh>
       <mesh position={[0, 0.6, 0]} castShadow><sphereGeometry args={[0.12, 10, 8]} /><meshStandardMaterial color="#ffcf9e" /></mesh>
     </group>
@@ -600,8 +601,13 @@ export default function Scene3D({ game }: { game: GameState }) {
   const upgrades = useMemo(() => UPGRADES[game.industryId].map((u, i) => ({ def: u, level: game.upgrades[u.id] ?? 0, plot: i })), [game.industryId, game.upgrades]);
   const built = upgrades.filter((u) => u.level > 0);
   const occupied = new Set(built.map((u) => u.plot));
-  const night = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
+  const themeNight = typeof document !== 'undefined' && (document.documentElement.dataset.theme === 'dark'
     || (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+  const night = isDayNightOn() ? isEveningNow() : themeNight;
+  const names = useGame((s) => s.profile.names);
+  const custom = useMemo(() => buildingNames({ names }), [names]);
+  const hatId = useGame((s) => wardrobeOf(s.profile).equipped);
+  const hatColour = HATS.find((h) => h.id === hatId)?.colour ?? null;
   // The team jumps for joy for a month after the board is pleased.
   const cheering = game.board?.last === 'hit' && game.month - (game.board.due - 3) <= 1;
   const weatherOn = isWeatherOn();
@@ -651,7 +657,7 @@ export default function Scene3D({ game }: { game: GameState }) {
     tags.push(u.level > 0 ? {
       id: u.def.id, at: [px, 2.4, pz], rank: 0, onSelect: () => setSceneFocus(u.def.id),
       label: `${u.def.name}, level ${u.level}${o.maxed ? ', maxed' : ready ? ', next level affordable' : ''}. Open upgrade card.`,
-      content: <>{shortUpgradeName(u.def)} <span className="opacity-70">Lv {u.level}</span>
+      content: <>{custom[u.def.id] ?? shortUpgradeName(u.def)} <span className="opacity-70">Lv {u.level}</span>
         {o.maxed ? <b className="cfx-scene-tag__badge is-max">MAX</b> : u.level > u.def.maxLevel ? <b className="cfx-scene-tag__badge is-max">★</b> : ready ? <b className="cfx-scene-tag__badge">▲</b> : null}</>,
     } : {
       id: u.def.id, at: [px, 1.5, pz], rank: 2, ghost: true, onSelect: () => setSceneFocus(u.def.id),
@@ -729,7 +735,7 @@ export default function Scene3D({ game }: { game: GameState }) {
         )}
 
         {Array.from({ length: staff }, (_, i) => (
-          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob cheer={cheering}><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} /></Mover>
+          <Mover key={`s${i}`} route={staffRoutes[i]} offset={i * 2.3} forward="z" bob cheer={cheering}><Person color={PERSON_COLOURS[i % PERSON_COLOURS.length]} hat={hatColour} /></Mover>
         ))}
       </group>
       <Gull r={6} y={5.5} speed={0.35} phase={0} />

@@ -2,7 +2,7 @@ import { playSound } from './lib/sfx';
 import {
   ActionError, advanceMonth, applyAction, INDUSTRIES, applyBankruptcy, applyPrestige, applyRetirement, buyPerk as buyPerkOnProfile, claimDaily as claimDailyReward,
   levelForXp, missionStatus, newAchievements, newGame, newProfile, offlineMonthsFor, plSummary, rebirthCheck, refillMissions, runOffline,
-  addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
+  adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, addBoxes, addPassPoints, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
 } from '@cfx/engine';
 import { create } from 'zustand';
@@ -106,6 +106,12 @@ interface Store {
   deletePlanAction: (id: string) => void;
   claimQuest: (id: string) => void;
   learnSkill: (id: string) => void;
+  adoptPet: (kind: string, name: string) => void;
+  nameEom: (personId: string) => void;
+  setBuildingName: (id: string, name: string) => void;
+  writeDiary: (entry: { year: number; company: string; note: string; facts: string }) => void;
+  buyHat: (id: string) => void;
+  wearHat: (id: string | null) => void;
   answerPuzzle: (kind: PuzzleKind, day: string, right: boolean) => void;
   seeTerm: (id: string) => void;
   claimPass: () => void;
@@ -712,6 +718,32 @@ export const useGame = create<Store>((set, get) => {
     seeTerm(id) {
       const next = seeTermOn(get().profile, id);
       if (next !== get().profile) set({ profile: persistProfile(next) });
+    },
+
+    adoptPet(kind, name) {
+      try { set({ profile: persistProfile(adoptPetOn(get().profile, kind, name, new Date().toISOString().slice(0, 10))) }); get().toast('good', 'Welcome to the team!'); playSound('success'); } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    nameEom(personId) {
+      const g = get().game;
+      if (!g) return;
+      try { set({ profile: persistProfile(nameEomOn(get().profile, g, personId)) }); get().toast('good', 'Employee of the month named.'); playSound('success'); } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    setBuildingName(id, name) {
+      try { set({ profile: persistProfile(setBuildingNameOn(get().profile, id, name)) }); } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    writeDiary(entry) {
+      try { set({ profile: persistProfile(writeDiaryOn(get().profile, entry)) }); get().toast('good', 'Diary entry saved.'); } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    buyHat(id) {
+      try { set({ profile: persistProfile(buyHatOn(get().profile, id)) }); get().toast('good', 'Hat bought: your team is wearing it.'); playSound('success'); } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    wearHat(id) {
+      try { set({ profile: persistProfile(wearHatOn(get().profile, id)) }); } catch (e) { get().toast('error', (e as Error).message); }
     },
 
     learnSkill(id) {

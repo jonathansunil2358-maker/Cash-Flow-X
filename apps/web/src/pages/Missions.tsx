@@ -7,6 +7,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
+import { DiaryCard, EomCard, NewspaperCard, PetCard } from './Personality';
 import { AuditCard, DetectiveCard, GlossaryCard, SpotCard } from './Learn';
 import { MasteryCard, SeasonPassCard, SkillsCard } from './Progress';
 import { AlbumCard, BoxesCard } from './Surprise';
@@ -41,6 +42,7 @@ export function Missions({ game }: { game: GameState }) {
     <div className="space-y-5">
       <PageTitle title="Missions" subtitle="Earn XP and gems by running your business well. Missions change as you complete them, and each one teaches a bit of finance." />
 
+      <NewspaperCard game={game} />
       <QuestsCard />
       <BoxesCard />
       <SeasonPassCard />
@@ -100,6 +102,9 @@ export function Missions({ game }: { game: GameState }) {
       <DetectiveCard />
       <AuditCard game={game} />
       <GlossaryCard game={game} />
+      <PetCard game={game} />
+      <EomCard game={game} />
+      <DiaryCard game={game} />
       <MasteryCard />
       <TitlesCard />
 

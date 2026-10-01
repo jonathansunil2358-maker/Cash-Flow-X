@@ -83,6 +83,12 @@ export interface Profile {
   milestones?: string[];
   /** Puzzle answers and glossary terms met (see learn.ts). */
   learn?: LearnState;
+  /** Personality: pet, employee of the month, building names, diary, hats (see personality.ts). */
+  pet?: { kind: string; name: string; adopted: string };
+  eom?: { month: number; id: string; name: string; note: string }[];
+  names?: Record<string, string>;
+  diary?: { year: number; company: string; note: string; facts: string }[];
+  wardrobe?: { owned: string[]; equipped: string | null };
   pass?: PassState;
 }
 
