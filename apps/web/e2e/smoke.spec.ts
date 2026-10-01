@@ -593,7 +593,7 @@ test('extra challenges can be chosen for a new company, and the pressures and ri
   await page.getByRole('button', { name: 'Next: name it' }).click();
   await page.getByRole('button', { name: 'Next: difficulty' }).click();
   const extra = page.getByLabel('Extra challenges');
-  await expect(extra.getByRole('checkbox')).toHaveCount(4);
+  await expect(extra.getByRole('checkbox')).toHaveCount(7);
   await extra.getByRole('checkbox', { name: /Slow market/ }).click();
   await extra.getByRole('checkbox', { name: /Runaway inflation/ }).click();
   await expect(extra.getByText('Score and Legacy bonus: +20%')).toBeVisible();
