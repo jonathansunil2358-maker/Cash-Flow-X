@@ -1,5 +1,6 @@
 import {
-  attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, INDUSTRIES, reachOf,
+  attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, headcount, INDUSTRIES, PREMISES_STEPS, premisesMove,
+  premisesTier, reachOf, STRAIN_ON,
   MAX_HIRE_AT_ONCE, recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
@@ -41,7 +42,10 @@ export function Operations({ game }: { game: GameState }) {
               [ind.model === 'subscription' ? `${ind.unitPlural} you can serve` : `${ind.unitPlural} you can deliver / month`, formatInt(capacity)],
               ['Current load', d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'],
               ['Automation uplift', `+${formatPct(capacityMultiplier(game, ind) - 1, 0)}`],
+              ['Team strain', d.last?.kpis.strain ? `${formatPct(d.last.kpis.strain, 0)}${d.last.kpis.strain >= 0.5 ? ': overstretched' : ''}` : 'None'],
+              ['Premises', PREMISES_STEPS[premisesTier(headcount(game))] ? `Fits up to ${PREMISES_STEPS[premisesTier(headcount(game))] - 1} staff` : 'Largest site'],
             ]} />
+            <p className="mt-2 text-xs text-ink-2">Running above {formatPct(STRAIN_ON, 0)} of capacity for months builds strain, which wears down quality, reputation and how much your team can handle.</p>
           </Card>
           <PriceCard game={game} />
           <MarketingCard game={game} reach={demand.reach} />
@@ -96,7 +100,8 @@ function RoleRow({ game, role }: { game: GameState; role: RoleId }) {
   const [count, setCount] = useState(1);
   const def = d.ind.roles[role];
   const salary = Math.round(def.salary * game.salaryIndex);
-  const oneOff = recruitmentFee(game, role) * count + d.ind.equipmentPerHire * count;
+  const move = premisesMove(game, d.ind, count);
+  const oneOff = recruitmentFee(game, role) * count + d.ind.equipmentPerHire * count + (move?.fitOut ?? 0);
   const monthly = Math.round((salary * 1.15 * count) / 12);
   const playing = game.status === 'playing';
   return (
@@ -117,6 +122,11 @@ function RoleRow({ game, role }: { game: GameState; role: RoleId }) {
         <Button variant="danger" disabled={!playing || game.staff[role] < count} onClick={() => act({ type: 'fire', role, count }, `${count} × ${def.title} made redundant.`)}>Let go</Button>
         <span className="text-xs text-muted">Hiring: {formatGBP(oneOff)} now, then {formatGBP(monthly)}/month. Redundancy: 1 month's salary each.</span>
       </div>
+      {move && (
+        <p className="mt-2 rounded-xl border-2 border-outline bg-[var(--coin)] px-2.5 py-1.5 text-xs font-bold text-[#3a2210]">
+          This takes you past {move.staffLimit} staff: you'll move to bigger premises. Fit-out {formatGBP(move.fitOut)} (included above, capitalised over 7 years) and a higher base rent.
+        </p>
+      )}
     </div>
   );
 }

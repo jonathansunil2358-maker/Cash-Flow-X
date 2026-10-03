@@ -1401,3 +1401,15 @@ test('V3 Batch F: mastery challenges, dynasty and the empire venture', async ({ 
   await expect(missions.locator('#card-dynasty').getByRole('button', { name: 'No inheritance waiting' })).toBeDisabled();
   await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
 });
+
+test('growing pains: team strain and premises show in the Business panel', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Business' });
+  await expect(sheet.getByText('Team strain')).toBeVisible();
+  await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
+});

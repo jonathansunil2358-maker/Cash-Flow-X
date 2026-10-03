@@ -71,4 +71,4 @@ export function continueRun(s: GameState, actions: { month: number; action: Acti
  * Version of the game rules. Bump whenever a change alters simulation results, so the server can
  * refuse to verify runs from an outdated client (their replays would not match).
  */
-export const RULES_VERSION = 14;
+export const RULES_VERSION = 15;

@@ -261,6 +261,8 @@ export interface MonthKpis {
   overdraftLimit: Pence;
   baseRate: number;
   ownership: number;
+  /** Team strain after the month (0-1). Absent in older records. */
+  strain?: number;
 }
 
 /** A closed month: the source for every statement, chart and ratio. */
@@ -293,6 +295,8 @@ export interface GameState {
   difficulty: DifficultyId;
   /** Founder reputation, 0-100 (50 = neutral). Nudges demand up to ±10%; moved by event decisions. */
   reputation: number;
+  /** Team strain 0-1: builds while running above 95% of capacity, wears down quality and reputation. Absent in older saves. */
+  strain?: number;
   /** True while the game runs itself offline: no bad news, no decisions, 25% less demand. */
   away: boolean;
   status: 'playing' | 'insolvent' | 'finished' | 'prestiged';
