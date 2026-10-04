@@ -7,14 +7,24 @@ import { useState, type ReactNode } from 'react';
 import { Button, Card, Field, KeyValue, Meter, MoneyInput, StatusPill } from '../components/ui';
 import { useGame } from '../store';
 
-/** A card that stays folded until opened, so the Business panel stays short on a phone. */
+/**
+ * A card that stays folded until opened: a single compact row (title, one line of summary, a small button)
+ * that opens in place, so a section of ten of them fits on one screen. Tap anywhere on the row to open it.
+ */
 export function Fold({ id, title, subtitle, summary, children }: { id: string; title: string; subtitle: ReactNode; summary?: ReactNode; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <Card id={id} title={title} subtitle={open ? subtitle : summary ?? subtitle}
-      actions={<Button variant="secondary" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Open'}</Button>}>
+    <section id={id} className={`scroll-mt-28 rounded-2xl border-[3px] border-outline bg-surface shadow-[var(--edge)] ${open ? 'p-4 sm:p-5' : 'px-3 py-2'}`}>
+      <header className={`flex items-center justify-between gap-2 ${open ? 'mb-3' : 'cursor-pointer'}`} onClick={open ? undefined : () => setOpen(true)}>
+        <div className="min-w-0 flex-1">
+          <h2 className={`font-display leading-tight text-ink ${open ? 'text-xl' : 'text-base'}`}>{title}</h2>
+          {open ? <p className="mt-1 text-sm text-ink-2">{subtitle}</p> : <p className="truncate text-xs text-ink-2">{summary ?? subtitle}</p>}
+        </div>
+        <Button variant="secondary" className="shrink-0 !min-h-8 !px-3 !text-sm" aria-expanded={open} aria-controls={`${id}-body`}
+          onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>{open ? 'Hide' : 'Open'}</Button>
+      </header>
       <div id={`${id}-body`} hidden={!open}>{open ? children : null}</div>
-    </Card>
+    </section>
   );
 }
 

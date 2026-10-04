@@ -1568,10 +1568,10 @@ test('the Business and Finance panels are split into sections you can reach in o
   await clearOverlays(page);
   await openDock(page, 'Business', { sections: true });
   const biz = page.getByRole('dialog', { name: 'Run the business' });
-  await expect(biz.getByRole('tab', { name: 'People' })).toHaveAttribute('aria-selected', 'true');
+  await expect(biz.getByRole('tab', { name: 'Team', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(biz.locator('#card-team')).toBeVisible();
   await expect(biz.locator('#card-loyalty')).toBeHidden();
-  await biz.getByRole('tab', { name: 'Selling' }).click();
+  await biz.getByRole('tab', { name: 'Customers' }).click();
   await expect(biz.locator('#card-loyalty')).toBeVisible();
   await expect(biz.locator('#card-team')).toBeHidden();
   await biz.getByRole('tab', { name: 'Strategy' }).click();
