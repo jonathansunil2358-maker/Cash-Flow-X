@@ -51,7 +51,7 @@ export function CoopCard() {
   const run = async (f: () => Promise<unknown>) => { try { await f(); } catch (e) { toast('error', (e as Error).message); } };
   const open = (c: string) => run(async () => setView(await api.coopView(c)));
   return (
-    <Card id="card-coop" title="Co-op" subtitle="Run a company with a friend. Give them a link: they can watch your company live, or advise you with suggestions that you apply with one tap. Only you can act on your company.">
+    <Card fold id="card-coop" title="Co-op" subtitle="Run a company with a friend. Give them a link: they can watch your company live, or advise you with suggestions that you apply with one tap. Only you can act on your company.">
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => run(async () => { const r = await api.coopCreate('advise'); toast('success', `Advice link ${r.code} made.`); await reload(); })}>New advice link</Button>
@@ -122,7 +122,7 @@ export function CardsCard() {
     try { const r = await api.giftCard(id); toast('success', `Gift code ${r.code}. Send it to a friend.`); try { await navigator.clipboard.writeText(r.code); } catch { /* shown in the toast */ } } catch (e) { addCardGift(id); toast('error', (e as Error).message); }
   };
   return (
-    <Card id="card-cards" title="Trading cards" subtitle="You collect mentors and rival bosses as you meet them. Spare copies can be gifted to friends with a one-time code.">
+    <Card fold id="card-cards" title="Trading cards" subtitle="You collect mentors and rival bosses as you meet them. Spare copies can be gifted to friends with a one-time code.">
       <ul className="grid gap-2 sm:grid-cols-2">
         {CARDS.map((c) => {
           const n = owned[c.id] ?? 0;
@@ -149,7 +149,7 @@ export function GuildRivalCard() {
   useEffect(() => { api.guildRival().then(setV).catch(() => setV(null)); }, []);
   if (!v?.mine) return null;
   return (
-    <Card id="card-guild-rival" title="Holding-company rivalry" subtitle="Your holding company against its neighbour in the table, by combined value of its members' companies.">
+    <Card fold id="card-guild-rival" title="Holding-company rivalry" subtitle="Your holding company against its neighbour in the table, by combined value of its members' companies.">
       <p className="text-sm"><b>{v.mine.name}</b> ({formatGBP(v.mine.value, { compact: true })}, {v.mine.members} members) is {v.rank} of {v.of}.</p>
       {v.rival ? <p className="text-sm">{v.rival.above ? 'Catch up with' : 'Hold off'} <b>{v.rival.name}</b>: {formatGBP(v.rival.value, { compact: true })}, {v.rival.members} members.</p> : <p className="text-sm text-ink-2">No rival yet: you are the only holding company.</p>}
     </Card>
@@ -163,7 +163,7 @@ export function HallCard() {
   if (!v || v.rows.length === 0) return null;
   const top = Math.max(1, ...v.rows.map((r) => r.netWorth));
   return (
-    <Card id="card-hall" title="Hall of fame" subtitle="The richest verified companies right now. Taller towers are worth more.">
+    <Card fold id="card-hall" title="Hall of fame" subtitle="The richest verified companies right now. Taller towers are worth more.">
       <div className="flex h-40 items-end gap-1" role="img" aria-label="Skyline of the richest companies">
         {v.rows.map((r) => <div key={r.rank} className="flex-1 rounded-t-md bg-accent/70" style={{ height: `${Math.max(8, Math.round((r.netWorth / top) * 100))}%` }} title={`${r.company ?? r.name}: ${formatGBP(r.netWorth, { compact: true })}`} />)}
       </div>

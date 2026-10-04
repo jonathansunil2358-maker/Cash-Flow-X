@@ -36,7 +36,7 @@ export function FeelCard() {
   const update = (patch: Partial<Access>) => setA(writeAccess(patch));
   const sel = 'rounded-lg border border-line bg-page px-2.5 py-1.5 text-sm';
   return (
-    <Card id="card-feel" title="Look, sound and reading" subtitle="Make the game comfortable for you. These stay on this device.">
+    <Card fold id="card-feel" title="Look, sound and reading" subtitle="Make the game comfortable for you. These stay on this device.">
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Font">
           <select aria-label="Font" className={sel} value={a.font} onChange={(e) => update({ font: e.target.value as Access['font'] })}>
@@ -85,7 +85,7 @@ export function TheatreCard({ game }: { game: GameState }) {
   const idx = Math.min(i, Math.max(0, months.length - 1));
   const f = months.length ? theatreAt(game, months[idx]) : null;
   return (
-    <Card id="card-theatre" title="Replay theatre" subtitle="Scrub back through your company's history and see what happened each month.">
+    <Card fold id="card-theatre" title="Replay theatre" subtitle="Scrub back through your company's history and see what happened each month.">
       {!f ? <p className="text-sm text-ink-2">Play a month first, then come back to watch it.</p> : (
         <div className="space-y-3">
           <label className="block text-xs font-black tracking-wider text-ink-2">MONTH: {f.label}
@@ -112,7 +112,7 @@ export function FestivalCard() {
   const now = new Date();
   const f = festivalOn(now);
   return (
-    <Card id="card-festival" title="Seasonal festivals" subtitle="A few weeks each year with a free treat and a limited hat in the wardrobe. Hats you buy are yours for good.">
+    <Card fold id="card-festival" title="Seasonal festivals" subtitle="A few weeks each year with a free treat and a limited hat in the wardrobe. Hats you buy are yours for good.">
       {f ? (
         <div className="space-y-2 text-sm">
           <p><span aria-hidden>{f.emoji}</span> <b>{f.name}</b> is on! {f.blurb}</p>
@@ -130,7 +130,7 @@ export function RadioCard({ game }: { game: GameState }) {
     try { const u = new SpeechSynthesisUtterance(bulletinText(b)); u.rate = 1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch { /* no speech in this browser */ }
   };
   return (
-    <Card id="card-radio" title="Island radio" subtitle="A news bulletin built from your real numbers, with an advert for your own brand. Tap to hear it read aloud.">
+    <Card fold id="card-radio" title="Island radio" subtitle="A news bulletin built from your real numbers, with an advert for your own brand. Tap to hear it read aloud.">
       <div className="space-y-1 text-sm" aria-label="Radio bulletin">
         <p className="font-extrabold">📻 {b.headline}</p>
         {b.lines.map((l, i) => <p key={i}>{l}</p>)}
@@ -155,7 +155,7 @@ export function TimelapseCard({ game }: { game: GameState }) {
     } finally { setBusy(false); }
   };
   return (
-    <Card id="card-timelapse" title="Island timelapse" subtitle="A few seconds of your company growing, month by month. It is recorded on your device and never uploaded.">
+    <Card fold id="card-timelapse" title="Island timelapse" subtitle="A few seconds of your company growing, month by month. It is recorded on your device and never uploaded.">
       <Button disabled={busy} onClick={make}>{busy ? 'Recording…' : 'Make a timelapse'}</Button>
       {url && (
         <div className="mt-3 space-y-2">

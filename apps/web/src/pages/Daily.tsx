@@ -52,7 +52,7 @@ export function DailyChallengeCard({ game }: { game: GameState }) {
   const me = board?.me ?? null;
   const rankedUsed = !!me;
   return (
-    <Card id="card-daily" title="Daily challenge"
+    <Card fold id="card-daily" title="Daily challenge"
       subtitle={`Everyone plays the same company for ${DAILY_MONTHS} months. No perks, boosts or prestige: just you against the day. Your final stake is your score.`}
       actions={<span className="tnum rounded-[10px] border-2 border-outline bg-surface-2 px-2 py-1 text-xs font-black" aria-label="Time left today">{countdown(left)}</span>}>
       <div className="space-y-3">

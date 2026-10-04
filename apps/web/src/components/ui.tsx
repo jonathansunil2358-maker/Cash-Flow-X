@@ -1,18 +1,38 @@
 import { formatGBP, type Pence } from '@cfx/engine';
 import { useId, useState, type ReactNode } from 'react';
+import { readPref } from '../lib/save';
 
-export function Card({ id, title, subtitle, actions, children, className = '' }: {
+export function Card({ id, title, subtitle, actions, children, className = '', fold, summary }: {
   id?: string; title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string;
+  /** Start folded into a one-line row that opens in place (the page stays short). */
+  fold?: boolean; summary?: ReactNode;
 }) {
+  const [open, setOpen] = useState(!fold || readPref('cardsopen') === 'true');
+  if (fold && !open) {
+    return (
+      <section id={id} className={`scroll-mt-28 rounded-2xl border-[3px] border-outline bg-surface px-3 py-2 shadow-[var(--edge)] ${className}`}>
+        <header className="flex cursor-pointer items-center justify-between gap-2" onClick={() => setOpen(true)}>
+          <div className="min-w-0 flex-1">
+            {title && <h2 className="font-display text-base leading-tight text-ink">{title}</h2>}
+            {(summary ?? subtitle) && <p className="truncate text-xs text-ink-2">{summary ?? subtitle}</p>}
+          </div>
+          <Button variant="secondary" className="shrink-0 !min-h-8 !px-3 !text-sm" aria-expanded={false} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>Open</Button>
+        </header>
+      </section>
+    );
+  }
   return (
     <section id={id} className={`scroll-mt-28 rounded-[26px] border-[3px] border-outline bg-surface p-4 shadow-[var(--edge)] sm:p-5 ${className}`}>
-      {(title || actions) && (
+      {(title || actions || fold) && (
         <header className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             {title && <h2 className="font-display text-xl leading-tight text-ink">{title}</h2>}
             {subtitle && <p className="mt-1 text-sm text-ink-2">{subtitle}</p>}
           </div>
-          {actions}
+          <div className="flex items-center gap-2">
+            {actions}
+            {fold && <Button variant="secondary" className="!min-h-8 !px-3 !text-sm" aria-expanded onClick={() => setOpen(false)}>Hide</Button>}
+          </div>
         </header>
       )}
       {children}

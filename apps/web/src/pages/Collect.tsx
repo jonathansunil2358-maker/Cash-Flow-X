@@ -10,7 +10,7 @@ export function LandCard() {
   const { profile, buyLand } = useGame();
   const owned = landOf(profile);
   return (
-    <Card id="card-land" title="Extra land" subtitle="Buy more island. Each piece of land appears off the shore and unlocks a new decoration in the list above.">
+    <Card fold id="card-land" title="Extra land" subtitle="Buy more island. Each piece of land appears off the shore and unlocks a new decoration in the list above.">
       <div className="grid gap-2 sm:grid-cols-3">
         {LAND.map((l) => (
           <div key={l.id} className="rounded-lg border border-line p-2.5 text-sm">
@@ -29,7 +29,7 @@ export function TrailsCard() {
   const { profile, claimTrail } = useGame();
   const claimed = trailsClaimed(profile);
   return (
-    <Card id="card-trails" title="Achievement trails" subtitle="Finish every achievement on a trail for a bigger reward.">
+    <Card fold id="card-trails" title="Achievement trails" subtitle="Finish every achievement on a trail for a bigger reward.">
       <ul className="space-y-3">
         {TRAILS.map((t) => {
           const p = trailProgress(profile, t);
@@ -56,7 +56,7 @@ export function SoundtrackCard() {
   const t = tracksOf(profile);
   const pick = (id: string) => { selectTrack(id); setTrack(id); if (game) playMusic(musicMood(game)); };
   return (
-    <Card id="card-tracks" title="Soundtracks" subtitle="Styles for the background music. Switch the music on above.">
+    <Card fold id="card-tracks" title="Soundtracks" subtitle="Styles for the background music. Switch the music on above.">
       <ul className="grid gap-2 sm:grid-cols-2">
         {SOUNDTRACKS.map((s) => {
           const owned = t.owned.includes(s.id);
@@ -79,7 +79,7 @@ export function MuseumCard() {
   const shelf = museumOf(profile);
   const cup = { gold: '🏆', silver: '🥈', bronze: '🥉', ruin: '🪦' } as const;
   return (
-    <Card id="card-museum" title="Museum of your companies" subtitle="Every company you have run gets a place on the shelf.">
+    <Card fold id="card-museum" title="Museum of your companies" subtitle="Every company you have run gets a place on the shelf.">
       {shelf.length === 0 ? <p className="text-sm text-ink-2">Nothing here yet. Finish or sell a company and it will appear.</p> : (
         <ul className="grid gap-2 sm:grid-cols-2">
           {[...shelf].reverse().slice(0, 12).map((e, i) => (

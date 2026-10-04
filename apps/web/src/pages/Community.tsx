@@ -134,7 +134,7 @@ function CommunityGoal() {
   if (!v) return null;
   const claim = async () => { try { const r = await api.claimCommunity(); add(r.gems, 'community goal'); await load(); } catch (e) { toast('error', (e as Error).message); } };
   return (
-    <Card id="card-community" title="Community goal" subtitle="Everyone's verified months this week add up. Reach the target and every contributor gets gems.">
+    <Card fold id="card-community" title="Community goal" subtitle="Everyone's verified months this week add up. Reach the target and every contributor gets gems.">
       <Meter value={Math.min(v.months, v.target)} max={v.target} label="Community goal" tone={v.reached ? 'go' : 'xp'} text={`${v.months.toLocaleString('en-GB')} of ${v.target.toLocaleString('en-GB')} months`} />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-2">
         <span>{v.players} player{v.players === 1 ? '' : 's'} this week · week {v.week.split('-W')[1]}</span>
@@ -152,7 +152,7 @@ function RivalOfTheWeek() {
   useEffect(() => { api.rival().then(setV).catch(() => setV(null)); }, []);
   if (!v) return null;
   return (
-    <Card id="card-rival" title="Rival of the week" subtitle="Someone close to you in net worth, picked afresh every Monday. Try to finish the week ahead.">
+    <Card fold id="card-rival" title="Rival of the week" subtitle="Someone close to you in net worth, picked afresh every Monday. Try to finish the week ahead.">
       {!v.rival ? <p className="text-sm text-ink-2">No rival yet: more players need to be on the board.</p> : (
         <div className="space-y-2">
           <div className="flex items-center gap-3 rounded-lg border border-line p-3">
@@ -183,7 +183,7 @@ function Tournament() {
   if (!v) return null;
   const b = v.bracket;
   return (
-    <Card id="card-tournament" title="Weekend tournament" subtitle="The top eight of last week's event play a knockout: Saturday's daily score decides the quarter-finals, Sunday's the semis, the weekly score the final.">
+    <Card fold id="card-tournament" title="Weekend tournament" subtitle="The top eight of last week's event play a knockout: Saturday's daily score decides the quarter-finals, Sunday's the semis, the weekly score the final.">
       {!b ? <p className="text-sm text-ink-2">Not enough finishers last week for a bracket. Finish this week's event to be in next week's.</p> : (
         <div className="space-y-3">
           {b.champion && <p className="text-sm font-bold" role="status">🏆 Champion of week {v.week.split('-W')[1]}: {b.champion.name}</p>}
@@ -208,7 +208,7 @@ function PlanMarket() {
   const publish = async (p: (typeof mine)[number]) => { try { await api.publishPlan(p); toast('success', 'Shared with everyone.'); await load(); } catch (e) { toast('error', (e as Error).message); } };
   const remove = async (id: string) => { try { await api.deleteSharedPlan(id); await load(); } catch (e) { toast('error', (e as Error).message); } };
   return (
-    <Card id="card-market" title="Plan marketplace" subtitle="Share a scenario plan, try other people's, and like the good ones. Plans only ever change your price, marketing and hiring, and only when you press Do it.">
+    <Card fold id="card-market" title="Plan marketplace" subtitle="Share a scenario plan, try other people's, and like the good ones. Plans only ever change your price, marketing and hiring, and only when you press Do it.">
       <div className="mb-2 flex gap-1.5" role="group" aria-label="Sort plans">
         <Button variant={sort === 'top' ? 'primary' : 'secondary'} aria-pressed={sort === 'top'} onClick={() => setSort('top')}>Top</Button>
         <Button variant={sort === 'new' ? 'primary' : 'secondary'} aria-pressed={sort === 'new'} onClick={() => setSort('new')}>New</Button>
@@ -245,7 +245,7 @@ function PuzzleLeague() {
   useEffect(() => { api.league().then(setV).catch(() => setV(null)); }, []);
   if (!v) return null;
   return (
-    <Card id="card-league" title="Puzzle league" subtitle={`Answer the daily Spot the mistake and Ratio detective puzzles in Missions. Each right answer is a point; the server checks them. Up to ${v.maxPoints} points a week. You have ${v.mine.points}.`}>
+    <Card fold id="card-league" title="Puzzle league" subtitle={`Answer the daily Spot the mistake and Ratio detective puzzles in Missions. Each right answer is a point; the server checks them. Up to ${v.maxPoints} points a week. You have ${v.mine.points}.`}>
       {v.rows.length === 0 ? <p className="text-sm text-ink-2">Nobody has scored yet this week. Be the first.</p> : (
         <ol className="space-y-1 text-sm">
           {v.rows.map((r) => <li key={r.id} className={`flex justify-between rounded-lg border p-2 ${r.me ? 'border-[var(--go)]' : 'border-line'}`}><span>#{r.rank} {r.name}{r.me ? ' (you)' : ''}</span><b className="tnum">{r.points}</b></li>)}

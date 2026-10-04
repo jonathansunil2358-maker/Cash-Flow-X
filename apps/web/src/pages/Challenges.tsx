@@ -68,7 +68,7 @@ export function ChallengeCard({ game }: { game: GameState }) {
   const ind = field ? INDUSTRIES[field.industryId] : null;
 
   return (
-    <Card id="card-challenge" title="Challenge a friend"
+    <Card fold id="card-challenge" title="Challenge a friend"
       subtitle={`Make a code and send it. Everyone with it plays the same company for ${FIXED_MONTHS} months, once, and you compare your final stakes on a private board.`}>
       <div className="space-y-3">
         {online && <Button variant="primary" disabled={busy || playing} onClick={() => make(false)}>{busy ? 'Making a code…' : 'Make a challenge and share it'}</Button>}

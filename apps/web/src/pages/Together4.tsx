@@ -19,7 +19,7 @@ export function IslandVisitCard() {
   const go = async (id = code.trim()) => { try { setView(await api.island(id)); } catch (e) { setView(null); toast('error', (e as Error).message); } };
   const GREET = ['Lovely island!', 'Great company!', 'Good luck with the next year!', 'Teach me your secrets!', 'See you in the table!', 'Keep going!'];
   return (
-    <Card id="card-island" title="Visit an island" subtitle="Paste a friend's island code to see their company, leave a like or send a greeting. Your own code is below: share it.">
+    <Card fold id="card-island" title="Visit an island" subtitle="Paste a friend's island code to see their company, leave a like or send a greeting. Your own code is below: share it.">
       <p className="mb-2 text-xs text-ink-2">Your island code: <code className="select-all rounded bg-surface-2 px-1">{me?.user?.id ?? '…'}</code></p>
       <div className="flex gap-2">
         <TextInput value={code} onChange={(e) => setCode(e.target.value)} aria-label="Island code" placeholder="Friend's island code" />
@@ -50,7 +50,7 @@ export function LandmarkCard() {
   useEffect(() => { api.landmark().then(setV).catch(() => setV(null)); }, []);
   if (!v?.guild) return null;
   return (
-    <Card id="card-landmark" title="Holding-company landmark" subtitle="Members pay into a shared landmark from their personal cash (dividends). It grows through four levels and every member's holding company shows it off.">
+    <Card fold id="card-landmark" title="Holding-company landmark" subtitle="Members pay into a shared landmark from their personal cash (dividends). It grows through four levels and every member's holding company shows it off.">
       <p className="text-sm"><b>{v.name ?? 'Nothing built yet'}</b> · {formatGBP(v.funded ?? 0, { compact: true })} funded{v.next ? `. Next: ${v.next.name} at ${formatGBP(v.next.cost, { compact: true })}` : '. Fully built!'}</p>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <Field label="Gift (£)"><NumberInput value={amount / 100} onChange={(n) => setAmount(Math.round(n * 100))} aria-label="Gift amount" /></Field>
@@ -89,7 +89,7 @@ export function MarketCard() {
   const collect = async () => { try { const r = await api.collectSales(); if (r.gems > 0) addGems(r.gems, 'items you sold'); else toast('info', 'Nothing to collect yet.'); } catch (e) { toast('error', (e as Error).message); } refresh(); };
   const sold = (v?.mine ?? []).filter((l) => l.status === 'sold' && !l.collected).length;
   return (
-    <Card id="card-cosmetics" title="Cosmetics market" subtitle="Sell a hat, decoration or spare card to another player for gems (5% fee). It runs on trust: gems are kept on each player's device, so nothing here touches a score.">
+    <Card fold id="card-cosmetics" title="Cosmetics market" subtitle="Sell a hat, decoration or spare card to another player for gems (5% fee). It runs on trust: gems are kept on each player's device, so nothing here touches a score.">
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Sell">
           <select value={pick} onChange={(e) => setPick(e.target.value)} className="rounded-lg border border-line bg-page px-2.5 py-1.5 text-sm" aria-label="Item to sell">
@@ -120,7 +120,7 @@ export function MentorCard() {
   useEffect(() => { refresh(); }, []);
   const claim = async (c: string) => { try { const r = await api.mentorClaim(c); addGems(r.gems, 'mentoring reward'); } catch (e) { toast('error', (e as Error).message); } refresh(); };
   return (
-    <Card id="card-mentor" title="Mentor and mentee" subtitle={`A player who has prestiged or finished a company can mentor a newcomer. When the newcomer's company is worth £100k, the mentor earns ${v?.gems.mentor ?? 30} gems and the newcomer ${v?.gems.mentee ?? 20}.`}>
+    <Card fold id="card-mentor" title="Mentor and mentee" subtitle={`A player who has prestiged or finished a company can mentor a newcomer. When the newcomer's company is worth £100k, the mentor earns ${v?.gems.mentor ?? 30} gems and the newcomer ${v?.gems.mentee ?? 20}.`}>
       {v?.mentor && (
         <p className="text-sm">Your mentor is <b>{v.mentor.name}</b>: {Math.round(v.mentor.progress * 100)}% of the way. {v.mentor.claimable && <Button onClick={() => claim(v.mentor!.code)}>Claim {v.gems.mentee} gems</Button>}{v.mentor.claimed && ' Reward claimed.'}</p>
       )}
@@ -160,7 +160,7 @@ export function ScenarioCard({ game }: { game: GameState | null }) {
   const open = async () => { try { setSc(await api.scenarioPlayed(load)); } catch (e) { toast('error', (e as Error).message); } };
   const here = sc && game && game.industryId === sc.sector && game.seedLabel === sc.seed;
   return (
-    <Card id="card-scenario" title="Scenario maker" subtitle="Pick a sector, a difficulty and a goal, and share the code. A friend starts a company with the same seed and sees how close they are. Goals are checked on their device: it is for fun, not a leaderboard.">
+    <Card fold id="card-scenario" title="Scenario maker" subtitle="Pick a sector, a difficulty and a goal, and share the code. A friend starts a company with the same seed and sees how close they are. Goals are checked on their device: it is for fun, not a leaderboard.">
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Name"><TextInput value={name} onChange={(e) => setName(e.target.value)} aria-label="Scenario name" placeholder="Name it" /></Field>
         <Field label="Sector"><select value={sector} onChange={(e) => setSector(e.target.value)} className="rounded-lg border border-line bg-page px-2.5 py-1.5 text-sm" aria-label="Scenario sector">{INDUSTRY_IDS.map((id) => <option key={id} value={id}>{INDUSTRIES[id].name}</option>)}</select></Field>

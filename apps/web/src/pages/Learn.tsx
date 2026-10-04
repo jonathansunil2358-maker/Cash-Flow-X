@@ -29,7 +29,7 @@ export function SpotCard() {
   const done = prior.done || picked !== null;
   const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('spot', day, id === puzzle.answer); if (ONLINE && signedIn) void api.answerLeague('spot', day, id).catch(() => undefined); };
   return (
-    <Card id="card-spot" title="Spot the mistake" subtitle={puzzle.intro}>
+    <Card fold id="card-spot" title="Spot the mistake" subtitle={puzzle.intro}>
       <table className="w-full text-sm" aria-label="Trial balance">
         <thead><tr className="text-left text-xs text-ink-2"><th scope="col">Account</th><th scope="col" className="text-right">Debit</th><th scope="col" className="text-right">Credit</th></tr></thead>
         <tbody>
@@ -70,7 +70,7 @@ export function DetectiveCard() {
   const done = prior.done || picked !== null;
   const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('detective', day, id === puzzle.case.answer); if (ONLINE && signedIn) void api.answerLeague('detective', day, id).catch(() => undefined); };
   return (
-    <Card id="card-detective" title="Ratio detective" subtitle={puzzle.case.story}>
+    <Card fold id="card-detective" title="Ratio detective" subtitle={puzzle.case.story}>
       <table className="w-full text-sm" aria-label="Ratios">
         <thead><tr className="text-left text-xs text-ink-2"><th scope="col">Ratio</th><th scope="col" className="text-right">This business</th><th scope="col" className="text-right">Normal</th></tr></thead>
         <tbody>
@@ -179,7 +179,7 @@ export function JournalCard() {
   const done = prior.done || picked !== null;
   const pick = (id: string) => { if (done) return; setPicked(id); answerPuzzle('journal', day, id === puzzle.answer); if (ONLINE && signedIn) void api.answerLeague('journal', day, id).catch(() => undefined); };
   return (
-    <Card id="card-journal" title="Accountant's desk" subtitle="Every transaction has a debit and a credit. Which entry records this one?">
+    <Card fold id="card-journal" title="Accountant's desk" subtitle="Every transaction has a debit and a credit. Which entry records this one?">
       <p className="rounded-lg border border-line p-2.5 text-sm font-bold">{puzzle.story}</p>
       <div className="mt-3 grid gap-2" role="group" aria-label="Which entry?">
         {puzzle.options.map((o) => (
@@ -268,7 +268,7 @@ export function SprintCard() {
   };
   const shown = finished ? learnOf(profile).sprintPoints ?? score.points : score.points;
   return (
-    <Card id="card-sprint" title="Tax season sprint" subtitle={`Sort ${SPRINT_ITEMS} items for a tax return in ${SPRINT_SECONDS} seconds: taxable income, allowed expense, or not allowed. Right answers score 10, wrong ones cost 5. Gems are paid once a day.`}>
+    <Card fold id="card-sprint" title="Tax season sprint" subtitle={`Sort ${SPRINT_ITEMS} items for a tax return in ${SPRINT_SECONDS} seconds: taxable income, allowed expense, or not allowed. Right answers score 10, wrong ones cost 5. Gems are paid once a day.`}>
       {doneToday && !running && !finished ? (
         <p className="text-sm">Today's sprint is done: {learnOf(profile).sprintPoints ?? 0} points. A new one tomorrow.</p>
       ) : !running && !finished ? (

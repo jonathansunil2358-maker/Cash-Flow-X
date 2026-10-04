@@ -8,7 +8,7 @@ export function ShopCard() {
   const { profile, buySkin, equipSkin } = useGame();
   const c = cosmeticsOf(profile);
   return (
-    <Card id="card-shop" title="Island shop" subtitle="Change how your island looks. Skins are colours only, so they never affect a score.">
+    <Card fold id="card-shop" title="Island shop" subtitle="Change how your island looks. Skins are colours only, so they never affect a score.">
       <ul className="grid gap-2 sm:grid-cols-2">
         {SKINS.map((s) => {
           const owned = c.owned.includes(s.id);
@@ -51,7 +51,7 @@ export function DecorCard() {
   const { profile, buyDecor, toggleDecor } = useGame();
   const d = decorOf(profile);
   return (
-    <Card id="card-decor" title="Island decorations" subtitle="Dress your island. Each one stands at its own spot and can be switched off. They never change a number in the game.">
+    <Card fold id="card-decor" title="Island decorations" subtitle="Dress your island. Each one stands at its own spot and can be switched off. They never change a number in the game.">
       <ul className="grid gap-2 sm:grid-cols-2">
         {DECOR.map((x) => {
           const owned = d.owned.includes(x.id);
@@ -87,7 +87,7 @@ export function LogoCard({ icon }: { icon: string }) {
     </div>
   );
   return (
-    <Card id="card-logo" title="Company logo" subtitle="Shows in the top bar and on your pictures.">
+    <Card fold id="card-logo" title="Company logo" subtitle="Shows in the top bar and on your pictures.">
       <div className="flex flex-wrap items-center gap-4">
         <LogoBadge logo={logo} icon={icon} size={72} />
         <div className="space-y-2">
