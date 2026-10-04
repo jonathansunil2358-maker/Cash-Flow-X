@@ -12,12 +12,12 @@ export const PREMISES_STEPS = [10, 25, 50, 100];
 
 export const premisesTier = (heads: number): number => PREMISES_STEPS.filter((n) => heads >= n).length;
 
-/** Monthly base rent for a premises tier: each move adds 40% to the base rent. */
-export const baseRentFor = (ind: IndustryConfig, tier: number): Pence => Math.round(ind.rentBase * (1 + 0.4 * tier));
+/** Monthly base rent for a premises tier: each move adds 25% to the base rent. */
+export const baseRentFor = (ind: IndustryConfig, tier: number): Pence => Math.round(ind.rentBase * (1 + 0.25 * tier));
 
-/** Fit-out of the premises for a tier: about four months of its full rent, capitalised as PP&E. */
+/** Fit-out of the premises for a tier: about three months of its full rent, capitalised as PP&E. */
 export const fitOutFor = (ind: IndustryConfig, tier: number): Pence =>
-  tier <= 0 ? 0 : Math.round((ind.rentBase + ind.rentPerHead * PREMISES_STEPS[tier - 1]) * 4);
+  tier <= 0 ? 0 : Math.round((ind.rentBase + ind.rentPerHead * PREMISES_STEPS[tier - 1]) * 3);
 
 /** Fit-outs are depreciated over seven years. */
 export const FIT_OUT_LIFE_MONTHS = 84;
