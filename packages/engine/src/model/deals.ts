@@ -227,7 +227,7 @@ export function advanceDeals(s: GameState, simulation: boolean): void {
       // Some deals disappoint: a deterministic one-in-four loses a third of the goodwill.
       if (roll(s, `impair:${g.test}`, 100) < 25 && (d.goodwill ?? 0) > 0) {
         const loss = Math.round((d.goodwill ?? 0) / 3);
-        post(s.ledger, s.month, 'Goodwill impairment on the acquisition', [dr('impairment', loss), cr('goodwill', loss)], { cf: 'none' });
+        post(s.ledger, s.month, 'Goodwill impairment on the acquisition', [dr('impairment', loss), cr('goodwill', loss)], { cf: 'operating' });
         d.goodwill = (d.goodwill ?? 0) - loss;
         say('warning', 'The acquisition disappointed', `Customers did not stay as hoped, so ${formatGBP(loss)} of goodwill was written off.`);
       } else say('milestone', 'The acquisition has bedded in', 'The two businesses now run as one.');

@@ -196,7 +196,7 @@ export function advanceStrategy(s: GameState, simulation: boolean): void {
   for (const sub of st.subs ?? []) {
     if (roll(s, `subbad:${sub.sector}:${s.month}`, 100) < 4) {
       const loss = Math.round(sub.stake * 0.05);
-      post(s.ledger, s.month, `Subsidiary loss: ${INDUSTRIES[sub.sector].name}`, [dr('fairValueGains', loss), cr('investments', loss)], { cf: 'none' });
+      post(s.ledger, s.month, `Subsidiary loss: ${INDUSTRIES[sub.sector].name}`, [dr('fairValueGains', loss), cr('investments', loss)], { cf: 'operating' });
       sub.stake -= loss;
       if (!simulation) logItem(s, 'warning', `A bad month at your ${INDUSTRIES[sub.sector].name.toLowerCase()} subsidiary`, `It lost ${formatGBP(loss)} of its value.`);
     } else {

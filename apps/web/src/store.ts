@@ -434,7 +434,13 @@ export const useGame = create<Store>((set, get) => {
     closeMonth() {
       const { game } = get();
       if (!game || game.status !== 'playing' || game.pendingEvent) return;
-      const next = advanceMonth(game);
+      let next: GameState;
+      try { next = advanceMonth(game); } catch (e) {
+        // Never let a bad month take the screen down: pause and say so (the saved game is untouched).
+        set({ speed: 0 });
+        get().toast('error', `Could not close the month: ${(e as Error).message}`);
+        return;
+      }
       commit(game, next, 0, { undoStack: [], monthProgress: 0 });
       if (next.status === 'playing' && next.month % 12 === 0 && next.month > game.month) set({ review: yearReview(next) });
       // Daily quests: a month closed, a profitable month, a board target beaten.
@@ -591,7 +597,11 @@ export const useGame = create<Store>((set, get) => {
       if (months <= 0) return;
       const next = structuredClone(game);
       // Keep each server sync within its 36-month window.
-      const summary = runOffline(next, Math.min(months, next.server ? 18 : months));
+      let summary: ReturnType<typeof runOffline>;
+      try { summary = runOffline(next, Math.min(months, next.server ? 18 : months)); } catch (e) {
+        get().toast('error', `Could not catch up while you were away: ${(e as Error).message}`);
+        return;
+      }
       if (summary.months > 0) {
         commit(game, next, 0, { offline: summary, undoStack: [], monthProgress: 0 });
         void get().syncNow();
