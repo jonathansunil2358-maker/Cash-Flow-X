@@ -71,11 +71,23 @@ export const targetNetAssets = (t: AcquisitionTarget): Pence =>
  * book value as a proxy for fair value, the excess of price over net assets is goodwill, and
  * the cash line is presented net of cash acquired.
  */
-export function completeAcquisition(s: GameState, target: AcquisitionTarget): void {
+export interface CompletionOptions {
+  /** What is paid at completion (default: the asking price). A later earn-out adds to goodwill when it falls due. */
+  price?: Pence;
+  /** The part of that price paid in new shares instead of cash. */
+  sharePart?: Pence;
+  /** Integration costs as a share of the price (default 3%). */
+  integrationPct?: number;
+  /** Brand strength gained (default 10). */
+  brandGain?: number;
+}
+export function completeAcquisition(s: GameState, target: AcquisitionTarget, opts: CompletionOptions = {}): void {
   const ind = industryOf(s);
   const L = s.ledger;
   const netAssets = targetNetAssets(target);
-  const goodwill = target.askingPrice - netAssets;
+  const price = opts.price ?? target.askingPrice;
+  const sharePart = Math.min(price, opts.sharePart ?? 0);
+  const goodwill = price - netAssets;
   const units = ind.model === 'unit' ? Math.round(target.inventory / ind.unitCost) : 0;
   const inventory = units * ind.unitCost;
 
@@ -87,7 +99,8 @@ export function completeAcquisition(s: GameState, target: AcquisitionTarget): vo
     dr('goodwill', goodwill + (target.inventory - inventory)),
     cr('payables', target.payables),
     cr('loans', target.debt),
-    cr('cash', target.askingPrice),
+    ...(price - sharePart > 0 ? [cr('cash', price - sharePart)] : []),
+    ...(sharePart > 0 ? [cr('shareCapital', sharePart)] : []),
   ], { cf: 'investing', cfLabel: 'Acquisition of subsidiary, net of cash acquired' });
 
   if (target.receivables) s.receivablesQueue[0] = (s.receivablesQueue[0] ?? 0) + target.receivables;
@@ -101,7 +114,7 @@ export function completeAcquisition(s: GameState, target: AcquisitionTarget): vo
     });
   }
 
-  const integration = Math.round(target.askingPrice * 0.03);
+  const integration = Math.round(price * (opts.integrationPct ?? 0.03));
   post(L, s.month, `Integration costs: ${target.name}`, [dr('dealCosts', integration), cr('cash', integration)], { cf: 'operating' });
 
   s.staff.ops += target.heads.ops;
@@ -109,12 +122,12 @@ export function completeAcquisition(s: GameState, target: AcquisitionTarget): vo
   s.staff.sales += target.heads.sales;
   if (ind.model === 'subscription') s.customers += Math.round(target.volume);
   else s.acquiredDemand += target.volume;
-  s.brand += 10;
+  s.brand += opts.brandGain ?? 10;
 
-  s.acquisitions.push({ name: target.name, month: s.month, price: target.askingPrice, netAssets, goodwill: goodwill + (target.inventory - inventory) });
+  s.acquisitions.push({ name: target.name, month: s.month, price, netAssets, goodwill: goodwill + (target.inventory - inventory) });
   s.targets = s.targets.filter((t) => t.id !== target.id);
   logItem(s, 'milestone', `Acquired ${target.name}`,
-    `Paid ${formatGBP(target.askingPrice)} for net assets of ${formatGBP(netAssets)}. The difference is recognised as goodwill and tested for impairment every year end.`);
+    `Paid ${formatGBP(price)} for net assets of ${formatGBP(netAssets)}. The difference is recognised as goodwill and tested for impairment every year end.`);
 }
 
 /**
