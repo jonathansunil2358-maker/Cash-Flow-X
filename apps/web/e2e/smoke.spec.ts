@@ -1603,6 +1603,12 @@ test('V4 Batch E: island visits, the cosmetics market and the scenario maker', a
   // Market: the empty market renders, and an item the player does not own cannot be listed.
   await expect(page.locator('#card-cosmetics').getByText('Nothing for sale right now.')).toBeVisible();
   await expect(page.locator('#card-mentor')).toBeVisible();
+
+  // V5: a joint venture can be started and shows its code.
+  const vent = page.locator('#card-venture');
+  await vent.getByRole('button', { name: 'Start a venture' }).click();
+  await expect(vent.locator('code')).toHaveText(/^[A-Z2-9]{6}$/);
+  await expect(vent.getByText('waiting for a partner')).toBeVisible();
 });
 
 test('V4 Batch F: island radio, timelapse and festivals, then free play', async ({ page }) => {

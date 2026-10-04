@@ -4,7 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
-import { IslandVisitCard, LandmarkCard, MarketCard, MentorCard, ScenarioCard } from './Together4';
+import { IslandVisitCard, LandmarkCard, MarketCard, MentorCard, ScenarioCard, TradeWarCard, VentureCard } from './Together4';
 import { CardsCard, CoopCard, GuildRivalCard, HallCard, SeasonBanner } from './Together';
 import { api, type LeagueView, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
@@ -268,6 +268,8 @@ export function CommunityTab() {
       <HallCard />
       <IslandVisitCard />
       <LandmarkCard />
+      <TradeWarCard />
+      <VentureCard />
       <MarketCard />
       <MentorCard />
       <ScenarioCard game={game} />

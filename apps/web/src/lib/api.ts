@@ -148,6 +148,10 @@ export interface HallView { rows: { rank: number; name: string; icon: string; co
 export interface IslandView { id: string; name: string; icon: string; title: string | null; prestige: number; likes: number; liked: boolean; self: boolean; company: { name: string | null; sector: string | null; difficulty: string | null; month: number; status: string | null; equityValue: number | null } | null; greetings: { from: string; text: string }[] }
 export interface LandmarkView { guild: boolean; funded?: number; level?: number; name?: string | null; next?: { name: string; cost: number } | null; personalCash?: number; levels?: { name: string; cost: number }[] }
 export interface MarketView { open: { id: string; kind: string; item: string; price: number; seller: string }[]; mine: { id: string; kind: string; item: string; price: number; status: string; collected: number }[] }
+export interface VentureShape { code: string; week: string; partner: string | null; waiting: boolean; points: number; goal: number; mine: number; theirs: number; done: boolean; contributedToday: boolean; reward: { gems: number; claimed: boolean } | null }
+export interface VentureView { week: string; venture: VentureShape | null; goal: number }
+export interface WarSide { name: string; icon: string; profit: number }
+export type WarView = { guild: false } | { guild: true; now: { week: string; mine: WarSide; opponent: WarSide | null; leading: boolean | null } | null; last: { week: string; mine: WarSide; opponent: WarSide; won: boolean; reward: { gems: number; claimed: boolean } | null } | null };
 export interface MentorView { mentees: ({ code: string; waiting: true } | { code: string; waiting: false; name: string; progress: number; claimable: boolean; claimed: boolean })[]; mentor: { code: string; name: string; progress: number; claimable: boolean; claimed: boolean } | null; goal: number; gems: { mentor: number; mentee: number } }
 export interface ScenarioView { code: string; name: string; sector: string; difficulty: string; seed: string; objective: { kind: 'worth' | 'customers' | 'streak'; value: number }; plays: number; owner: string }
 
@@ -196,6 +200,13 @@ export const api = {
   buyListing: (id: string) => request<{ kind: string; item: string; price: number }>(`/market/${id}/buy`, { body: {} }),
   cancelListing: (id: string) => request<{ ok: boolean }>(`/market/${id}/cancel`, { body: {} }),
   collectSales: () => request<{ gems: number }>('/market/collect', { body: {} }),
+  venture: () => request<VentureView>('/venture'),
+  ventureCreate: () => request<{ code: string }>('/venture/create', { body: {} }),
+  ventureJoin: (code: string) => request<{ ok: boolean }>('/venture/join', { body: { code } }),
+  ventureContribute: () => request<VentureView>('/venture/contribute', { body: {} }),
+  ventureClaim: () => request<{ gems: number }>('/venture/claim', { body: {} }),
+  war: () => request<WarView>('/guild/war'),
+  warClaim: () => request<{ gems: number }>('/guild/war/claim', { body: {} }),
   mentor: () => request<MentorView>('/mentor'),
   mentorCreate: () => request<{ code: string }>('/mentor/create', { body: {} }),
   mentorJoin: (code: string) => request<{ ok: boolean }>('/mentor/join', { body: { code } }),
