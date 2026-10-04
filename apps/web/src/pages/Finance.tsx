@@ -5,6 +5,7 @@ import {
   formatGBP, formatPct, leasesCurrentPortion, loanOffer, loanRate, monthLabel, overdraftLimit, ownership, scheduledRepayment, spreadFor, type GameState,
 } from '@cfx/engine';
 import { useState } from 'react';
+import { Fold } from './Strategy';
 import { Grouped } from '../components/Grouped';
 import { Button, Card, Field, KeyValue, MoneyInput, NumberInput, PageTitle, StatusPill } from '../components/ui';
 import { useGame } from '../store';
@@ -96,7 +97,7 @@ function CovenantCard({ game }: { game: GameState }) {
   const t = covenantTest(game);
   const hasLoans = game.loans.length > 0;
   return (
-    <Card title="Loan covenants" subtitle={`Tested quarterly on trailing-12-month figures, from 6 months after drawdown. One breach: 1% fee and +3% penalty rate. Two in a row: the loan is recalled.`}>
+    <Fold id="card-covenants" title="Loan covenants" summary="Tested every quarter. Open to see your headroom." subtitle={`Tested quarterly on trailing-12-month figures, from 6 months after drawdown. One breach: 1% fee and +3% penalty rate. Two in a row: the loan is recalled.`}>
       <KeyValue rows={[
         [`Debt / EBITDA (max ${COVENANT_MAX_DEBT_EBITDA}x)`, t.debtToEbitda === null ? (t.debt > 0 ? 'EBITDA ≤ 0: breach' : 'no debt') : `${t.debtToEbitda.toFixed(2)}x`],
         [`Interest cover (min ${COVENANT_MIN_INTEREST_COVER}x)`, t.interestCover === null ? 'n/a' : `${t.interestCover.toFixed(1)}x`],
@@ -105,7 +106,7 @@ function CovenantCard({ game }: { game: GameState }) {
       <div className="mt-3">
         {!hasLoans ? <StatusPill kind="na" label="No covenants apply" /> : t.breach ? <StatusPill kind="bad" label="Would breach if tested today" /> : <StatusPill kind="good" label="Within covenants" />}
       </div>
-    </Card>
+    </Fold>
   );
 }
 
@@ -113,9 +114,9 @@ function OverdraftCard({ game }: { game: GameState }) {
   const limit = overdraftLimit(game);
   const used = Math.max(0, -game.ledger.balances.cash);
   return (
-    <Card title="Overdraft facility" subtitle="Asset-based: 50% of receivables + 25% of inventory + £10k, cut in a credit crunch. Interest at base + 5%. Going beyond it means insolvency.">
+    <Fold id="card-overdraft" title="Overdraft facility" summary="Open to see your limit and what you owe." subtitle="Asset-based: 50% of receivables + 25% of inventory + £10k, cut in a credit crunch. Interest at base + 5%. Going beyond it means insolvency.">
       <KeyValue rows={[['Facility limit', formatGBP(limit)], ['Drawn', formatGBP(used)], ['Headroom', formatGBP(limit - used)]]} />
-    </Card>
+    </Fold>
   );
 }
 
@@ -126,7 +127,7 @@ function EquityCard({ game }: { game: GameState }) {
   const own = ownership(game);
   const newOwn = terms.preMoney > 0 ? own * (terms.preMoney / (terms.preMoney + amount)) : own;
   return (
-    <Card title="Raise equity" subtitle={`Sell new shares to investors at a 15% discount to your equity valuation. No repayments or covenants, but you own less of the upside. ${formatPct(EQUITY_FEE, 0)} fees are deducted from equity.`}>
+    <Fold id="card-equity" title="Raise equity" summary="Sell new shares to investors. Open to raise money." subtitle={`Sell new shares to investors at a 15% discount to your equity valuation. No repayments or covenants, but you own less of the upside. ${formatPct(EQUITY_FEE, 0)} fees are deducted from equity.`}>
       <KeyValue rows={[
         ['Your ownership', formatPct(own)],
         ['Pre-money valuation', formatGBP(terms.preMoney)],
@@ -137,7 +138,7 @@ function EquityCard({ game }: { game: GameState }) {
         <Field label="Amount"><MoneyInput value={amount} onChange={setAmount} step={10000} /></Field>
         <Button variant="primary" disabled={game.status !== 'playing' || !terms.available} onClick={() => act({ type: 'raiseEquity', amount }, `Raised ${formatGBP(amount)} of equity.`)}>Raise</Button>
       </div>
-    </Card>
+    </Fold>
   );
 }
 
@@ -146,7 +147,7 @@ function DividendCard({ game }: { game: GameState }) {
   const reserves = distributableReserves(game);
   const [amount, setAmount] = useState(10_000_00);
   return (
-    <Card title="Dividends" subtitle="Dividends come out of distributable reserves (retained earnings + this year's profit). Your share counts towards your final score, but cash paid out cannot fund growth.">
+    <Fold id="card-dividends" title="Dividends" summary="Pay yourself from reserves. Open to pay a dividend." subtitle="Dividends come out of distributable reserves (retained earnings + this year's profit). Your share counts towards your final score, but cash paid out cannot fund growth.">
       <KeyValue rows={[
         ['Distributable reserves', formatGBP(reserves)],
         ['Cash', formatGBP(game.ledger.balances.cash)],
@@ -156,7 +157,7 @@ function DividendCard({ game }: { game: GameState }) {
         <Field label="Dividend"><MoneyInput value={amount} onChange={setAmount} step={5000} /></Field>
         <Button variant="primary" disabled={game.status !== 'playing' || reserves <= 0} onClick={() => act({ type: 'payDividend', amount }, `Dividend of ${formatGBP(amount)} paid.`)}>Pay dividend</Button>
       </div>
-    </Card>
+    </Fold>
   );
 }
 
@@ -166,7 +167,7 @@ function TreasuryCard({ game }: { game: GameState }) {
   const [product, setProduct] = useState<'deposit' | 'fund'>('deposit');
   const playing = game.status === 'playing';
   return (
-    <Card title="Treasury: invest surplus cash" subtitle="A deposit earns base rate − 0.5%. The equity fund is volatile and revalued monthly at fair value through profit or loss (it falls in recessions).">
+    <Fold id="card-treasury" title="Treasury: invest surplus cash" summary="A deposit or the equity fund. Open to invest spare cash." subtitle="A deposit earns base rate − 0.5%. The equity fund is volatile and revalued monthly at fair value through profit or loss (it falls in recessions).">
       <KeyValue rows={[['Deposit', formatGBP(game.deposit)], ['Equity fund (fair value)', formatGBP(game.fundValue)]]} />
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <Field label="Product">
@@ -179,13 +180,13 @@ function TreasuryCard({ game }: { game: GameState }) {
         <Button variant="primary" disabled={!playing} onClick={() => act({ type: 'invest', product, amount }, 'Invested.')}>Invest</Button>
         <Button disabled={!playing} onClick={() => act({ type: 'withdraw', product, amount: Math.min(amount, product === 'deposit' ? game.deposit : game.fundValue) }, 'Withdrawn.')}>Withdraw</Button>
       </div>
-    </Card>
+    </Fold>
   );
 }
 
 function LeasesCard({ game }: { game: GameState }) {
   return (
-    <Card title="Leases (IFRS 16)" subtitle="Leased equipment sits on the balance sheet as a right-of-use asset, depreciated straight line, with a lease liability that earns interest. Payments split into interest (operating cash flow) and principal (financing cash flow).">
+    <Fold id="card-leases" title="Leases (IFRS 16)" summary="Open to see your leases." subtitle="Leased equipment sits on the balance sheet as a right-of-use asset, depreciated straight line, with a lease liability that earns interest. Payments split into interest (operating cash flow) and principal (financing cash flow).">
       {game.leases.map((l) => (
         <KeyValue key={l.id} rows={[
           [l.label, `${formatGBP(l.payment)}/month · ${l.monthsRemaining} of ${l.termMonths} months left`],
@@ -195,18 +196,18 @@ function LeasesCard({ game }: { game: GameState }) {
         ]} />
       ))}
       <p className="mt-2 text-xs text-ink-2">Due within 12 months: {formatGBP(leasesCurrentPortion(game.leases))} (current liability).</p>
-    </Card>
+    </Fold>
   );
 }
 
 function TaxCard({ game }: { game: GameState }) {
   return (
-    <Card title="Corporation tax" subtitle="19% small profits rate up to £50k, 25% main rate above £250k, marginal relief between. Accrued monthly on year-to-date profit; paid 9 months and 1 day after the year end. Losses carry forward.">
+    <Fold id="card-tax" title="Corporation tax" summary="What you owe the taxman. Open for details." subtitle="19% small profits rate up to £50k, 25% main rate above £250k, marginal relief between. Accrued monthly on year-to-date profit; paid 9 months and 1 day after the year end. Losses carry forward.">
       <KeyValue rows={[
         ['Accrued this year', formatGBP(game.tax.ytdBooked)],
         ['Liability for last year', game.tax.due ? `${formatGBP(game.tax.due)} due ${monthLabel(game.tax.dueMonth ?? 0)}` : 'None outstanding'],
         ['Losses carried forward', formatGBP(game.tax.lossesCarriedForward)],
       ]} />
-    </Card>
+    </Fold>
   );
 }
