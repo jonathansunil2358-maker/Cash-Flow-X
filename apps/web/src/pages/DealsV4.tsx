@@ -2,6 +2,7 @@ import {
   acquireCheck, bidsFor, CROWD_TIERS, crowdChance, crowdCheck, crowdGoal, dealsOf, formatGBP, grantedPatents, hedgeCheck, HEDGE_MONTHS, LICENCE_RATE, MAX_PATENTS,
   openMarkets, patentCheck, patentChance, PATENT_MONTHS, rivalPrice, saleCheck, vcCheck, vcOffers, type GameState,
 } from '@cfx/engine';
+import { useState } from 'react';
 import { Button, KeyValue } from '../components/ui';
 import { useGame } from '../store';
 import { Fold } from './Strategy';
@@ -35,16 +36,22 @@ export function AcquireCard({ game }: { game: GameState }) {
 export function SaleCard({ game }: { game: GameState }) {
   const act = useGame((s) => s.act);
   const chk = saleCheck(game);
+  const [ask, setAsk] = useState('');
+  const askNum = ask.trim() === '' ? undefined : Number(ask);
   return (
     <Fold id="card-sale" title="Sell the company" summary="Three bidders. Selling ends this company." subtitle="Selling ends the run. The price compared with the valuation (a premium or a discount) is added to or taken from your final score. You can also just keep playing.">
       <ul className="space-y-2">
         {bidsFor(game).map((b) => (
           <li key={b.id} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="min-w-0 flex-1"><b>{b.buyer}</b>: {b.mult.toFixed(2)} × valuation. {b.blurb}</span>
-            <Button variant="danger" disabled={!chk.ok || !live(game)} onClick={() => { if (window.confirm(`Sell to ${b.buyer.toLowerCase()}? This ends the company.`)) act({ type: 'tradeSale', bid: b.id }, 'Sold!'); }}>Sell</Button>
+            <Button variant="danger" disabled={!chk.ok || !live(game)} onClick={() => { if (window.confirm(`Sell to ${b.buyer.toLowerCase()}? This ends the company.`)) act({ type: 'tradeSale', bid: b.id, ask: askNum }, 'Sold!'); }}>Sell</Button>
           </li>
         ))}
       </ul>
+      <label className="mt-3 block text-xs text-ink-2">Negotiate: ask for this many times the valuation (leave empty to take the bid)
+        <input type="number" step="0.01" min="0.8" max="1.6" value={ask} onChange={(e) => setAsk(e.target.value)} aria-label="Ask for a multiple of the valuation"
+          className="mt-1 block w-28 rounded-xl border-[3px] border-outline bg-surface-2 px-2 py-1 text-sm font-extrabold text-ink" />
+      </label>
       {!chk.ok && <p className="mt-2 text-xs text-muted">{chk.reason}</p>}
     </Fold>
   );

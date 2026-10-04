@@ -1,4 +1,5 @@
 import { AcquireCard, CrowdCard, HedgeCard, PatentCard, SaleCard, VcCard } from './DealsV4';
+import { DealBookCard, DealRoom, HostileCard } from './DealsV5';
 import { VentureCard } from './Progress';
 import {
   COVENANT_MAX_DEBT_EBITDA, COVENANT_MIN_INTEREST_COVER, covenantTest, distributableReserves, EQUITY_FEE, equityRaiseTerms,
@@ -29,7 +30,7 @@ export function Finance({ game }: { game: GameState }) {
         },
         {
           id: 'deals', label: 'Deals', blurb: 'Buy a rival or sell the company.',
-          items: <><AcquireCard game={game} /><SaleCard game={game} /></>,
+          items: <><DealRoom game={game} /><AcquireCard game={game} /><HostileCard game={game} /><DealBookCard game={game} /><SaleCard game={game} /></>,
         },
         {
           id: 'tax', label: 'Tax', blurb: 'What you owe the taxman.',

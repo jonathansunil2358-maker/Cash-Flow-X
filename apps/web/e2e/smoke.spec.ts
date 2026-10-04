@@ -1443,6 +1443,39 @@ test('V4 Batch A: venture capital, crowdfunding, hedging, patents, buying a riva
   await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
 });
 
+test('M&A v5: deal room, checks, haggling, terms, hostile bids and the deal book', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Finance');
+  const sheet = page.getByRole('dialog', { name: 'Finance' });
+  for (const id of ['card-dealroom', 'card-hostile', 'card-dealbook']) await expect(sheet.locator(`#${id}`)).toBeVisible();
+  const room = sheet.locator('#card-dealroom');
+  await room.getByRole('button', { name: 'Open' }).click();
+  const first = room.getByTestId('listing').first();
+  await expect(first).toBeVisible();
+  await first.getByRole('button', { name: /^Legal check/ }).click();
+  await expect(first.getByText(/Legal:/)).toBeVisible();
+  await first.getByRole('button', { name: 'Pay the asking price' }).click();
+  await expect(first.getByText('Price agreed').first()).toBeVisible();
+  // Either a rival has jumped in, or the terms can be chosen and the deal closed.
+  const war = first.getByText('Bidding war');
+  if (await war.count()) {
+    await expect(first.getByRole('button', { name: /^Match/ })).toBeVisible();
+  } else {
+    await expect(first.getByRole('button', { name: 'Close the deal' })).toBeVisible();
+    await first.getByRole('button', { name: 'Earn-out' }).click();
+    await expect(first.getByRole('button', { name: 'Earn-out' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(first.getByText(/Cash needed now/)).toBeVisible();
+  }
+  await expect(first.getByRole('button', { name: /^Walk away/ })).toBeVisible();
+  await sheet.locator('#card-hostile').getByRole('button', { name: 'Open' }).click();
+  await expect(sheet.locator('#card-hostile').getByText(/% chance/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
