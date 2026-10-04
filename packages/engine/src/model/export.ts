@@ -23,7 +23,7 @@ const lastRevenue = (s: GameState): Pence => { const r = s.history.at(-1); retur
 export const marketFee = (s: GameState): Pence => Math.max(3_000_00, Math.round(lastRevenue(s) / 10000) * 10000);
 
 /** This month's currency swing for a market, from -1 to +1 times its volatility. */
-export const currencyOf = (s: GameState, m: MarketDef): number => ((hashSeed(`${s.seedLabel}:fx:${m.id}:${s.month}`) % 2001) / 1000 - 1) * m.swing;
+export const currencyOf = (s: GameState, m: MarketDef): number => (s.deals && (s.deals.hedgeFx ?? -1) >= s.month) ? 0 : ((hashSeed(`${s.seedLabel}:fx:${m.id}:${s.month}`) % 2001) / 1000 - 1) * m.swing;
 export function exportMult(s: GameState): number {
   let mult = 1;
   for (const id of openMarkets(s)) { const m = marketDef(id); if (m) mult += m.base * (1 + currencyOf(s, m) / m.base * 0.5); }

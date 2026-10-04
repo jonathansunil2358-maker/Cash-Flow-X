@@ -1,3 +1,4 @@
+import { AcquireCard, CrowdCard, HedgeCard, PatentCard, SaleCard, VcCard } from './DealsV4';
 import { VentureCard } from './Progress';
 import {
   COVENANT_MAX_DEBT_EBITDA, COVENANT_MIN_INTEREST_COVER, covenantTest, distributableReserves, EQUITY_FEE, equityRaiseTerms,
@@ -21,6 +22,12 @@ export function Finance({ game }: { game: GameState }) {
         <DividendCard game={game} />
         <TreasuryCard game={game} />
         <VentureCard game={game} />
+        <VcCard game={game} />
+        <CrowdCard game={game} />
+        <HedgeCard game={game} />
+        <PatentCard game={game} />
+        <AcquireCard game={game} />
+        <SaleCard game={game} />
         <TaxCard game={game} />
         {game.leases.length > 0 && <LeasesCard game={game} />}
       </div>

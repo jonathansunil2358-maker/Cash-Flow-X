@@ -145,6 +145,12 @@ export interface GuildRivalView { week: string; rank?: number; of?: number; mine
 
 export interface HallView { rows: { rank: number; name: string; icon: string; company: string | null; sector: string | null; netWorth: number; prestige: number }[] }
 
+export interface IslandView { id: string; name: string; icon: string; title: string | null; prestige: number; likes: number; liked: boolean; self: boolean; company: { name: string | null; sector: string | null; difficulty: string | null; month: number; status: string | null; equityValue: number | null } | null; greetings: { from: string; text: string }[] }
+export interface LandmarkView { guild: boolean; funded?: number; level?: number; name?: string | null; next?: { name: string; cost: number } | null; personalCash?: number; levels?: { name: string; cost: number }[] }
+export interface MarketView { open: { id: string; kind: string; item: string; price: number; seller: string }[]; mine: { id: string; kind: string; item: string; price: number; status: string; collected: number }[] }
+export interface MentorView { mentees: ({ code: string; waiting: true } | { code: string; waiting: false; name: string; progress: number; claimable: boolean; claimed: boolean })[]; mentor: { code: string; name: string; progress: number; claimable: boolean; claimed: boolean } | null; goal: number; gems: { mentor: number; mentee: number } }
+export interface ScenarioView { code: string; name: string; sector: string; difficulty: string; seed: string; objective: { kind: 'worth' | 'customers' | 'streak'; value: number }; plays: number; owner: string }
+
 export interface LeagueView { week: string; maxPoints: number; mine: { points: number; answered: number }; rows: { rank: number; id: string; name: string; icon: string; points: number; me: boolean }[] }
 
 export const api = {
@@ -180,6 +186,23 @@ export const api = {
   giftCard: (card: string) => request<{ code: string; card: string }>('/cards/gift', { body: { card } }),
   claimCard: (code: string) => request<{ card: string }>('/cards/claim', { body: { code } }),
   hall: () => request<HallView>('/hall'),
+  island: (id: string) => request<IslandView>(`/island/${encodeURIComponent(id)}`),
+  likeIsland: (id: string) => request<{ ok: boolean }>(`/island/${encodeURIComponent(id)}/like`, { body: {} }),
+  greetIsland: (id: string, idx: number) => request<{ ok: boolean }>(`/island/${encodeURIComponent(id)}/greet`, { body: { idx } }),
+  landmark: () => request<LandmarkView>('/guild/landmark'),
+  fundLandmark: (amount: number) => request<LandmarkView>('/guild/landmark/fund', { body: { amount } }),
+  market: () => request<MarketView>('/market'),
+  listItem: (kind: string, item: string, price: number) => request<{ id: string }>('/market/list', { body: { kind, item, price } }),
+  buyListing: (id: string) => request<{ kind: string; item: string; price: number }>(`/market/${id}/buy`, { body: {} }),
+  cancelListing: (id: string) => request<{ ok: boolean }>(`/market/${id}/cancel`, { body: {} }),
+  collectSales: () => request<{ gems: number }>('/market/collect', { body: {} }),
+  mentor: () => request<MentorView>('/mentor'),
+  mentorCreate: () => request<{ code: string }>('/mentor/create', { body: {} }),
+  mentorJoin: (code: string) => request<{ ok: boolean }>('/mentor/join', { body: { code } }),
+  mentorClaim: (code: string) => request<{ gems: number }>('/mentor/claim', { body: { code } }),
+  createScenario: (b: { name: string; sector: string; difficulty: string; objective: { kind: string; value: number } }) => request<{ code: string }>('/scenarios', { body: b }),
+  scenario: (code: string) => request<ScenarioView>(`/scenarios/${encodeURIComponent(code)}`),
+  scenarioPlayed: (code: string) => request<ScenarioView>(`/scenarios/${encodeURIComponent(code)}/played`, { body: {} }),
   guildRival: () => request<GuildRivalView>('/guild/rival'),
   league: () => request<LeagueView>('/league'),
   answerLeague: (kind: 'spot' | 'detective' | 'journal', day: string, answer: string) => request<{ correct: boolean }>('/league/answer', { body: { kind, day, answer } }),

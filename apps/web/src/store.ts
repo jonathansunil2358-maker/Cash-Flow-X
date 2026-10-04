@@ -6,6 +6,7 @@ import {
   adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, grantAwardBoxes, payPlayGems, payPrestigeGems, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
   claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
+  claimFestival as claimFestivalOn,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -123,7 +124,10 @@ interface Store {
   finishSprint: (day: string, points: number, gems: number) => void;
   hearTip: (id: string) => void;
   addCardGift: (id: string) => void;
+  marketTake: (kind: string, item: string) => boolean;
+  marketGive: (kind: string, item: string, price: number) => boolean;
   claimInheritance: () => void;
+  claimFestival: () => void;
   takeSpareCard: (id: string) => boolean;
   finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
@@ -773,6 +777,16 @@ export const useGame = create<Store>((set, get) => {
       playSound('success');
     },
 
+    claimFestival() {
+      try {
+        const before = get().profile;
+        const next = claimFestivalOn(before);
+        set({ profile: persistProfile(next) });
+        get().toast('good', `Festival treat: +${next.gems - before.gems} gems.`);
+        playSound('success');
+      } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
     claimInheritance() {
       try {
         const before = get().profile;
@@ -781,6 +795,37 @@ export const useGame = create<Store>((set, get) => {
         get().toast('good', `Inheritance claimed: +${next.gems - before.gems} gems.`);
         playSound('success');
       } catch (e) { get().toast('error', (e as Error).message); }
+    },
+
+    marketTake(kind, item) {
+      const p = get().profile;
+      if (kind === 'hat') {
+        const w = p.wardrobe ?? { owned: [], equipped: null };
+        if (!w.owned.includes(item)) return false;
+        set({ profile: persistProfile({ ...p, wardrobe: { owned: w.owned.filter((x) => x !== item), equipped: w.equipped === item ? null : w.equipped } }) });
+        return true;
+      }
+      if (kind === 'decor') {
+        const d = p.decor ?? { owned: [], placed: [] };
+        if (!d.owned.includes(item)) return false;
+        set({ profile: persistProfile({ ...p, decor: { owned: d.owned.filter((x) => x !== item), placed: d.placed.filter((x) => x !== item) } }) });
+        return true;
+      }
+      if (kind === 'card') { try { set({ profile: persistProfile(takeForGiftOn(p, item)) }); return true; } catch { return false; } }
+      return false;
+    },
+
+    marketGive(kind, item, price) {
+      const p = get().profile;
+      if (p.gems < price) return false;
+      let next = { ...p, gems: p.gems - price };
+      if (kind === 'hat') { const w = p.wardrobe ?? { owned: [], equipped: null }; if (w.owned.includes(item)) return false; next = { ...next, wardrobe: { ...w, owned: [...w.owned, item] } }; }
+      else if (kind === 'decor') { const d = p.decor ?? { owned: [], placed: [] }; if (d.owned.includes(item)) return false; next = { ...next, decor: { ...d, owned: [...d.owned, item] } }; }
+      else if (kind === 'card') next = addCardOn(next, item);
+      else return false;
+      set({ profile: persistProfile(next) });
+      playSound('success');
+      return true;
     },
 
     takeSpareCard(id) {

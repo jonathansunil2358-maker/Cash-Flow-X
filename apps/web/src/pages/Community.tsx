@@ -4,6 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Meter, StatusPill } from '../components/ui';
 import { useAccount } from '../lib/account';
+import { IslandVisitCard, LandmarkCard, MarketCard, MentorCard, ScenarioCard } from './Together4';
 import { CardsCard, CoopCard, GuildRivalCard, HallCard, SeasonBanner } from './Together';
 import { api, type LeagueView, type CommunityView, type ReplayData, type RivalView, type SharedPlan, type TournamentMatch, type TournamentView } from '../lib/api';
 import { CURRENCY_ICONS, iconUrl } from '../lib/icons';
@@ -256,6 +257,7 @@ function PuzzleLeague() {
 
 export function CommunityTab() {
   const signedIn = !!useAccount((s) => s.me);
+  const game = useGame((s) => s.game);
   if (!signedIn) return <p className="text-sm text-ink-2">Sign in to join the community.</p>;
   return (
     <div className="space-y-4">
@@ -264,6 +266,11 @@ export function CommunityTab() {
       <CoopCard />
       <GuildRivalCard />
       <HallCard />
+      <IslandVisitCard />
+      <LandmarkCard />
+      <MarketCard />
+      <MentorCard />
+      <ScenarioCard game={game} />
       <CardsCard />
       <PuzzleLeague />
       <RivalOfTheWeek />

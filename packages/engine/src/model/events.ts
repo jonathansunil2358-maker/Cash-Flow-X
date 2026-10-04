@@ -1,6 +1,6 @@
 import { cr, dr, post, type CfCategory, type JournalLine } from '../ledger/journal';
 import { formatGBP, type Pence } from '../money';
-import { chance, intRange, neutralRng, pick, range, type Rng } from '../rng';
+import { chance, hashSeed, intRange, neutralRng, pick, range, type Rng } from '../rng';
 import { DIFFICULTIES } from './difficulty';
 import { industryOf, ROLE_IDS, type RoleId } from './industries';
 import { plSummary } from '../ledger/statements';
@@ -814,6 +814,31 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
             apply: (st, _rng, P, p) => { markOnce(st, 'scandal'); P('Compensation and public apology', [dr('otherCosts', p.fine), cr('cash', p.fine)]); adjustReputation(st, -4); return 'You owned up. It hurt, but people respect that.'; } },
           { id: 'deny', label: 'Deny everything', hint: 'Free, if it works. It rarely does.', impact: [{ label: 'Reputation', up: false }],
             apply: (st, rng) => { markOnce(st, 'scandal'); if (chance(rng, 0.3)) return 'The story fizzled out. You got away with it.'; adjustReputation(st, -12); st.brand *= 0.9; return 'Documents leaked and you were caught lying. Customers will remember.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'poach', title: 'A rival is poaching your star', polarity: 'bad', weight: 0.7, icon: 'star',
+    when: (s) => (s.stars?.length ?? 0) > 0 && s.month >= 12 && !doneOnce(s, `poach${Math.floor(s.month / 12)}`),
+    setup: (s) => {
+      const star = s.stars![hashSeed(`${s.seedLabel}:poach:${s.month}`) % s.stars!.length];
+      const bonus = sized(s, 0.05, 1_000_00);
+      return {
+        story: `A recruiter has offered ${star.name} a lot of money to join a rival. They have come to you first. Match it with a retention bonus, try a cheaper counter-offer, or let them go.`,
+        params: { bonus, half: Math.round(bonus / 2 / 10000) * 10000 },
+        choices: [
+          { id: 'match', label: `Match the offer (${formatGBP(bonus)})`, hint: 'They stay, and the team sees you look after people.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { markOnce(st, `poach${Math.floor(st.month / 12)}`); P('Retention bonus for a star employee', [dr('wages', p.bonus), cr('cash', p.bonus)]); st.morale = Math.min(100, st.morale + 2); return `${star.name} stays, and tells everyone.`; } },
+          { id: 'counter', label: `Counter-offer (${formatGBP(Math.round(bonus / 2 / 10000) * 10000)})`, hint: 'A coin flip: it may not be enough.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng2, P, p) => {
+              markOnce(st, `poach${Math.floor(st.month / 12)}`); P('Counter-offer to a star employee', [dr('wages', p.half), cr('cash', p.half)]);
+              if (chance(rng2, 0.5)) return `${star.name} accepts and stays.`;
+              st.stars = (st.stars ?? []).filter((x) => x.id !== star.id); st.staff[star.role] = Math.max(0, st.staff[star.role] - 1);
+              return `${star.name} took the rival's offer anyway. Their perk goes with them.`;
+            } },
+          { id: 'letgo', label: 'Let them go', hint: 'Free today. You lose their perk.', impact: [{ label: 'Perk', up: false }],
+            apply: (st) => { markOnce(st, `poach${Math.floor(st.month / 12)}`); st.stars = (st.stars ?? []).filter((x) => x.id !== star.id); st.staff[star.role] = Math.max(0, st.staff[star.role] - 1); return `${star.name} wished you well and left.`; } },
         ],
       };
     },

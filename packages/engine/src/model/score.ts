@@ -59,7 +59,7 @@ export function finalScore(s: GameState): FinalScore {
   const equityValue = s.status === 'insolvent' ? 0 : valuationOf(s).equityValue;
   const own = ownership(s);
   const ownerStake = Math.round(equityValue * own);
-  const ownerWealth = ownerStake + s.ownerDividends;
+  const ownerWealth = Math.max(0, ownerStake + s.ownerDividends + (s.deals?.saleBonus ?? 0) - (s.deals?.vcPref ?? 0));
   const health = financialHealth(s);
   const multiplier = s.status === 'insolvent' ? 0.5 : 0.75 + 0.5 * health.score;
   return {

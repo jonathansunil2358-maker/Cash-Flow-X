@@ -340,6 +340,16 @@ export interface GameState {
   supplier?: 'budget' | 'premium';
   supplierSince?: number;
   franchises?: number;
+  /** Deals and money (acquisitions, sale, VC, crowdfunding, hedges, patents): see deals.ts. */
+  deals?: import('./deals').Deals;
+  /** Training, work style, innovation day and headhunting: see people.ts. */
+  people?: import('./people').People;
+  /** Loyalty programme, service desk, influencer and Black Friday bookkeeping: see loyalty.ts and customers.ts. */
+  cust?: import('./loyalty').Cust;
+  /** Subsidiaries, boons, cycle stance, green steps and giving: see strategy.ts. */
+  strat?: import('./strategy').Strat;
+  /** Free play: start-up cash and demand multipliers chosen at the start (never ranked). */
+  sandbox?: { cash: number; demand: number };
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

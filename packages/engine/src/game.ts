@@ -29,6 +29,8 @@ export interface NewGameOptions {
   prestigeLevel?: number;
   /** Optional handicaps (see OPTIONAL_MODIFIERS). Ignored on Hard and in challenges. */
   modifiers?: string[];
+  /** Free play only: start-up cash and demand multipliers (each between 0.5 and 5 for cash, 0.5 and 2 for demand). */
+  sandbox?: { cash: number; demand: number };
   /** Business icon id (cosmetic). */
   icon?: string;
 }
@@ -164,9 +166,14 @@ export function newGame(opts: NewGameOptions): GameState {
   if (modifiers.includes('slow-market')) s.economy.active.push({ type: 'mod-slow', title: 'Slow market', startMonth: 0, remaining: 100_000, effects: { demandMult: 0.9 } });
   if (modifiers.includes('origin-marketer')) s.brand += 25;
   if (modifiers.includes('origin-banker')) s.brand = Math.max(0, s.brand - 10);
+  if (modifiers.includes('origin-heir')) s.brand += 15;
   recomputeEconomy(s);
 
-  const capital = startingCash(difficulty, perks);
+  const sb = scenario.id === 'freeplay' && opts.sandbox
+    ? { cash: Math.min(5, Math.max(0.5, Number(opts.sandbox.cash) || 1)), demand: Math.min(2, Math.max(0.5, Number(opts.sandbox.demand) || 1)) }
+    : undefined;
+  if (sb) s.sandbox = sb;
+  const capital = Math.round((startingCash(difficulty, perks) * (sb?.cash ?? 1)) / 10000) * 10000;
   if (scenario.setup) {
     scenario.setup(s);
   } else {

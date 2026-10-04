@@ -1,3 +1,5 @@
+import { bulletinOf, bulletinText, festivalClaimed, festivalOn, FESTIVALS } from '@cfx/engine';
+import { recordTimelapse } from '../lib/timelapse';
 import { formatGBP, nextTip, theatreAt, theatreMonths, tipsHeard, type GameState } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Card, Field } from '../components/ui';
@@ -98,6 +100,67 @@ export function TheatreCard({ game }: { game: GameState }) {
           </dl>
           <div className="text-sm"><b>What you did:</b> {f.actions.length ? f.actions.join('; ') + '.' : 'Nothing special.'}</div>
           <div className="text-sm"><b>What happened:</b> {f.news.length ? f.news.join('; ') + '.' : 'A quiet month.'}</div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** The festival on right now, with a free treat to claim once a year. */
+export function FestivalCard() {
+  const { profile, claimFestival } = useGame();
+  const now = new Date();
+  const f = festivalOn(now);
+  return (
+    <Card id="card-festival" title="Seasonal festivals" subtitle="A few weeks each year with a free treat and a limited hat in the wardrobe. Hats you buy are yours for good.">
+      {f ? (
+        <div className="space-y-2 text-sm">
+          <p><span aria-hidden>{f.emoji}</span> <b>{f.name}</b> is on! {f.blurb}</p>
+          <Button variant="gem" disabled={festivalClaimed(profile, f, now)} onClick={claimFestival}>{festivalClaimed(profile, f, now) ? 'Treat claimed' : `Claim ${f.gems} gems`}</Button>
+        </div>
+      ) : <p className="text-sm text-ink-2">No festival right now. Next up: {FESTIVALS.map((x) => `${x.emoji} ${x.name}`).join(', ')}.</p>}
+    </Card>
+  );
+}
+
+/** The island radio: a spoken-style bulletin from your real numbers. */
+export function RadioCard({ game }: { game: GameState }) {
+  const b = bulletinOf(game);
+  const speak = () => {
+    try { const u = new SpeechSynthesisUtterance(bulletinText(b)); u.rate = 1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch { /* no speech in this browser */ }
+  };
+  return (
+    <Card id="card-radio" title="Island radio" subtitle="A news bulletin built from your real numbers, with an advert for your own brand. Tap to hear it read aloud.">
+      <div className="space-y-1 text-sm" aria-label="Radio bulletin">
+        <p className="font-extrabold">📻 {b.headline}</p>
+        {b.lines.map((l, i) => <p key={i}>{l}</p>)}
+        <p className="text-xs text-ink-2">{b.ad}</p>
+      </div>
+      <div className="mt-2"><Button onClick={speak}>Read it aloud</Button></div>
+    </Card>
+  );
+}
+
+/** Make a short clip of the company growing, and keep it. */
+export function TimelapseCard({ game }: { game: GameState }) {
+  const toast = useGame((s) => s.toast);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const make = async () => {
+    setBusy(true);
+    try {
+      const blob = await recordTimelapse(game, 6);
+      if (!blob) toast('error', game.history.length < 2 ? 'Play a couple of months first.' : 'This browser cannot record video.');
+      else { if (url) URL.revokeObjectURL(url); setUrl(URL.createObjectURL(blob)); }
+    } finally { setBusy(false); }
+  };
+  return (
+    <Card id="card-timelapse" title="Island timelapse" subtitle="A few seconds of your company growing, month by month. It is recorded on your device and never uploaded.">
+      <Button disabled={busy} onClick={make}>{busy ? 'Recording…' : 'Make a timelapse'}</Button>
+      {url && (
+        <div className="mt-3 space-y-2">
+          <video src={url} controls loop className="w-full rounded-lg border border-line" aria-label="Timelapse" />
+          <a className="cfx-btn is-soft is-sm inline-block" href={url} download={`${game.companyName.replace(/[^A-Za-z0-9]+/g, '-')}-timelapse.webm`}>Download</a>
         </div>
       )}
     </Card>

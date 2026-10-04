@@ -1,5 +1,5 @@
 import {
-  buildingNames, canNameEom, documentaryOf, nemesisOf, nemesisTaunt, diaryOf, diaryShareText, eomOf, formatGBP, headlineOf, HATS, PETS, petMood, petOf, rosterOf, UPGRADES, wardrobeOf, yearOf, type GameState,
+  buildingNames, canNameEom, documentaryOf, nemesisOf, nemesisTaunt, diaryOf, diaryShareText, eomOf, formatGBP, festivalOn, headlineOf, HATS, PETS, petMood, petOf, rosterOf, UPGRADES, wardrobeOf, yearOf, type GameState,
 } from '@cfx/engine';
 import { useState } from 'react';
 import { Button, Card, Field, TextInput } from '../components/ui';
@@ -127,7 +127,7 @@ export function WardrobeCard() {
   return (
     <Card id="card-wardrobe" title="Team wardrobe" subtitle="Hats for the little workers on your island. Buy one and everybody wears it.">
       <div className="grid gap-2 sm:grid-cols-2">
-        {HATS.map((h) => {
+        {HATS.filter((h) => !h.festival || w.owned.includes(h.id) || festivalOn()?.id === h.festival).map((h) => {
           const owned = w.owned.includes(h.id);
           const on = w.equipped === h.id;
           return (

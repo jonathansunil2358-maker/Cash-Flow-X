@@ -89,7 +89,8 @@ describe('building names, diary and hats', () => {
     p = wearHat(p, null);
     expect(wardrobeOf(p).equipped).toBeNull();
     expect(() => buyHat(p, 'cap')).toThrow(/already/);
-    expect(HATS.length).toBe(4);
+    expect(HATS.filter((h) => !h.festival).length).toBe(4);
+    expect(HATS.filter((h) => h.festival).length).toBe(4);
     expect(wardrobeOf({ wardrobe: { owned: ['junk', 'cap'], equipped: 'junk' } })).toEqual({ owned: ['cap'], equipped: null });
   });
 });

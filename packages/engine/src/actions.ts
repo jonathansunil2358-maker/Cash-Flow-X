@@ -1,7 +1,7 @@
 import { cr, dr, post } from './ledger/journal';
 import { formatGBP, type Pence } from './money';
 import { completeAcquisition } from './model/acquisitions';
-import { industryOf, ROLE_IDS, type RoleId } from './model/industries';
+import { industryOf, ROLE_IDS, type IndustryId, type RoleId } from './model/industries';
 import { loanOffer, MAX_TERM, MIN_TERM, overdraftLimit, spreadFor } from './model/loans';
 import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
@@ -17,6 +17,10 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
+import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
+import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
+import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
@@ -47,6 +51,25 @@ export type Action =
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
+  | { type: 'acquireRival'; index: number }
+  | { type: 'tradeSale'; bid: string }
+  | { type: 'takeVc'; offer: number }
+  | { type: 'startCrowd'; tier: number }
+  | { type: 'hedge'; kind: 'fx' | 'cost' }
+  | { type: 'filePatent' }
+  | { type: 'takeCourse'; course: string }
+  | { type: 'setWorkstyle'; style: Workstyle }
+  | { type: 'innovationDay' }
+  | { type: 'setLoyalty'; on: boolean }
+  | { type: 'resolveComplaint'; id: string }
+  | { type: 'influencer'; tier: string }
+  | { type: 'blackFriday' }
+  | { type: 'foundSub'; sector: IndustryId }
+  | { type: 'pickBoon'; id: string }
+  | { type: 'setStance'; stance: 'defensive' | 'neutral' | 'expansion' }
+  | { type: 'goGreen'; step: string }
+  | { type: 'donate'; amount: Pence }
+  | { type: 'headhunt'; role: RoleId }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
   | { type: 'setDesign'; features: number }
@@ -292,6 +315,123 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       if (!check.ok) fail(check.reason!);
       requireFunds(s, check.fee, 'the franchise set-up');
       addFranchise(s);
+      break;
+    }
+    case 'acquireRival': {
+      const check = acquireCheck(s, action.index);
+      if (!check.ok) fail(check.reason!);
+      acquireRival(s, action.index);
+      break;
+    }
+    case 'tradeSale': {
+      const check = saleCheck(s);
+      if (!check.ok) fail(check.reason!);
+      try { tradeSale(s, action.bid); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'takeVc': {
+      const check = vcCheck(s, action.offer);
+      if (!check.ok) fail(check.reason!);
+      takeVc(s, action.offer);
+      break;
+    }
+    case 'startCrowd': {
+      const check = crowdCheck(s, action.tier);
+      if (!check.ok) fail(check.reason!);
+      startCrowd(s, action.tier);
+      break;
+    }
+    case 'hedge': {
+      if (action.kind !== 'fx' && action.kind !== 'cost') fail('Unknown hedge.');
+      const check = hedgeCheck(s, action.kind);
+      if (!check.ok) fail(check.reason!);
+      buyHedge(s, action.kind);
+      break;
+    }
+    case 'takeCourse': {
+      const check = courseCheck(s, action.course);
+      if (!check.ok) fail(check.reason!);
+      takeCourse(s, action.course);
+      break;
+    }
+    case 'setWorkstyle': {
+      const check = workstyleCheck(s, action.style);
+      if (!check.ok) fail(check.reason!);
+      setWorkstyle(s, action.style);
+      break;
+    }
+    case 'setLoyalty': {
+      const check = loyaltyCheck(s, !!action.on);
+      if (!check.ok) fail(check.reason!);
+      setLoyalty(s, !!action.on);
+      break;
+    }
+    case 'resolveComplaint': {
+      const check = complaintCheck(s, String(action.id));
+      if (!check.ok) fail(check.reason!);
+      resolveComplaint(s, String(action.id));
+      break;
+    }
+    case 'influencer': {
+      const check = influencerCheck(s, String(action.tier));
+      if (!check.ok) fail(check.reason!);
+      signInfluencer(s, String(action.tier));
+      break;
+    }
+    case 'foundSub': {
+      const check = subCheck(s, String(action.sector));
+      if (!check.ok) fail(check.reason!);
+      foundSub(s, action.sector);
+      break;
+    }
+    case 'pickBoon': {
+      const check = boonCheck(s, String(action.id));
+      if (!check.ok) fail(check.reason!);
+      pickBoon(s, String(action.id));
+      break;
+    }
+    case 'setStance': {
+      const check = stanceCheck(s, String(action.stance));
+      if (!check.ok) fail(check.reason!);
+      setStance(s, action.stance);
+      break;
+    }
+    case 'goGreen': {
+      const check = greenCheck(s, String(action.step));
+      if (!check.ok) fail(check.reason!);
+      goGreen(s, String(action.step));
+      break;
+    }
+    case 'donate': {
+      const check = donateCheck(s, action.amount);
+      if (!check.ok) fail(check.reason!);
+      donate(s, action.amount);
+      break;
+    }
+    case 'blackFriday': {
+      const check = blackFridayCheck(s);
+      if (!check.ok) fail(check.reason!);
+      blackFriday(s);
+      break;
+    }
+    case 'innovationDay': {
+      const check = innovationCheck(s);
+      if (!check.ok) fail(check.reason!);
+      innovationDay(s);
+      break;
+    }
+    case 'headhunt': {
+      const check = headhuntCheck(s, action.role);
+      if (!check.ok) fail(check.reason!);
+      applyActionInPlace(s, { type: 'hire', role: action.role, count: 1 }, false);
+      const from = headhunt(s, action.role);
+      logItem(s, 'milestone', `A star joins from ${from}`, 'Poached for a premium. Their perk is a lasting boost, and the rival is a little weaker.');
+      break;
+    }
+    case 'filePatent': {
+      const check = patentCheck(s);
+      if (!check.ok) fail(check.reason!);
+      filePatent(s);
       break;
     }
     case 'startVenture': {

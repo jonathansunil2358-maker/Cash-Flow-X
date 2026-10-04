@@ -109,6 +109,8 @@ export interface Profile {
   trails?: string[];
   tracks?: { owned: string[]; selected: string };
   wardrobe?: { owned: string[]; equipped: string | null };
+  /** Festival treats claimed: festival id to the year. See festivals.ts. */
+  festivals?: Record<string, number>;
   pass?: PassState;
   /** Today's gems and boxes from repeatable play (see economy.ts). */
   playGems?: PlayGems;

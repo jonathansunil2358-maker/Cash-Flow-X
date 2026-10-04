@@ -3,6 +3,7 @@ import { plSummary } from '../ledger/statements';
 import { moodOf, rosterOf, type Teammate } from './roster';
 import { industryOf, type IndustryId } from './industries';
 import { UPGRADES } from './upgrades';
+import { festivalOn } from './festivals';
 import { monthLabel, type GameState } from './state';
 import type { Profile } from './prestige';
 
@@ -119,21 +120,26 @@ export const diaryShareText = (e: DiaryEntry): string => `${e.company}, year ${e
 // ---------------------------------------------------------------------------------------------
 // Staff wardrobe
 // ---------------------------------------------------------------------------------------------
-export interface Hat { id: string; name: string; emoji: string; gems: number; colour: string }
+export interface Hat { id: string; name: string; emoji: string; gems: number; colour: string; /** Only sold during this festival (see festivals.ts). */ festival?: string }
 export const HATS: Hat[] = [
   { id: 'cap', name: 'Baseball cap', emoji: '🧢', gems: 75, colour: '#3a7bd5' },
   { id: 'party', name: 'Party hat', emoji: '🎉', gems: 100, colour: '#ff6fae' },
   { id: 'helmet', name: 'Hard hat', emoji: '⛑️', gems: 100, colour: '#ffc633' },
   { id: 'crown', name: 'Crown', emoji: '👑', gems: 250, colour: '#ffd24a' },
+  { id: 'pumpkin', name: 'Pumpkin hat', emoji: '🎃', gems: 150, colour: '#ff8a1c', festival: 'halloween' },
+  { id: 'santa', name: 'Festive hat', emoji: '🎅', gems: 150, colour: '#d92b2b', festival: 'winter' },
+  { id: 'bunny', name: 'Bunny ears', emoji: '🐰', gems: 150, colour: '#f3d6f5', festival: 'spring' },
+  { id: 'sunhat', name: 'Sun hat', emoji: '👒', gems: 150, colour: '#f2c46b', festival: 'summer' },
 ];
 export interface Wardrobe { owned: string[]; equipped: string | null }
 export const wardrobeOf = (p: Pick<Profile, 'wardrobe'>): Wardrobe => ({
   owned: (p.wardrobe?.owned ?? []).filter((id) => HATS.some((h) => h.id === id)),
   equipped: p.wardrobe?.equipped && HATS.some((h) => h.id === p.wardrobe!.equipped) ? p.wardrobe.equipped : null,
 });
-export function buyHat<T extends Pick<Profile, 'gems' | 'wardrobe'>>(p: T, id: string): T {
+export function buyHat<T extends Pick<Profile, 'gems' | 'wardrobe'>>(p: T, id: string, now: Date = new Date()): T {
   const h = HATS.find((x) => x.id === id);
   if (!h) throw new Error('Unknown hat.');
+  if (h.festival && festivalOn(now)?.id !== h.festival) throw new Error('This hat is only sold during its festival.');
   const w = wardrobeOf(p);
   if (w.owned.includes(id)) throw new Error('You already own that hat.');
   if (p.gems < h.gems) throw new Error(`You need ${h.gems} gems.`);

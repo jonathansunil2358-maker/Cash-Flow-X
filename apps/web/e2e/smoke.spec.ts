@@ -1413,3 +1413,147 @@ test('growing pains: team strain and premises show in the Business panel', async
   await expect(sheet.getByText('Team strain')).toBeVisible();
   await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
 });
+
+test('V4 Batch A: venture capital, crowdfunding, hedging, patents, buying a rival and selling the company', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Finance');
+  const sheet = page.getByRole('dialog', { name: 'Finance' });
+  for (const id of ['card-vc', 'card-crowd', 'card-hedge', 'card-patents', 'card-acquire', 'card-sale']) await expect(sheet.locator(`#${id}`)).toBeVisible();
+  await sheet.locator('#card-patents').getByRole('button').first().click();
+  await expect(sheet.locator('#card-patents').getByRole('button', { name: 'File a patent' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});
+
+test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const work = biz.locator('#card-workstyle');
+  await work.getByRole('button', { name: 'Open' }).click();
+  await work.getByRole('button', { name: 'Choose' }).first().click();
+  await expect.poll(async () => (await savedGame(page)).people?.workstyle).toBeTruthy();
+  const inno = biz.locator('#card-innovation');
+  await inno.getByRole('button', { name: 'Open' }).click();
+  await expect(inno.getByRole('button', { name: 'Hold an innovation day' })).toBeVisible();
+  const academy = biz.locator('#card-academy');
+  await academy.getByRole('button', { name: 'Open' }).click();
+  await expect(academy.getByText('Customer service')).toBeVisible();
+});
+
+test('V4 Batch C: loyalty programme, service desk, influencers, regulars and Black Friday', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const loy = biz.locator('#card-loyalty');
+  await loy.getByRole('button', { name: 'Open' }).click();
+  await loy.getByRole('button', { name: 'Launch the programme' }).click();
+  await expect.poll(async () => (await savedGame(page)).cust?.loyalty).toBe(true);
+  const desk = biz.locator('#card-service');
+  await desk.getByRole('button', { name: 'Open' }).click();
+  await desk.getByRole('button', { name: 'Make it right' }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).cust?.resolved ?? []).length).toBe(1);
+  const reg = biz.locator('#card-regulars');
+  await reg.getByRole('button', { name: 'Open' }).click();
+  await expect(reg.getByText('Needs reputation 55.')).toBeVisible();
+  for (const id of ['card-influencer', 'card-blackfriday']) await expect(biz.locator(`#${id}`)).toBeVisible();
+});
+
+test('V4 Batch D: yearly boons, cycle stance, green track, ESG and the group of companies', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const cycle = biz.locator('#card-cycle');
+  await cycle.getByRole('button', { name: 'Open' }).click();
+  await cycle.getByRole('button', { name: 'Choose' }).first().click();
+  await expect.poll(async () => (await savedGame(page)).strat?.stance).toBeTruthy();
+  const green = biz.locator('#card-green');
+  await green.getByRole('button', { name: 'Open' }).click();
+  await expect(green.getByText('Green steps', { exact: true })).toBeVisible();
+  for (const id of ['card-boons', 'card-subs']) await expect(biz.locator(`#${id}`)).toBeVisible();
+});
+
+test('V4 Batch E: island visits, the cosmetics market and the scenario maker', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Visitors');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await clearOverlays(page);
+  await page.getByRole('button', { name: /Holding company and leaderboards/ }).click();
+  await page.getByRole('tab', { name: 'Community' }).click();
+
+  // Scenario maker: create one and open it back by its code.
+  const scn = page.locator('#card-scenario');
+  await scn.getByLabel('Scenario name').fill('Quick start');
+  await scn.getByRole('button', { name: 'Create' }).click();
+  const code = (await scn.getByText(/Your code:/).locator('code').innerText()).trim();
+  expect(code).toMatch(/^[A-Z2-9]{6}$/);
+  await scn.getByLabel('Scenario code').fill(code);
+  await scn.getByRole('button', { name: 'Open' }).click();
+  await expect(scn.getByText(/Quick start/).first()).toBeVisible();
+
+  // Island: your own island opens by its code.
+  const island = page.locator('#card-island');
+  const id = (await island.locator('code').first().innerText()).trim();
+  await island.getByLabel('Island code').fill(id);
+  await island.getByRole('button', { name: 'Visit' }).click();
+  await expect(island.getByLabel('Island visit')).toContainText('Visitors');
+
+  // Market: the empty market renders, and an item the player does not own cannot be listed.
+  await expect(page.locator('#card-cosmetics').getByText('Nothing for sale right now.')).toBeVisible();
+  await expect(page.locator('#card-mentor')).toBeVisible();
+});
+
+test('V4 Batch F: island radio, timelapse and festivals, then free play', async ({ page }) => {
+  test.setTimeout(150_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.getByLabel('Radio bulletin')).toContainText(g.companyName);
+  await expect(missions.locator('#card-festival')).toBeVisible();
+  await missions.getByRole('button', { name: 'Make a timelapse' }).click();
+  await expect(missions.getByLabel('Timelapse')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+});
+
+test('V4 Batch F: free play takes your rules and is never ranked', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Sandbox');
+  await page.getByRole('button', { name: /Free play/ }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByLabel('Start-up cash multiplier').fill('3');
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).sandbox?.cash).toBe(3);
+  expect((await savedGame(page)).server).toBeUndefined();
+});
