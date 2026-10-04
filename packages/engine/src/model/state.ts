@@ -340,6 +340,8 @@ export interface GameState {
   supplier?: 'budget' | 'premium';
   supplierSince?: number;
   franchises?: number;
+  /** Deals and money (acquisitions, sale, VC, crowdfunding, hedges, patents): see deals.ts. */
+  deals?: import('./deals').Deals;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

@@ -1413,3 +1413,17 @@ test('growing pains: team strain and premises show in the Business panel', async
   await expect(sheet.getByText('Team strain')).toBeVisible();
   await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
 });
+
+test('V4 Batch A: venture capital, crowdfunding, hedging, patents, buying a rival and selling the company', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Finance');
+  const sheet = page.getByRole('dialog', { name: 'Finance' });
+  for (const id of ['card-vc', 'card-crowd', 'card-hedge', 'card-patents', 'card-acquire', 'card-sale']) await expect(sheet.locator(`#${id}`)).toBeVisible();
+  await sheet.locator('#card-patents').getByRole('button').first().click();
+  await expect(sheet.locator('#card-patents').getByRole('button', { name: 'File a patent' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});

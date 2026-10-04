@@ -22,6 +22,7 @@ export * from './model/upgrades';
 export * from './model/leases';
 export * from './model/modifiers';
 export * from './model/venture';
+export * from './model/deals';
 export * from './model/boss';
 export * from './model/suppliers';
 export * from './model/franchise';

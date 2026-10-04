@@ -36,6 +36,7 @@ import { exportUpkeep } from './model/export';
 import { advanceBoss } from './model/boss';
 import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
+import { advanceDeals, hedgedCostMult } from './model/deals';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
@@ -152,7 +153,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   }
   const d = demandFor(s, ind);
   const capacity = capacityOf(s, ind) * (1 - 0.07 * strain);
-  const costMult = s.economy.unitCostMult * supplierCostMultiplier(s, ind) * mods.unitCostMult * supplierMult(s);
+  const costMult = hedgedCostMult(s) * supplierCostMultiplier(s, ind) * mods.unitCostMult * supplierMult(s);
 
   // 6. Revenue
   const vol = ind.model === 'subscription'
@@ -280,6 +281,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceSurprise(s, rng, !!opts.simulation);
   advanceVentures(s, rng, !!opts.simulation);
   advanceFranchises(s, rng, !!opts.simulation);
+  advanceDeals(s, !!opts.simulation);
   advanceSuppliers(s, rng, !!opts.simulation);
 
   // 11. Close the month

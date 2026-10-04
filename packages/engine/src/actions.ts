@@ -17,6 +17,7 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
@@ -47,6 +48,12 @@ export type Action =
   | { type: 'cancelProject'; projectId: string }
   | { type: 'setTraining'; amount: Pence }
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
+  | { type: 'acquireRival'; index: number }
+  | { type: 'tradeSale'; bid: string }
+  | { type: 'takeVc'; offer: number }
+  | { type: 'startCrowd'; tier: number }
+  | { type: 'hedge'; kind: 'fx' | 'cost' }
+  | { type: 'filePatent' }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
   | { type: 'setDesign'; features: number }
@@ -292,6 +299,43 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       if (!check.ok) fail(check.reason!);
       requireFunds(s, check.fee, 'the franchise set-up');
       addFranchise(s);
+      break;
+    }
+    case 'acquireRival': {
+      const check = acquireCheck(s, action.index);
+      if (!check.ok) fail(check.reason!);
+      acquireRival(s, action.index);
+      break;
+    }
+    case 'tradeSale': {
+      const check = saleCheck(s);
+      if (!check.ok) fail(check.reason!);
+      try { tradeSale(s, action.bid); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'takeVc': {
+      const check = vcCheck(s, action.offer);
+      if (!check.ok) fail(check.reason!);
+      takeVc(s, action.offer);
+      break;
+    }
+    case 'startCrowd': {
+      const check = crowdCheck(s, action.tier);
+      if (!check.ok) fail(check.reason!);
+      startCrowd(s, action.tier);
+      break;
+    }
+    case 'hedge': {
+      if (action.kind !== 'fx' && action.kind !== 'cost') fail('Unknown hedge.');
+      const check = hedgeCheck(s, action.kind);
+      if (!check.ok) fail(check.reason!);
+      buyHedge(s, action.kind);
+      break;
+    }
+    case 'filePatent': {
+      const check = patentCheck(s);
+      if (!check.ok) fail(check.reason!);
+      filePatent(s);
       break;
     }
     case 'startVenture': {
