@@ -7,6 +7,7 @@ import { answerPuzzle, leagueView } from './league';
 import {
   buyListing, cancelListing, claimMentor, collectSales, createMentorCode, createScenario, fundLandmark, getScenario, greetIsland, joinMentor, landmarkView, likeIsland, listItem, marketView, mentorView, myScenarios, playedScenario, visitIsland,
 } from './social4';
+import { claimVenture, claimWar, contributeVenture, createVenture, joinVenture, ventureView, warView } from './social5';
 import { claimCard, createLink, giftCard, guildRival, hallOfFame, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
 import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
@@ -227,6 +228,13 @@ app.post('/market/list', requireUser, async (c) => { await limit(c, 'plans'); re
 app.post('/market/collect', requireUser, async (c) => c.json(await collectSales(c.env, c.get('user'))));
 app.post('/market/:id/buy', requireUser, async (c) => c.json(await buyListing(c.env, c.get('user'), c.req.param('id')!)));
 app.post('/market/:id/cancel', requireUser, async (c) => c.json(await cancelListing(c.env, c.get('user'), c.req.param('id')!)));
+app.get('/venture', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await ventureView(c.env, c.get('user'))); });
+app.post('/venture/create', requireUser, async (c) => c.json(await createVenture(c.env, c.get('user'))));
+app.post('/venture/join', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await joinVenture(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });
+app.post('/venture/contribute', requireUser, async (c) => c.json(await contributeVenture(c.env, c.get('user'))));
+app.post('/venture/claim', requireUser, async (c) => c.json(await claimVenture(c.env, c.get('user'))));
+app.get('/guild/war', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await warView(c.env, c.get('user'))); });
+app.post('/guild/war/claim', requireUser, async (c) => c.json(await claimWar(c.env, c.get('user'))));
 app.post('/mentor/create', requireUser, async (c) => c.json(await createMentorCode(c.env, c.get('user'))));
 app.post('/mentor/join', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await joinMentor(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });
 app.get('/mentor', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await mentorView(c.env, c.get('user'))); });

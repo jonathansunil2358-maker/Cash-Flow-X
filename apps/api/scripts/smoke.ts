@@ -510,5 +510,26 @@ check('carry-over v4: the real company is accepted', ok4.status === 200 && ok4.j
 v4.synced = ok4.json.actionsVerified ?? 0;
 check('carry-over v4: play afterwards is verified', (await play(v4, 14)).status === 200 && v4.synced === v4.game.actionLog.length);
 
+// V5: joint ventures and guild trade wars.
+const vA = await startRun('VentA', (await signUp('VentA')).token, 'software');
+const vB = await startRun('VentB', (await signUp('VentB')).token, 'software');
+const vC = await signUp('VentC');
+check('venture: contributing needs a partner first', (await call('/venture/contribute', { token: vA.token, body: {} })).status === 409);
+const vNew = await call<{ code: string }>('/venture/create', { token: vA.token, body: {} });
+check('venture: one can be created', vNew.status === 200 && vNew.json.code.length === 6, vNew);
+check('venture: only one a week', (await call('/venture/create', { token: vA.token, body: {} })).status === 409);
+check('venture: a bad code is refused', (await call('/venture/join', { token: vB.token, body: { code: 'ZZZZZZ' } })).status === 404);
+check('venture: you cannot join your own', (await call('/venture/join', { token: vA.token, body: { code: vNew.json.code } })).status === 409);
+check('venture: a partner joins', (await call('/venture/join', { token: vB.token, body: { code: vNew.json.code } })).status === 200);
+check('venture: a third player cannot join', (await call('/venture/join', { token: vC.token, body: { code: vNew.json.code } })).status === 404);
+const vc1 = await call<{ venture: { points: number; mine: number; contributedToday: boolean } }>('/venture/contribute', { token: vA.token, body: {} });
+check('venture: a day of work adds points', vc1.status === 200 && vc1.json.venture.points >= 1 && vc1.json.venture.contributedToday, vc1);
+check('venture: only one contribution a day', (await call('/venture/contribute', { token: vA.token, body: {} })).status === 409);
+check('venture: the partner sees the shared total', ((await call<{ venture: { points: number; theirs: number } }>('/venture', { token: vB.token })).json.venture.theirs ?? 0) >= 1);
+check('venture: nothing to claim before the goal', (await call('/venture/claim', { token: vA.token, body: {} })).status === 409);
+const war = await call<{ guild: boolean }>('/guild/war', { token: vC.token });
+check('trade war: no holding company, no war', war.status === 200 && war.json.guild === false, war);
+check('trade war: nothing to claim without a win', (await call('/guild/war/claim', { token: vC.token, body: {} })).status === 409);
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;

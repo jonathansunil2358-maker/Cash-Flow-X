@@ -1,3 +1,4 @@
+import { ManagersCard, FocusCard, FranchiseStandardsCard, LifecycleCard, PopupCard, PriceLabCard, SecurityCard, SupplyChainCard } from './Play5';
 import {
   attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, headcount, INDUSTRIES, PREMISES_STEPS, premisesMove,
   premisesTier, reachOf, STRAIN_ON,
@@ -58,6 +59,7 @@ export function Operations({ game }: { game: GameState }) {
             <AcademyCard game={game} />
             <WorkstyleCard game={game} />
             <InnovationCard game={game} />
+            <ManagersCard game={game} />
           </>,
         },
         {
@@ -95,6 +97,10 @@ export function Operations({ game }: { game: GameState }) {
             <PropertyCard game={game} />
             <InsuranceCard game={game} />
             <PressuresCard game={game} />
+            <SupplyChainCard game={game} />
+            <LifecycleCard game={game} />
+            <PopupCard game={game} />
+            {game.franchises ? <FranchiseStandardsCard game={game} /> : null}
           </>,
         },
         {
@@ -106,6 +112,8 @@ export function Operations({ game }: { game: GameState }) {
             <CycleCard game={game} />
             <GreenCard game={game} />
             <SubsidiaryCard game={game} />
+            <FocusCard game={game} />
+            <SecurityCard game={game} />
             <RumourCard game={game} />
           </>,
         },
@@ -116,6 +124,7 @@ export function Operations({ game }: { game: GameState }) {
             <RiskCard game={game} />
             <BreakEvenCard game={game} />
             <AutopilotCard game={game} />
+            <PriceLabCard game={game} />
           </>,
         },
       ]} />

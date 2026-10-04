@@ -41,6 +41,7 @@ const lastRevenue = (s: GameState): Pence => {
   return r ? plSummary(r.period.pl).revenue : 0;
 };
 /** Scale an event's money to the size of the business (a month of revenue × k, with a floor). */
+const s2 = (st: GameState): Pence => lastRevenue(st);
 const sized = (s: GameState, k: number, floor: number): Pence => Math.round(Math.max(floor, lastRevenue(s) * k) / 10000) * 10000;
 
 function addTemporary(s: GameState, type: string, title: string, months: number, effects: EventEffects, betweenTicks: boolean): void {
@@ -806,6 +807,115 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
   {
+    id: 'rivalMove', title: 'A rival makes a move', polarity: 'bad', weight: 0, icon: 'flag',
+    when: () => false,
+    setup: (s) => {
+      const name = s.play5?.rival ?? 'Your main rival';
+      const match = sized(s, 0.015, 1_000_00);
+      const counter = sized(s, 0.03, 2_000_00);
+      return {
+        story: `${name} has slashed its prices and is plastering your customers' streets with adverts. How do you answer?`,
+        params: { match, counter },
+        choices: [
+          { id: 'match', label: `Match their offers (${formatGBP(match)})`, hint: 'Hold your ground and keep your customers.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Matching a rival promotion', [dr('marketing', p.match), cr('cash', p.match)]); return 'You matched them, and customers stayed put.'; } },
+          { id: 'counter', label: `Counter-attack (${formatGBP(counter)})`, hint: 'A bigger campaign: demand up for four months and a name for boldness.', impact: [{ label: 'Demand', up: true }, { label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Counter-campaign against a rival', [dr('marketing', p.counter), cr('cash', p.counter)]); addTemporary(st, 'rival-counter', 'Counter-campaign', 4, { demandMult: 1.03 }, true); st.reputation = Math.min(100, st.reputation + 1); return 'Your campaign made the headlines.'; } },
+          { id: 'ignore', label: 'Ignore it', hint: 'Free, but some customers wander for three months.', impact: [{ label: 'Demand', up: false }],
+            apply: (st) => { addTemporary(st, 'rival-ignored', 'A rival stole customers', 3, { demandMult: 0.96 }, true); return 'You stayed calm. Some customers did not.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'industryShock', title: 'A shock hits your industry', polarity: 'bad', weight: 0, icon: 'bolt',
+    when: () => false,
+    setup: (s) => {
+      const kind = s.play5?.shock ?? 'regulation';
+      const adapt = sized(s, 0.04, 3_000_00);
+      const lobby = sized(s, 0.02, 1_500_00);
+      const story: Record<string, string> = {
+        regulation: 'The government has announced new rules for your whole industry. Everyone has to change how they work.',
+        supply: 'A key material has gone short across the whole industry. Prices are jumping and queues are forming.',
+        tech: 'A new technology has just arrived and customers are talking about nothing else.',
+      };
+      return {
+        story: story[kind] ?? story.regulation,
+        params: { adapt, lobby, kind: ['regulation', 'supply', 'tech'].indexOf(kind) },
+        choices: [
+          { id: 'adapt', label: `Adapt early (${formatGBP(adapt)})`, hint: 'Pay to get ahead of it. No lasting harm, a small upside.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Adapting to an industry shock', [dr('otherCosts', p.adapt), cr('cash', p.adapt)]); if (p.kind === 2) { st.quality = Math.min(100, st.quality + 3); addTemporary(st, 'shock-tech', 'Ahead of the technology', 6, { demandMult: 1.02 }, true); } return 'You moved first, and it paid.'; } },
+          { id: 'lobby', label: `Lobby and wait (${formatGBP(lobby)})`, hint: 'Half the time it works and nothing happens; otherwise it hurts a bit.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng, P, p) => { P('Industry lobbying', [dr('otherCosts', p.lobby), cr('cash', p.lobby)]); if (chance(rng, 0.5)) return 'Your trade body won an easier timetable.'; addTemporary(st, 'shock-hit', 'Industry shock', 4, p.kind === 2 ? { demandMult: 0.98 } : { unitCostMult: 1.03 }, true); return 'The lobbying fell short, and costs rose.'; } },
+          { id: 'ignore', label: 'Ride it out', hint: 'Free, but the shock bites for six months.', impact: [{ label: 'Costs', up: false }],
+            apply: (st, _rng, _P, p) => { addTemporary(st, 'shock-hit', 'Industry shock', 6, p.kind === 2 ? { demandMult: 0.97 } : { unitCostMult: 1.04 }, true); return 'You hoped it would blow over. It did not, quite.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'activist', title: 'An activist investor calls', polarity: 'bad', weight: 0, icon: 'chart',
+    when: () => false,
+    setup: (s) => {
+      const fee = sized(s, 0.02, 3_000_00);
+      return {
+        story: 'A fund has bought a small stake in your company and wants changes: trim costs, return cash, or it will go to the press.',
+        params: { fee },
+        choices: [
+          { id: 'cut', label: 'Run an efficiency drive (free)', hint: 'Unit costs 3% lower for a year, but people are unsettled.', impact: [{ label: 'Costs', up: true }, { label: 'Morale', up: false }],
+            apply: (st) => { addTemporary(st, 'activist-cut', 'Efficiency drive', 12, { unitCostMult: 0.97 }, true); st.morale = Math.max(0, st.morale - 5); return 'The savings were real, and so were the grumbles.'; } },
+          { id: 'engage', label: `Hire advisers to engage them (${formatGBP(fee)})`, hint: 'They are polite, take the advice, and go quiet.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Advisers for an activist investor', [dr('dealCosts', p.fee), cr('cash', p.fee)]); st.reputation = Math.min(100, st.reputation + 2); return 'The fund left satisfied.'; } },
+          { id: 'refuse', label: 'Refuse to talk', hint: 'They go to the press.', impact: [{ label: 'Reputation', up: false }, { label: 'Brand', up: false }],
+            apply: (st) => { st.reputation = Math.max(0, st.reputation - 3); st.brand *= 0.98; return 'The headlines were not kind.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'cyberAttack', title: 'You have been hacked', polarity: 'bad', weight: 0, icon: 'key',
+    when: () => false,
+    setup: (s) => {
+      const heavy = s.play5?.attack === 'heavy';
+      const strong = (s.play5?.security ?? 0) >= 1;
+      const restore = Math.round(sized(s, heavy ? 0.06 : 0.02, 2_000_00) * (strong ? 0.5 : 1) / 10000) * 10000;
+      const ransom = sized(s, heavy ? 0.08 : 0.03, 3_000_00);
+      return {
+        story: heavy
+          ? 'Criminals have locked your systems and copied your customer list. They want money, or they will publish it.'
+          : 'Someone got into your email and your systems are crawling. It is a nuisance, but it could get worse.',
+        params: { restore, ransom },
+        choices: [
+          { id: 'restore', label: `Restore from backups (${formatGBP(restore)})`, hint: strong ? 'Your backups make this cheap.' : 'Slow and costly without good security.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Recovering from a cyber attack', [dr('otherCosts', p.restore), cr('cash', p.restore)]); return 'Systems came back after a long weekend.'; } },
+          { id: 'ransom', label: `Pay the ransom (${formatGBP(ransom)})`, hint: 'Quick, but a quarter of the time the data leaks anyway.', impact: [{ label: 'Cash', up: false }, { label: 'Risk', up: false }],
+            apply: (st, rng, P, p) => { P('Ransom paid to criminals', [dr('otherCosts', p.ransom), cr('cash', p.ransom)]); if (chance(rng, 0.25)) { st.reputation = Math.max(0, st.reputation - 5); return 'They leaked it anyway. Customers noticed.'; } return 'The files came back.'; } },
+          { id: 'public', label: 'Go public and fix it properly', hint: 'Honesty costs a little reputation but the team pulls together.', impact: [{ label: 'Reputation', up: false }, { label: 'Morale', up: true }],
+            apply: (st, _rng, P) => { const f = Math.max(1_000_00, Math.round((s2(st) * 0.01) / 10000) * 10000); P('Public disclosure and fix', [dr('otherCosts', f), cr('cash', f)]); st.reputation = Math.max(0, st.reputation - 3); st.morale = Math.min(100, st.morale + 2); return 'You told customers first. Many respected it.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'founderRest', title: 'A moment for the founder', polarity: 'good', weight: 0, icon: 'heart',
+    when: () => false,
+    setup: (s) => {
+      const fee = sized(s, 0.01, 1_000_00);
+      return {
+        story: 'You have not had a proper day off in months. Your family has noticed, and so has the team.',
+        params: { fee },
+        choices: [
+          { id: 'family', label: 'Take a proper break (free)', hint: 'Demand dips for three months while you are away; the team feels it is a kind place.', impact: [{ label: 'Morale', up: true }, { label: 'Demand', up: false }],
+            apply: (st) => { addTemporary(st, 'founder-away', 'Founder away', 3, { demandMult: 0.98 }, true); st.morale = Math.min(100, st.morale + 3); st.reputation = Math.min(100, st.reputation + 2); return 'You came back rested, and so did everyone.'; } },
+          { id: 'grind', label: 'Keep grinding (free)', hint: 'A push for three months at a cost to the team.', impact: [{ label: 'Demand', up: true }, { label: 'Morale', up: false }],
+            apply: (st) => { addTemporary(st, 'founder-grind', 'Founder grind', 3, { demandMult: 1.02 }, true); st.morale = Math.max(0, st.morale - 4); return 'The numbers moved. Your patience wore thin.'; } },
+          { id: 'retreat', label: `Send everyone on a retreat (${formatGBP(fee)})`, hint: 'A weekend away for all.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Team retreat', [dr('otherCosts', p.fee), cr('cash', p.fee)]); st.morale = Math.min(100, st.morale + 5); st.reputation = Math.min(100, st.reputation + 1); return 'It rained all weekend and nobody minded.'; } },
+        ],
+      };
+    },
+  },
+  {
     id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
     when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
     setup: (s) => {
@@ -964,6 +1074,9 @@ const REPUTATION: Record<string, number> = {
   'collab.split': 0, 'collab.solo': 0, 'collab.pass': 0, 'recall.full': 0, 'recall.partial': 0, 'recall.deny': 0, 'recallFollow.fix': 0, 'recallFollow.ride': 0,
   'whistle.report': 4, 'whistle.exploit': 0, 'whistle.ignore': -1, 'scandal.apologise': 0, 'scandal.deny': 0,
   'integrationIssue.fix': 2, 'integrationIssue.senior': 0, 'integrationIssue.ignore': -2,
+  'rivalMove.match': 0, 'rivalMove.counter': 1, 'rivalMove.ignore': -1, 'industryShock.adapt': 2, 'industryShock.lobby': 0, 'industryShock.ignore': -1,
+  'activist.cut': 0, 'activist.engage': 1, 'activist.refuse': -1, 'cyberAttack.restore': 1, 'cyberAttack.ransom': -1, 'cyberAttack.public': 1,
+  'founderRest.family': 2, 'founderRest.grind': -1, 'founderRest.retreat': 1,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

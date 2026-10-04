@@ -3,7 +3,7 @@ import {
 } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { Button, Card, Field, NumberInput, TextInput } from '../components/ui';
-import { api, type IslandView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
+import { api, type IslandView, type VentureView, type WarView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
 import { useAccount } from '../lib/account';
 import { useGame } from '../store';
 
@@ -180,6 +180,61 @@ export function ScenarioCard({ game }: { game: GameState | null }) {
           <p className="text-xs text-ink-2">To play: start a new company in that sector with the seed <code className="select-all rounded bg-surface-2 px-1">{sc.seed}</code> (the seed box on the start screen).</p>
           {here && game && <p className="font-bold">Progress: {sc.objective.kind === 'worth' ? formatGBP(progressOf(game, sc.objective.kind), { compact: true }) : progressOf(game, sc.objective.kind).toLocaleString('en-GB')} of {sc.objective.kind === 'worth' ? formatGBP(sc.objective.value, { compact: true }) : sc.objective.value.toLocaleString('en-GB')}{progressOf(game, sc.objective.kind) >= sc.objective.value ? ' ✅ Goal reached!' : ''}</p>}
         </div>
+      )}
+    </Card>
+  );
+}
+
+/** Two players build something together for a week: each day's work adds points, and both share the gems. */
+export function VentureCard() {
+  const { addGems, toast } = useGame();
+  const [v, setV] = useState<VentureView | null>(null);
+  const [code, setCode] = useState('');
+  const refresh = () => api.venture().then(setV).catch(() => setV(null));
+  useEffect(() => { refresh(); }, []);
+  const run = async (fn: () => Promise<unknown>, ok?: string) => { try { await fn(); if (ok) toast('success', ok); } catch (e) { toast('error', (e as Error).message); } refresh(); };
+  const x = v?.venture;
+  return (
+    <Card fold id="card-venture" title="Joint venture" subtitle="Team up with a friend for a week. Each of you can add a day's work once a day (bigger companies add more points). Reach the goal together and you both claim gems, shared by contribution.">
+      {!x ? (
+        <div className="space-y-2">
+          <Button onClick={() => run(() => api.ventureCreate(), 'Venture started. Share its code.')}>Start a venture</Button>
+          <div className="flex gap-2">
+            <TextInput value={code} onChange={(e) => setCode(e.target.value)} aria-label="Venture code" placeholder="Friend's venture code" />
+            <Button disabled={code.trim().length < 6} onClick={() => run(() => api.ventureJoin(code.trim()), 'You joined the venture.')}>Join</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2 text-sm">
+          <p>Code <code className="select-all rounded bg-surface-2 px-1">{x.code}</code> · {x.waiting ? 'waiting for a partner' : <>partner: <b>{x.partner}</b></>}</p>
+          <p>Progress: <b>{x.points}</b> of {x.goal} points (you {x.mine}, them {x.theirs})</p>
+          <div className="flex flex-wrap gap-2">
+            <Button disabled={x.waiting || x.contributedToday || x.done} onClick={() => run(() => api.ventureContribute())}>{x.contributedToday ? 'Worked today' : 'Put in a day of work'}</Button>
+            {x.reward && !x.reward.claimed && <Button variant="primary" onClick={() => run(async () => { const r = await api.ventureClaim(); addGems(r.gems, 'joint venture'); }, 'Reward claimed.')}>Claim {x.reward.gems} gems</Button>}
+            {x.reward?.claimed && <span className="text-xs font-black text-good-text">Reward claimed</span>}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** Your holding company against another one this week: more profit wins. */
+export function TradeWarCard() {
+  const { addGems, toast } = useGame();
+  const [v, setV] = useState<WarView | null>(null);
+  const refresh = () => api.war().then(setV).catch(() => setV(null));
+  useEffect(() => { refresh(); }, []);
+  if (!v?.guild) return null;
+  const gbp = (n: number) => formatGBP(n, { compact: true });
+  return (
+    <Card fold id="card-war" title="Guild trade war" subtitle="Every week your holding company is paired with another. The one whose members made more profit wins, and each member can claim gems.">
+      {v.now?.opponent ? <p className="text-sm">This week: <b>{v.now.mine.name}</b> {gbp(v.now.mine.profit)} vs <b>{v.now.opponent.name}</b> {gbp(v.now.opponent.profit)}. {v.now.leading ? 'You are ahead.' : 'You are behind.'}</p> : <p className="text-sm text-ink-2">No opponent this week: a free week.</p>}
+      {v.last && (
+        <p className="mt-2 text-sm">Last week: you {v.last.won ? 'won' : 'lost'} against {v.last.opponent.name} ({gbp(v.last.mine.profit)} to {gbp(v.last.opponent.profit)}).
+          {v.last.reward && !v.last.reward.claimed && <Button className="ml-2" variant="primary" onClick={async () => { try { const r = await api.warClaim(); addGems(r.gems, 'trade war win'); refresh(); } catch (e) { toast('error', (e as Error).message); } }}>Claim {v.last.reward.gems} gems</Button>}
+          {v.last.reward?.claimed && ' Reward claimed.'}
+        </p>
       )}
     </Card>
   );

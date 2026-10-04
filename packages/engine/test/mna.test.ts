@@ -126,9 +126,9 @@ describe('mergers and acquisitions v5', () => {
         if (talk?.rival) {
           tested++;
           const win = structuredClone(s); const lose = structuredClone(s);
-          applyActionInPlace(win, { type: 'raiseBid', targetId: t.id, price: talk.rival.bid });
+          applyActionInPlace(win, { type: 'raiseBid', targetId: t.id, price: talk.rival!.bid });
           expect(talkOf(win, t.id)?.rival).toBeUndefined();
-          expect(() => applyActionInPlace(lose, { type: 'raiseBid', targetId: t.id, price: talk.rival.bid - 1 })).toThrow();
+          expect(() => applyActionInPlace(lose, { type: 'raiseBid', targetId: t.id, price: talk.rival!.bid - 1 })).toThrow();
           for (let i = 0; i < 3; i++) { answer(lose); tickInPlace(lose); }
           expect(talkOf(lose, t.id)?.status).toBe('dead');
           expect(checkIntegrity(lose)).toEqual([]);

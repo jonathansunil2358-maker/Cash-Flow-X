@@ -362,6 +362,8 @@ export interface GameState {
   sandbox?: { cash: number; demand: number };
   /** Deal talks, integrations, earn-outs and hostile bids in progress: see mna.ts. */
   mna?: import('./mna').Mna;
+  /** Sourcing, product age, pop-ups, pricing lab, franchise standards, managers, department focus, security: see play5.ts. */
+  play5?: import('./play5').Play5;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;
