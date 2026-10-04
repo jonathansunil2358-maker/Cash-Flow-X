@@ -90,9 +90,10 @@ export function saleCheck(s: GameState): { ok: boolean; reason?: string } {
   if (equityOf(s) < 50_000_00) return { ok: false, reason: 'The company is not worth selling yet (under £50,000).' };
   return { ok: true };
 }
-export function tradeSale(s: GameState, bidId: string): void {
-  const bid = bidsFor(s).find((b) => b.id === bidId);
-  if (!bid) throw new Error('Unknown bid.');
+export function tradeSale(s: GameState, bidId: string, asked?: number): void {
+  const found = bidsFor(s).find((b) => b.id === bidId);
+  if (!found) throw new Error('Unknown bid.');
+  const bid = asked === undefined ? found : { ...found, mult: Math.round(asked * 100) / 100 };
   const stake = Math.round(equityOf(s) * ownership(s));
   const d = dealsOf(s);
   d.saleBonus = Math.round((bid.mult - 1) * stake);

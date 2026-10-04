@@ -784,6 +784,28 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
   {
+    id: 'integrationIssue', title: 'Trouble after the deal', polarity: 'bad', weight: 0, icon: 'key',
+    when: () => false,
+    setup: (s) => {
+      const name = s.mna?.issue ?? 'the new business';
+      const integ = s.mna?.integrations?.find((i) => i.name === name);
+      const base = integ?.price ?? sized(s, 0.05, 20_000_00);
+      const fix = Math.max(1_000_00, Math.round((base * 0.02) / 100) * 100);
+      return {
+        story: `Two companies, two ways of doing things. At ${name} a group of managers is pulling against yours, key customers are asking who they should call and a few people are looking at job ads.`,
+        params: { fix },
+        choices: [
+          { id: 'fix', label: `Fund a proper fix (${formatGBP(fix)})`, hint: 'Away-days, one set of rules and a clear contact for every customer.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Integration programme', [dr('otherCosts', p.fix), cr('cash', p.fix)]); st.morale = Math.min(100, st.morale + 4); return 'The two teams started to pull in the same direction.'; } },
+          { id: 'senior', label: 'Step in yourself (free)', hint: 'Your time, not your money. It works about half the time.', impact: [{ label: 'Morale', up: true }],
+            apply: (st, rng) => { if (chance(rng, 0.5)) { st.morale = Math.min(100, st.morale + 3); return 'Your presence calmed things down.'; } st.morale = Math.max(0, st.morale - 3); return 'It did not land. People felt managed rather than heard.'; } },
+          { id: 'ignore', label: 'Let them sort it out', hint: 'Free, but people leave and customers drift.', impact: [{ label: 'Morale', up: false }, { label: 'Reputation', up: false }],
+            apply: (st) => { st.morale = Math.max(0, st.morale - 6); st.reputation = Math.max(0, st.reputation - 2); if (integ) integ.synergy = Math.round(integ.synergy * 0.8); return 'Several good people quit and the promised savings slipped.'; } },
+        ],
+      };
+    },
+  },
+  {
     id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
     when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
     setup: (s) => {
@@ -941,6 +963,7 @@ const REPUTATION: Record<string, number> = {
   'tradeFair.big': 1, 'tradeFair.small': 0, 'tradeFair.skip': 0, 'lawsuit.settle': -1, 'lawsuit.fight': 0,
   'collab.split': 0, 'collab.solo': 0, 'collab.pass': 0, 'recall.full': 0, 'recall.partial': 0, 'recall.deny': 0, 'recallFollow.fix': 0, 'recallFollow.ride': 0,
   'whistle.report': 4, 'whistle.exploit': 0, 'whistle.ignore': -1, 'scandal.apologise': 0, 'scandal.deny': 0,
+  'integrationIssue.fix': 2, 'integrationIssue.senior': 0, 'integrationIssue.ignore': -2,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

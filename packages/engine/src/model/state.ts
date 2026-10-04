@@ -215,6 +215,8 @@ export interface AcquisitionTarget {
   diligenceFee: Pence;
   diligenceDone: boolean;
   expiresMonth: number;
+  /** Extra due-diligence checks paid for (customers, people, legal, ops): see mna.ts. */
+  checks?: string[];
 }
 
 export interface Acquisition {
@@ -223,6 +225,14 @@ export interface Acquisition {
   price: Pence;
   netAssets: Pence;
   goodwill: Pence;
+  /** How the deal was done and how it went (see mna.ts). Missing on older deals. */
+  plan?: string;
+  structure?: string;
+  volume?: number;
+  heads?: Record<RoleId, number>;
+  synergy?: Pence;
+  realised?: Pence;
+  divested?: { month: number; proceeds: Pence };
 }
 
 export interface Valuation {
@@ -350,6 +360,8 @@ export interface GameState {
   strat?: import('./strategy').Strat;
   /** Free play: start-up cash and demand multipliers chosen at the start (never ranked). */
   sandbox?: { cash: number; demand: number };
+  /** Deal talks, integrations, earn-outs and hostile bids in progress: see mna.ts. */
+  mna?: import('./mna').Mna;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

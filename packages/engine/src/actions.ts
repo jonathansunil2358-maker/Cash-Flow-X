@@ -20,7 +20,8 @@ import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
-import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
+import { acceptCounter, acceptCounterCheck, askCheck, checkCheck, closeCheck, closeDeal, divest, divestCheck, hostileBid, hostileCheck, makeOffer, mergerCheck, mergerOfEquals, offerCheck, raiseBid, raiseBidCheck, runCheck, withdraw, withdrawCheck, type CheckId, type Terms } from './model/mna';
+import { acquireCheck, acquireRival, rivalPrice, bidsFor, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
@@ -52,7 +53,16 @@ export type Action =
   | { type: 'setTraining'; amount: Pence }
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'acquireRival'; index: number }
-  | { type: 'tradeSale'; bid: string }
+  | { type: 'tradeSale'; bid: string; ask?: number }
+  | { type: 'check'; targetId: string; kind: string }
+  | { type: 'makeOffer'; targetId: string; price: number }
+  | { type: 'acceptCounter'; targetId: string }
+  | { type: 'raiseBid'; targetId: string; price: number }
+  | { type: 'walkAway'; targetId: string }
+  | { type: 'closeDeal'; targetId: string; terms: Terms }
+  | { type: 'mergerOfEquals'; targetId: string }
+  | { type: 'hostileBid'; index: number; premium: number }
+  | { type: 'divest'; name: string }
   | { type: 'takeVc'; offer: number }
   | { type: 'startCrowd'; tier: number }
   | { type: 'hedge'; kind: 'fx' | 'cost' }
@@ -326,7 +336,69 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
     case 'tradeSale': {
       const check = saleCheck(s);
       if (!check.ok) fail(check.reason!);
-      try { tradeSale(s, action.bid); } catch (e) { fail((e as Error).message); }
+      let mult: number | undefined;
+      if (action.ask !== undefined) {
+        const b = bidsFor(s).find((x) => x.id === action.bid) ?? fail('Unknown bid.');
+        const a = askCheck(b.mult, action.ask);
+        if (!a.ok) fail(a.counter ? `They will not go that high. Their best is ${a.counter.toFixed(2)} times the valuation.` : 'Ask for between 0.8 and 1.6 times the valuation.');
+        mult = action.ask;
+      }
+      try { tradeSale(s, action.bid, mult); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'check': {
+      const c = checkCheck(s, action.targetId, action.kind);
+      if (!c.ok) fail(c.reason!);
+      requireFunds(s, c.fee, 'the check');
+      runCheck(s, action.targetId, action.kind as CheckId);
+      break;
+    }
+    case 'makeOffer': {
+      const c = offerCheck(s, action.targetId, action.price);
+      if (!c.ok) fail(c.reason!);
+      makeOffer(s, action.targetId, Math.round(action.price));
+      break;
+    }
+    case 'acceptCounter': {
+      const c = acceptCounterCheck(s, action.targetId);
+      if (!c.ok) fail(c.reason!);
+      acceptCounter(s, action.targetId);
+      break;
+    }
+    case 'raiseBid': {
+      const c = raiseBidCheck(s, action.targetId, action.price);
+      if (!c.ok) fail(c.reason!);
+      raiseBid(s, action.targetId, Math.round(action.price));
+      break;
+    }
+    case 'walkAway': {
+      const c = withdrawCheck(s, action.targetId);
+      if (!c.ok) fail(c.reason!);
+      withdraw(s, action.targetId);
+      break;
+    }
+    case 'closeDeal': {
+      const c = closeCheck(s, action.targetId, action.terms);
+      if (!c.ok) fail(c.reason!);
+      closeDeal(s, action.targetId, action.terms);
+      break;
+    }
+    case 'mergerOfEquals': {
+      const c = mergerCheck(s, action.targetId);
+      if (!c.ok) fail(c.reason!);
+      mergerOfEquals(s, action.targetId);
+      break;
+    }
+    case 'hostileBid': {
+      const c = hostileCheck(s, action.index, action.premium, rivalPrice(s, action.index));
+      if (!c.ok) fail(c.reason!);
+      hostileBid(s, action.index, action.premium, rivalPrice(s, action.index));
+      break;
+    }
+    case 'divest': {
+      const c = divestCheck(s, action.name);
+      if (!c.ok) fail(c.reason!);
+      divest(s, action.name);
       break;
     }
     case 'takeVc': {

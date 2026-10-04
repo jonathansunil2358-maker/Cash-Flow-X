@@ -23,6 +23,7 @@ export * from './model/leases';
 export * from './model/modifiers';
 export * from './model/venture';
 export * from './model/deals';
+export * from './model/mna';
 export * from './model/people';
 export * from './model/loyalty';
 export * from './model/strategy';
