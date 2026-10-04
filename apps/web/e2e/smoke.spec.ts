@@ -1412,6 +1412,7 @@ test('growing pains: team strain and premises show in the Business panel', async
   await clearOverlays(page);
   await openDock(page, 'Business');
   const sheet = page.getByRole('dialog', { name: 'Business' });
+  await sheet.locator('#card-capacity').getByRole('button', { name: 'Open' }).click();
   await expect(sheet.getByText('Team strain')).toBeVisible();
   await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
 });
