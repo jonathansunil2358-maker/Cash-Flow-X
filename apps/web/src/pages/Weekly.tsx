@@ -52,7 +52,7 @@ export function WeeklyEventCard({ game }: { game: GameState }) {
   const me = board?.me ?? null;
   const reward = board?.reward ?? null;
   return (
-    <Card id="card-weekly" title="Weekly event"
+    <Card fold id="card-weekly" title="Weekly event"
       subtitle={`A shared company with a twist that lasts the whole game. ${FIXED_MONTHS} months, no perks or boosts. Top ten earn gems next week.`}
       actions={<span className="tnum rounded-[10px] border-2 border-outline bg-surface-2 px-2 py-1 text-xs font-black" aria-label="Time left this week">{countdown(left)}</span>}>
       <div className="space-y-3">

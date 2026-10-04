@@ -1,3 +1,4 @@
+import { Grouped } from '../components/Grouped';
 import { Button, Card, PageTitle } from '../components/ui';
 import { useState } from 'react';
 import { useAccount } from '../lib/account';
@@ -24,6 +25,8 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
   return (
     <div className="space-y-5">
       <PageTitle title="Settings" />
+      <Grouped id="settings" groups={[
+        { id: 'basics', label: 'Basics', blurb: 'Saving, sound, theme and the usual switches.', items: <>
       <Card title="Save game" subtitle="Your game also autosaves after every month and decision.">
         <div className="flex flex-wrap gap-2">
           {(['1', '2', '3'] as const).map((slot) => <Button key={slot} onClick={() => save(slot)}>Save to slot {slot}</Button>)}
@@ -93,14 +96,20 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
           {ONLINE && <Button onClick={() => openSheet('social')}>Holding company & leaderboards</Button>}
         </div>
       </Card>
+        </> },
+        { id: 'island', label: 'Island', blurb: 'The shop, decorations, land, logo, hats, music and names for your island.', items: <>
       <ShopCard />
-      <FeelCard />
       <DecorCard />
       <LandCard />
       {game && <LogoCard icon={game.icon} />}
       <WardrobeCard />
       <SoundtrackCard />
       {game && <NamesCard game={game} />}
+        </> },
+        { id: 'comfort', label: 'Comfort', blurb: 'Fonts, sizes, colours, sound packs and the guide.', items: <>
+      <FeelCard />
+        </> },
+        { id: 'account', label: 'Account', blurb: 'Your name, signing out and leaving.', items: <>
       {me && (
         <Card title="Account" subtitle={game?.server ? (game.server.flagged ? `This company failed verification: ${game.server.flagged}` : `This company is verified up to ${game.server.syncedMonth} months in.`) : undefined}>
           <label className="block text-xs font-black tracking-wider text-ink-2" htmlFor="player-name">PLAYER NAME (SHOWN ON LEADERBOARDS)</label>
@@ -116,6 +125,8 @@ export function Settings({ theme, cycleTheme }: { theme: string; cycleTheme: () 
       <Card title="Leave">
         <Button variant="danger" onClick={quit}>Main menu</Button>
       </Card>
+        </> },
+      ]} />
     </div>
   );
 }

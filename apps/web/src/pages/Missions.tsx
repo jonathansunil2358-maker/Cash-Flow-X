@@ -1,3 +1,4 @@
+import { Grouped } from '../components/Grouped';
 import {
   ACHIEVEMENTS, AWARD_BOXES_PER_DAY, DAILY_PLAY_GEMS, dailyStatus, DAILY_REWARDS, formatGBP, levelForXp, LEVEL_UNLOCKS, missionStatus, playGemsOf, PRESTIGE_GEMS, utcDay,
   xpForLevel, type GameState, type MissionStatus,
@@ -46,26 +47,14 @@ export function Missions({ game }: { game: GameState }) {
     <div className="space-y-5">
       <PageTitle title="Missions" subtitle="Earn XP and gems by running your business well. Missions change as you complete them, and each one teaches a bit of finance." />
 
-      <NewspaperCard game={game} />
-      <QuestsCard />
-      <BoxesCard />
-      <SeasonPassCard />
-      <SkillsCard />
-      <DailyChallengeCard game={game} />
-      <WeeklyEventCard game={game} />
-      <ChallengeCard game={game} />
-
-      <Card title={`Founder level ${level}`} subtitle={next ? `Level ${next.level} unlocks ${next.label}.` : 'Every feature unlocked.'}>
-        <Meter value={profile.xp - from} max={to - from} label="XP to next level" text={`${(profile.xp - from).toLocaleString('en-GB')} / ${(to - from).toLocaleString('en-GB')} XP`} />
-        <p className="mt-2 text-xs text-ink-2">XP: +5 per month, +5 more if profitable, +15 per decision, +10 per upgrade, +60 per mission, +25 per achievement. Each level pays gems.</p>
-        <div className="mt-3">
-          <Meter value={playGemsOf(profile, utcDay()).gems} max={DAILY_PLAY_GEMS} tone="go" label="Gems from play today"
-            text={`Gems from play today: ${playGemsOf(profile, utcDay()).gems} / ${DAILY_PLAY_GEMS}`} />
-          <p className="mt-1 text-xs text-ink-2">Missions and level-ups pay up to {DAILY_PLAY_GEMS} gems a day; after that they still give XP. The first prestige each day pays {PRESTIGE_GEMS} gems, and awards give up to {AWARD_BOXES_PER_DAY} mystery box a day. Daily rewards, quests, puzzles, the season pass and achievements are not limited.</p>
-        </div>
-      </Card>
-
-      <Card title="Daily reward" subtitle={daily.canClaim ? `Day ${daily.day} of your streak is ready.` : `Come back tomorrow for day ${Math.min(daily.day + 1, 7)}.`}>
+      <Grouped id="missions" groups={[
+        {
+          id: 'today', label: 'Today', blurb: 'What to do right now: quests, rewards, missions and challenges.',
+          items: <>
+            <NewspaperCard game={game} />
+            <QuestsCard />
+            <BoxesCard />
+      <Card fold title="Daily reward" subtitle={daily.canClaim ? `Day ${daily.day} of your streak is ready.` : `Come back tomorrow for day ${Math.min(daily.day + 1, 7)}.`}>
         <div className="grid grid-cols-7 gap-1.5" aria-label="Streak rewards">
           {DAILY_REWARDS.map((g, i) => {
             const done = i < daily.day - (daily.canClaim ? 1 : 0);
@@ -103,36 +92,27 @@ export function Missions({ game }: { game: GameState }) {
         </div>
       </Card>
 
-      <TrophyCard game={game} />
+            <DailyChallengeCard game={game} />
+            <WeeklyEventCard game={game} />
+            <ChallengeCard game={game} />
+          </>,
+        },
+        {
+          id: 'progress', label: 'Progress', blurb: 'Your level, skills, season pass, trophies and long-term goals.',
+          items: <>
+      <Card fold title={`Founder level ${level}`} subtitle={next ? `Level ${next.level} unlocks ${next.label}.` : 'Every feature unlocked.'}>
+        <Meter value={profile.xp - from} max={to - from} label="XP to next level" text={`${(profile.xp - from).toLocaleString('en-GB')} / ${(to - from).toLocaleString('en-GB')} XP`} />
+        <p className="mt-2 text-xs text-ink-2">XP: +5 per month, +5 more if profitable, +15 per decision, +10 per upgrade, +60 per mission, +25 per achievement. Each level pays gems.</p>
+        <div className="mt-3">
+          <Meter value={playGemsOf(profile, utcDay()).gems} max={DAILY_PLAY_GEMS} tone="go" label="Gems from play today"
+            text={`Gems from play today: ${playGemsOf(profile, utcDay()).gems} / ${DAILY_PLAY_GEMS}`} />
+          <p className="mt-1 text-xs text-ink-2">Missions and level-ups pay up to {DAILY_PLAY_GEMS} gems a day; after that they still give XP. The first prestige each day pays {PRESTIGE_GEMS} gems, and awards give up to {AWARD_BOXES_PER_DAY} mystery box a day. Daily rewards, quests, puzzles, the season pass and achievements are not limited.</p>
+        </div>
+      </Card>
 
-      <AlbumCard />
-
-      <SpotCard />
-      <DetectiveCard />
-      <JournalCard />
-      <SprintCard />
-      <InterviewCard game={game} />
-      <GamesCards game={game} />
-      <AuditCard game={game} />
-      <GlossaryCard game={game} />
-      <NemesisCard game={game} />
-      <PetCard game={game} />
-      <EomCard game={game} />
-      <DiaryCard game={game} />
-      <ShareSeedCard game={game} />
-      <DocumentaryCard game={game} />
-      <TheatreCard game={game} />
-      <RadioCard game={game} />
-      <TimelapseCard game={game} />
-      <FestivalCard />
-      <TrailsCard />
-      <MasteryCard />
-      <ChallengesCard sector={game.industryId} />
-      <DynastyCard />
-      <MuseumCard />
-      <TitlesCard />
-
-      <Card title={`Achievements (${earned}/${ACHIEVEMENTS.length})`}>
+            <SeasonPassCard />
+            <SkillsCard />
+      <Card fold title={`Achievements (${earned}/${ACHIEVEMENTS.length})`}>
         <div className="grid gap-2 sm:grid-cols-2">
           {ACHIEVEMENTS.map((a) => {
             const got = profile.achievements[a.id];
@@ -149,6 +129,45 @@ export function Missions({ game }: { game: GameState }) {
           })}
         </div>
       </Card>
+            <TrailsCard />
+            <MasteryCard />
+            <ChallengesCard sector={game.industryId} />
+            <DynastyCard />
+            <TitlesCard />
+            <TrophyCard game={game} />
+            <AlbumCard />
+            <MuseumCard />
+          </>,
+        },
+        {
+          id: 'learn', label: 'Learn', blurb: 'Puzzles, case studies and mini-games that teach you finance.',
+          items: <>
+            <SpotCard />
+            <DetectiveCard />
+            <JournalCard />
+            <SprintCard />
+            <InterviewCard game={game} />
+            <GamesCards game={game} />
+            <AuditCard game={game} />
+            <GlossaryCard game={game} />
+          </>,
+        },
+        {
+          id: 'story', label: 'Story', blurb: 'Your rival, pet, diary, radio and the fun extras.',
+          items: <>
+            <NemesisCard game={game} />
+            <PetCard game={game} />
+            <EomCard game={game} />
+            <DiaryCard game={game} />
+            <ShareSeedCard game={game} />
+            <DocumentaryCard game={game} />
+            <TheatreCard game={game} />
+            <RadioCard game={game} />
+            <TimelapseCard game={game} />
+            <FestivalCard />
+          </>,
+        },
+      ]} />
     </div>
   );
 }

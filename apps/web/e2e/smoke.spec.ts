@@ -2,6 +2,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
+// Long panels start folded and split into sections. Most tests want everything on one page, so open it all
+// up front; the dedicated sections test below removes these again.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('cfx:pref:cardsopen', 'true');
+      for (const t of ['missions', 'settings']) localStorage.setItem(`cfx:pref:tab:${t}`, 'all');
+    } catch { /* ignore */ }
+  });
+});
+
 /** Clear anything that pauses the game: event choices, celebrations, the offline summary. */
 async function clearOverlays(page: Page) {
   for (let i = 0; i < 10; i++) {
@@ -1588,4 +1599,34 @@ test('the Business and Finance panels are split into sections you can reach in o
   await expect(fin.getByRole('tab', { name: 'Borrow' })).toHaveAttribute('aria-selected', 'true');
   await fin.getByRole('tab', { name: 'Deals' }).click();
   await expect(fin.locator('#card-sale')).toBeVisible();
+});
+
+test('Missions and Settings are split into sections, and their cards start folded', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  // Undo the "open everything" helper settings for this test.
+  await page.evaluate(() => { for (const k of ['cardsopen', 'tab:missions', 'tab:settings']) localStorage.removeItem(`cfx:pref:${k}`); });
+  await page.keyboard.press('m');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  await expect(m.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true');
+  await expect(m.locator('#card-spot')).toBeHidden();
+  await m.getByRole('tab', { name: 'Learn' }).click();
+  const spot = m.locator('#card-spot');
+  await expect(spot).toBeVisible();
+  // Folded: a one-line row with an Open button; the body appears only once opened.
+  await expect(spot.getByRole('button', { name: 'Open' })).toBeVisible();
+  await spot.getByRole('button', { name: 'Open' }).click();
+  await expect(spot.getByRole('button', { name: 'Hide' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const st = page.getByRole('dialog', { name: 'Settings' });
+  await expect(st.getByRole('tab', { name: 'Basics' })).toHaveAttribute('aria-selected', 'true');
+  await st.getByRole('tab', { name: 'Island' }).click();
+  await expect(st.locator('#card-shop')).toBeVisible();
+  await st.getByRole('tab', { name: 'Account' }).click();
+  await expect(st.getByRole('button', { name: 'Main menu' })).toBeVisible();
 });

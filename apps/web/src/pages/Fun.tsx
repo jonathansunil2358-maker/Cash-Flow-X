@@ -17,7 +17,7 @@ export function QuestsCard() {
   const q = questsOf(profile, day);
   const done = q.items.filter((i) => i.claimed).length;
   return (
-    <Card id="card-quests" title="Daily quests"
+    <Card fold id="card-quests" title="Daily quests"
       subtitle={`Finish and claim all three for a streak bonus (${STREAK_BONUS_GEMS} gems a day of streak, up to ${STREAK_BONUS_CAP}). Streak: ${q.streak} day${q.streak === 1 ? '' : 's'}.`}
       actions={<StatusPill kind={done === 3 ? 'good' : 'ok'} label={`${done}/3 claimed`} />}>
       <ul className="space-y-2">
@@ -106,7 +106,7 @@ export function TrophyCard({ game }: { game: GameState }) {
     else if (res === 'failed') toast('error', 'Could not make the picture on this device.');
   };
   return (
-    <Card id="card-trophies" title="Trophy shelf" subtitle={`Awards are given every year end. ${won.length} won by ${game.companyName} so far.`}>
+    <Card fold id="card-trophies" title="Trophy shelf" subtitle={`Awards are given every year end. ${won.length} won by ${game.companyName} so far.`}>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {AWARDS.map((a) => {
           const wins = won.filter((w) => w.id === a.id);
@@ -164,7 +164,7 @@ export function WhatIfCard({ game }: { game: GameState }) {
   const delta = (a: number, b: number) => { const d = b - a; return `${d >= 0 ? '+' : '−'}${formatGBP(Math.abs(d), { compact: true })}`; };
   const changed = price !== 0 || marketing !== 100 || hires > 0;
   return (
-    <Card id="card-whatif" title="What if…?" subtitle="Move the sliders to try a decision on a copy of your company. Nothing changes until you do it for real in the Business panel.">
+    <Card fold id="card-whatif" title="What if…?" subtitle="Move the sliders to try a decision on a copy of your company. Nothing changes until you do it for real in the Business panel.">
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label={`Price ${price > 0 ? '+' : ''}${price}%`}>
           <input type="range" min={-30} max={30} step={5} value={price} onChange={(e) => setPrice(Number(e.target.value))} className="w-full accent-[var(--primary)]" aria-label="Price change" />

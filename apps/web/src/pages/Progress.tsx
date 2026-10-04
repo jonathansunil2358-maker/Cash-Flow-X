@@ -14,7 +14,7 @@ export function SkillsCard() {
   const points = skillPoints(profile);
   const known = skillsOf(profile);
   return (
-    <Card id="card-skills" title="Founder skills" subtitle="Each founder level above 1 gives a skill point. Skills are conveniences only: they never change how your company performs."
+    <Card fold id="card-skills" title="Founder skills" subtitle="Each founder level above 1 gives a skill point. Skills are conveniences only: they never change how your company performs."
       actions={<span className="tnum rounded-[10px] border-2 border-outline bg-surface-2 px-2 py-1 text-xs font-black" aria-label={`${points} skill points`}>⭐ {points}</span>}>
       <ul className="grid gap-2">
         {SKILLS.map((s) => {
@@ -41,7 +41,7 @@ export function SeasonPassCard() {
   const tier = passTier(pass);
   const waiting = tier - pass.claimed.length;
   return (
-    <Card id="card-pass" title={`Season pass: ${pass.season}`} subtitle={`One point for every month you run and five for each mission. Every ${PASS_POINTS_PER_TIER} points opens a tier. It resets each calendar month.`}>
+    <Card fold id="card-pass" title={`Season pass: ${pass.season}`} subtitle={`One point for every month you run and five for each mission. Every ${PASS_POINTS_PER_TIER} points opens a tier. It resets each calendar month.`}>
       <Meter value={Math.min(pass.points, PASS_TIERS * PASS_POINTS_PER_TIER)} max={PASS_TIERS * PASS_POINTS_PER_TIER} label="Season progress" text={`Tier ${tier} of ${PASS_TIERS} · ${pass.points} points`} />
       <ol className="mt-3 grid grid-cols-5 gap-1.5 text-center text-xs" aria-label="Season pass rewards">
         {PASS_REWARDS.map((r, i) => {
@@ -65,7 +65,7 @@ export function SeasonPassCard() {
 export function MasteryCard() {
   const profile = useGame((s) => s.profile);
   return (
-    <Card id="card-mastery" title="Sector mastery" subtitle={`Finish companies of at least a year in a sector: ${MASTERY_STEPS.map((m) => `${m.name} at ${m.runs}`).join(', ')}.`}>
+    <Card fold id="card-mastery" title="Sector mastery" subtitle={`Finish companies of at least a year in a sector: ${MASTERY_STEPS.map((m) => `${m.name} at ${m.runs}`).join(', ')}.`}>
       <ul className="grid grid-cols-2 gap-2">
         {INDUSTRY_IDS.map((id) => {
           const m = masteryOf(profile, id);
@@ -123,7 +123,7 @@ export function DynastyCard() {
   const gens = dynastyOf(profile);
   const claim = claimableGenerations(profile);
   return (
-    <Card id="card-dynasty" title="Your dynasty" subtitle={`Every five finished companies complete a generation, and each pays an inheritance of ${INHERITANCE_GEMS} gems.`}>
+    <Card fold id="card-dynasty" title="Your dynasty" subtitle={`Every five finished companies complete a generation, and each pays an inheritance of ${INHERITANCE_GEMS} gems.`}>
       {gens.length === 0 ? <p className="text-sm text-ink-2">Finish a company and your family tree starts here.</p> : (
         <ol className="space-y-3">
           {gens.map((g) => (
@@ -146,7 +146,7 @@ export function ChallengesCard({ sector }: { sector: Parameters<typeof challenge
   const profile = useGame((s) => s.profile);
   const done = new Set(challengesDone(profile));
   return (
-    <Card id="card-mastery-challenges" title="Mastery challenges" subtitle={`Meet one of these in any company and earn ${CHALLENGE_GEMS} gems, once each.`}>
+    <Card fold id="card-mastery-challenges" title="Mastery challenges" subtitle={`Meet one of these in any company and earn ${CHALLENGE_GEMS} gems, once each.`}>
       <ul className="space-y-1.5 text-sm">
         {challengesFor(sector).map((c) => (
           <li key={c.id} className="flex gap-2"><span aria-hidden>{done.has(c.id) ? '✅' : '⬜'}</span><span><b>{c.name}</b>: {c.text}</span></li>

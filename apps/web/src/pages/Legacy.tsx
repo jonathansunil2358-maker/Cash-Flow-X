@@ -17,7 +17,7 @@ const BRANCHES: { id: PerkBranch; name: string }[] = [
 export function PerkTree() {
   const { profile, buyPerk } = useGame();
   return (
-    <Card title="Perk tree" subtitle={`${profile.legacyPoints} Legacy points to spend. Perks apply to every new company on Easy and Medium.`}>
+    <Card fold title="Perk tree" subtitle={`${profile.legacyPoints} Legacy points to spend. Perks apply to every new company on Easy and Medium.`}>
       <div className="grid gap-4 md:grid-cols-3">
         {BRANCHES.map((b) => (
           <div key={b.id} className="space-y-2">
@@ -120,7 +120,7 @@ export function Legacy({ game }: { game: GameState }) {
             </>
           )}
         </Card>
-        <Card title="Gem boosts" subtitle={`You have ${profile.gems} gems. Unused boost time carries over to your next company.`}>
+        <Card fold title="Gem boosts" subtitle={`You have ${profile.gems} gems. Unused boost time carries over to your next company.`}>
           <div className="space-y-2">
             {(Object.keys(BOOSTS) as BoostId[]).map((id) => {
               const b = BOOSTS[id];
@@ -193,7 +193,7 @@ function HistoryView() {
         {st.favouriteIndustry && <p className="mt-3 text-sm text-ink-2">Favourite sector: {INDUSTRIES[st.favouriteIndustry].emoji} {INDUSTRIES[st.favouriteIndustry].name}.</p>}
       </Card>
       {profile.runs.length > 0 && (
-        <Card title="Past companies" subtitle="Your latest 20. Tap Share to make a picture of one.">
+        <Card fold title="Past companies" subtitle="Your latest 20. Tap Share to make a picture of one.">
           <ul className="space-y-2">
             {profile.runs.map((r, i) => (
               <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2.5 text-sm">

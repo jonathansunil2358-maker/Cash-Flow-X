@@ -136,7 +136,7 @@ export function TetrisCard() {
 export function GamesCards({ game }: { game: GameState }) {
   return (
     <>
-      <Card id="card-games" title="Daily games" subtitle="Four small games a day, each paying gems for a good score. They never change your company.">
+      <Card fold id="card-games" title="Daily games" subtitle="Four small games a day, each paying gems for a good score. They never change your company.">
         <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush and Cash-flow tetris.</p>
       </Card>
       <NegotiationCard />

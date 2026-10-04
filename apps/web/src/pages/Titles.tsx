@@ -8,7 +8,7 @@ export function TitlesCard() {
   const owned = TITLES.filter((t) => profile.achievements[t.id]);
   const worn = TITLES.find((t) => t.id === profile.title);
   return (
-    <Card id="card-titles" title="Founder titles"
+    <Card fold id="card-titles" title="Founder titles"
       subtitle={owned.length ? `Wear one beside your name on the boards. ${owned.length} of ${TITLES.length} earned.` : `Earn achievements to unlock titles. There are ${TITLES.length} to find.`}>
       <div className="space-y-3">
         <p className="text-sm font-bold" role="status">{worn ? `You are "${worn.title}".` : 'No title chosen.'}</p>

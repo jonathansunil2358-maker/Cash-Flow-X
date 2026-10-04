@@ -21,7 +21,7 @@ export function BoxesCard() {
   const n = boxCount(profile);
   const d = last ? describe(last) : null;
   return (
-    <Card id="card-boxes" title="Mystery boxes" subtitle="Earned by finishing all three daily quests and by winning awards. Each opens to gems, a boost or a sticker."
+    <Card fold id="card-boxes" title="Mystery boxes" subtitle="Earned by finishing all three daily quests and by winning awards. Each opens to gems, a boost or a sticker."
       actions={<span className="tnum rounded-[10px] border-2 border-outline bg-surface-2 px-2 py-1 text-xs font-black" aria-label={`${n} boxes`}>🎁 {n}</span>}>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="gem" disabled={n < 1} onClick={() => { const r = openBox(); if (r) setLast(r.reward); }}>{n < 1 ? 'No boxes yet' : `Open a box (${n})`}</Button>
@@ -42,7 +42,7 @@ export function AlbumCard() {
   const owned = profile.stickers ?? [];
   const ready = completedPages(owned, profile.albumClaimed ?? []).map((p) => p.id);
   return (
-    <Card id="card-album" title={`Sticker album (${owned.length}/${STICKERS.length})`} subtitle="Finish a page of six for 40 gems. Stickers come from mystery boxes and some achievements.">
+    <Card fold id="card-album" title={`Sticker album (${owned.length}/${STICKERS.length})`} subtitle="Finish a page of six for 40 gems. Stickers come from mystery boxes and some achievements.">
       <div className="space-y-3">
         {STICKER_PAGES.map((pg) => {
           const items = stickersOnPage(pg.id);
