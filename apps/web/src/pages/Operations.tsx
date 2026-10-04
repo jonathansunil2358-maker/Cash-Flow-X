@@ -4,6 +4,7 @@ import {
   MAX_HIRE_AT_ONCE, recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
+import { Grouped } from '../components/Grouped';
 import { BoonsCard, CycleCard, GreenCard, SubsidiaryCard } from './StrategyV4';
 import { BlackFridayCard, InfluencerCard, LoyaltyCard, RegularsCard, ServiceDeskCard } from './CustomersV4';
 import { AcademyCard, HeadhuntCard, InnovationCard, WorkstyleCard } from './PeopleV4';
@@ -26,73 +27,88 @@ export function Operations({ game }: { game: GameState }) {
   return (
     <div>
       <PageTitle title="Run the business" subtitle="Hiring, pricing, marketing, stock and credit terms. One-off costs (recruitment, equipment, redundancy) post straight away; see Books › Ledger." />
-      <nav className="sticky top-[52px] z-[5] -mx-1 mb-3 flex gap-1.5 overflow-x-auto bg-surface px-1 py-1.5" aria-label="Jump to">
-        {[['card-team', 'Staff'], ['card-pricing', 'Pricing'], ['card-marketing', 'Marketing'], ...(ind.model === 'unit' ? [['card-inventory', 'Stock']] : []), ['card-credit', 'Credit'], ['card-promo', 'Promos'], ['card-morale', 'Morale'], ['card-projects', 'R&D'], ['card-rivals', 'Rivals']].map(([id, label]) => (
-          <button key={id} type="button" className="cfx-btn is-soft is-sm shrink-0 !min-h-8 !px-3 !text-sm"
-            onClick={() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>{label}</button>
-        ))}
-      </nav>
-      <div className="grid gap-5">
-        <Card id="card-team" title="Team" subtitle={`Salaries shown include wage inflation (index ${game.salaryIndex.toFixed(3)}). Employer NI & pension add 15%.`}>
-          <div className="space-y-4">
-            {ROLE_IDS.map((r) => <RoleRow key={r} game={game} role={r} />)}
-          </div>
-        </Card>
-
-        <div className="grid gap-5">
-          <Card title="Capacity" subtitle="Operations staff (plus you, the founder) set how many customers you can serve.">
-            <KeyValue rows={[
-              [ind.model === 'subscription' ? `${ind.unitPlural} you can serve` : `${ind.unitPlural} you can deliver / month`, formatInt(capacity)],
-              ['Current load', d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'],
-              ['Automation uplift', `+${formatPct(capacityMultiplier(game, ind) - 1, 0)}`],
-              ['Team strain', d.last?.kpis.strain ? `${formatPct(d.last.kpis.strain, 0)}${d.last.kpis.strain >= 0.5 ? ': overstretched' : ''}` : 'None'],
-              ['Premises', PREMISES_STEPS[premisesTier(headcount(game))] ? `Fits up to ${PREMISES_STEPS[premisesTier(headcount(game))] - 1} staff` : 'Largest site'],
-            ]} />
-            <p className="mt-2 text-xs text-ink-2">Running above {formatPct(STRAIN_ON, 0)} of capacity for months builds strain, which wears down quality, reputation and how much your team can handle.</p>
-          </Card>
-          <PriceCard game={game} />
-          <MarketingCard game={game} reach={demand.reach} />
-        </div>
-
-        {ind.model === 'unit' && <StockCard game={game} />}
-        <TermsCard game={game} />
-        <PromotionsCard game={game} />
-        <MoraleCard game={game} />
-        <ProjectsCard game={game} />
-        <AdvisorsCard game={game} />
-        <RiskCard game={game} />
-        <BreakEvenCard game={game} />
-        <AutopilotCard game={game} />
-        <BoardCard game={game} />
-        <RumourCard game={game} />
-        <TeamCard game={game} />
-        <SegmentsCard game={game} />
-        <LoyaltyCard game={game} />
-        <ServiceDeskCard game={game} />
-        <InfluencerCard game={game} />
-        <RegularsCard game={game} />
-        <BlackFridayCard game={game} />
-        <BoonsCard game={game} />
-        <CycleCard game={game} />
-        <GreenCard game={game} />
-        <SubsidiaryCard game={game} />
-        <SupplierCard game={game} />
-        <FranchiseCard game={game} />
-        <DesignCard game={game} />
-        <HiringMarketCard game={game} />
-        <HeadhuntCard game={game} />
-        <AcademyCard game={game} />
-        <WorkstyleCard game={game} />
-        <InnovationCard game={game} />
-        <ReviewsCard game={game} />
-        <ExportCard game={game} />
-        <PropertyCard game={game} />
-        <PressuresCard game={game} />
-        <RivalsCard game={game} />
-        <SitesCard game={game} />
-        <ContractsCard game={game} />
-        <InsuranceCard game={game} />
-      </div>
+      <Grouped id="business" groups={[
+        {
+          id: 'people', label: 'People', blurb: 'Hiring, pay, training and the stars on your team.',
+          items: <>
+            <Card id="card-team" title="Team" subtitle={`Salaries shown include wage inflation (index ${game.salaryIndex.toFixed(3)}). Employer NI & pension add 15%.`}>
+              <div className="space-y-4">
+                {ROLE_IDS.map((r) => <RoleRow key={r} game={game} role={r} />)}
+              </div>
+            </Card>
+            <Card title="Capacity" subtitle="Operations staff (plus you, the founder) set how many customers you can serve.">
+              <KeyValue rows={[
+                [ind.model === 'subscription' ? `${ind.unitPlural} you can serve` : `${ind.unitPlural} you can deliver / month`, formatInt(capacity)],
+                ['Current load', d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'],
+                ['Automation uplift', `+${formatPct(capacityMultiplier(game, ind) - 1, 0)}`],
+                ['Team strain', d.last?.kpis.strain ? `${formatPct(d.last.kpis.strain, 0)}${d.last.kpis.strain >= 0.5 ? ': overstretched' : ''}` : 'None'],
+                ['Premises', PREMISES_STEPS[premisesTier(headcount(game))] ? `Fits up to ${PREMISES_STEPS[premisesTier(headcount(game))] - 1} staff` : 'Largest site'],
+              ]} />
+              <p className="mt-2 text-xs text-ink-2">Running above {formatPct(STRAIN_ON, 0)} of capacity for months builds strain, which wears down quality, reputation and how much your team can handle.</p>
+            </Card>
+            <TeamCard game={game} />
+            <MoraleCard game={game} />
+            <HiringMarketCard game={game} />
+            <HeadhuntCard game={game} />
+            <AcademyCard game={game} />
+            <WorkstyleCard game={game} />
+            <InnovationCard game={game} />
+          </>,
+        },
+        {
+          id: 'selling', label: 'Selling', blurb: 'Price, marketing, promotions, customers and your brand.',
+          items: <>
+            <PriceCard game={game} />
+            <MarketingCard game={game} reach={demand.reach} />
+            <PromotionsCard game={game} />
+            <TermsCard game={game} />
+            <SegmentsCard game={game} />
+            <DesignCard game={game} />
+            <LoyaltyCard game={game} />
+            <ServiceDeskCard game={game} />
+            <InfluencerCard game={game} />
+            <RegularsCard game={game} />
+            <BlackFridayCard game={game} />
+            <ReviewsCard game={game} />
+          </>,
+        },
+        {
+          id: 'ops', label: 'Operations', blurb: 'Stock, suppliers, sites, contracts, new markets and R&D.',
+          items: <>
+            {ind.model === 'unit' && <StockCard game={game} />}
+            <SupplierCard game={game} />
+            <ProjectsCard game={game} />
+            <SitesCard game={game} />
+            <ContractsCard game={game} />
+            <FranchiseCard game={game} />
+            <ExportCard game={game} />
+            <PropertyCard game={game} />
+            <InsuranceCard game={game} />
+            <PressuresCard game={game} />
+          </>,
+        },
+        {
+          id: 'strategy', label: 'Strategy', blurb: 'Rivals, the board, yearly boons, the economy, green and group plans.',
+          items: <>
+            <RivalsCard game={game} />
+            <BoardCard game={game} />
+            <BoonsCard game={game} />
+            <CycleCard game={game} />
+            <GreenCard game={game} />
+            <SubsidiaryCard game={game} />
+            <RumourCard game={game} />
+          </>,
+        },
+        {
+          id: 'tools', label: 'Tools', blurb: 'Advisers, risk, break-even and standing orders.',
+          items: <>
+            <AdvisorsCard game={game} />
+            <RiskCard game={game} />
+            <BreakEvenCard game={game} />
+            <AutopilotCard game={game} />
+          </>,
+        },
+      ]} />
     </div>
   );
 }
