@@ -364,6 +364,8 @@ export interface GameState {
   mna?: import('./mna').Mna;
   /** Sourcing, product age, pop-ups, pricing lab, franchise standards, managers, department focus, security: see play5.ts. */
   play5?: import('./play5').Play5;
+  /** Temps, loyalty tiers, warehouse layout, tenders, inspections, mascot: see play6.ts. */
+  play6?: import('./play6').Play6;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

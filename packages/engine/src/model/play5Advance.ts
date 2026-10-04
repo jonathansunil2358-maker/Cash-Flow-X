@@ -42,7 +42,7 @@ export function advancePlay5(s: GameState, rng: Rng, simulation: boolean): void 
       if (!simulation) logItem(s, 'warning', 'Shipping disruption', 'Your worldwide suppliers are stuck. Unit costs are 8% higher for three months.');
     }
   }
-  if (simulation || s.pendingEvent || s.month < 9) return;
+  if (simulation || s.away || s.pendingEvent || s.month < 9) return;
   const q = playOf(s);
   q.last ??= {};
   const since = (k: string): number => s.month - (q.last![k] ?? -999);

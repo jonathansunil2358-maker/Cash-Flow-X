@@ -916,6 +916,114 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
   {
+    id: 'insiderTip', title: 'An employee raises a worry', polarity: 'bad', weight: 0, icon: 'key',
+    when: () => false,
+    setup: (s) => {
+      const fix = sized(s, 0.02, 1_500_00);
+      const report = sized(s, 0.01, 1_000_00);
+      return {
+        story: 'A junior employee quietly tells you that a manager has been signing off quality checks that were never done. Customers have not noticed yet.',
+        params: { fix, report },
+        choices: [
+          { id: 'fix', label: `Thank them and fix it (${formatGBP(fix)})`, hint: 'Redo the checks and reward the whistleblower.', impact: [{ label: 'Reputation', up: true }, { label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Redoing quality checks and a thank-you bonus', [dr('otherCosts', p.fix), cr('cash', p.fix)]); st.reputation = Math.min(100, st.reputation + 2); st.morale = Math.min(100, st.morale + 2); return 'The checks were redone, and the team saw that speaking up works.'; } },
+          { id: 'bury', label: 'Keep it quiet (free)', hint: 'Four times in ten it leaks.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng) => { if (chance(rng, 0.4)) { st.reputation = Math.max(0, st.reputation - 6); st.morale = Math.max(0, st.morale - 3); return 'It leaked. The press were not kind and the team lost trust.'; } return 'Nothing came of it, this time.'; } },
+          { id: 'report', label: `Tell the regulator (${formatGBP(report)})`, hint: 'Honest and safe, with a little extra paperwork for three months.', impact: [{ label: 'Reputation', up: true }, { label: 'Costs', up: false }],
+            apply: (st, _rng, P, p) => { P('Regulator filing and legal help', [dr('otherCosts', p.report), cr('cash', p.report)]); st.reputation = Math.min(100, st.reputation + 1); addTemporary(st, 'tip-paperwork', 'Extra paperwork', 3, { unitCostMult: 1.02 }, true); return 'The regulator thanked you and asked for more reports.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'boardCoup', title: 'A challenge from the board', polarity: 'bad', weight: 0, icon: 'crown',
+    when: () => false,
+    setup: (s) => {
+      const fight = sized(s, 0.03, 2_000_00);
+      const deal = sized(s, 0.02, 1_500_00);
+      return {
+        story: 'With the team unhappy, a senior colleague has been counting votes. They want you to step aside as chief executive.',
+        params: { fight, deal },
+        choices: [
+          { id: 'fight', label: `Fight it with advisers (${formatGBP(fight)})`, hint: 'Win the vote, but the fight leaves marks.', impact: [{ label: 'Reputation', up: true }, { label: 'Morale', up: false }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Advisers for a board vote', [dr('dealCosts', p.fight), cr('cash', p.fight)]); st.reputation = Math.min(100, st.reputation + 1); st.morale = Math.max(0, st.morale - 2); return 'You held the vote, narrowly.'; } },
+          { id: 'deal', label: `Do a deal: bigger bonuses (${formatGBP(deal)})`, hint: 'Buy peace with the team.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Retention bonuses after a board challenge', [dr('wages', p.deal), cr('cash', p.deal)]); st.morale = Math.min(100, st.morale + 4); return 'Everyone got something. The challenge faded.'; } },
+          { id: 'step', label: 'Step back for a while (free)', hint: 'A caretaker runs things for four months.', impact: [{ label: 'Demand', up: false }, { label: 'Morale', up: true }],
+            apply: (st) => { addTemporary(st, 'coup-caretaker', 'A caretaker in charge', 4, { demandMult: 0.95 }, true); st.morale = Math.min(100, st.morale + 6); return 'Things calmed down, though without you the pace dropped.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'disasterSeason', title: 'Extreme weather', polarity: 'bad', weight: 0, icon: 'bolt',
+    when: () => false,
+    setup: (s) => {
+      const kind = s.play6?.kind ?? 'flood';
+      const prep = sized(s, 0.03, 2_000_00);
+      const repair = sized(s, 0.05, 3_000_00);
+      const story: Record<string, string> = {
+        flood: 'Heavy rain is forecast, and the river is already high near your premises.',
+        heatwave: 'A heatwave is coming. Kit overheats and stock spoils in these temperatures.',
+        storm: 'A big storm is on its way, with winds that can tear a roof off.',
+      };
+      return {
+        story: story[kind] ?? story.flood,
+        params: { prep, repair },
+        choices: [
+          { id: 'prepare', label: `Prepare now (${formatGBP(prep)})`, hint: 'Sandbags, shutters or fans. No damage.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Preparing for extreme weather', [dr('otherCosts', p.prep), cr('cash', p.prep)]); return 'Your preparations held, and the neighbours were envious.'; } },
+          { id: 'repair', label: `Wait and repair (${formatGBP(repair)})`, hint: 'Pay for damage afterwards. Insurance helps.', impact: [{ label: 'Cash', up: false }, { label: 'Demand', up: false }],
+            apply: (st, _rng, P, p) => { P('Repairs after extreme weather', [dr('otherCosts', p.repair), cr('cash', p.repair)]); addTemporary(st, 'weather-repair', 'Closed for repairs', 2, { demandMult: 0.97 }, true); return `The weather hit and you repaired it.${claim(st, P, p.repair, 'weather damage')}`; } },
+          { id: 'ignore', label: 'Do nothing (free)', hint: 'A gamble: the worst of it hits for three months.', impact: [{ label: 'Demand', up: false }, { label: 'Costs', up: false }],
+            apply: (st) => { addTemporary(st, 'weather-hit', 'Weather damage', 3, { demandMult: 0.93, unitCostMult: 1.04 }, true); return 'It hit hard, and the clean-up lasted weeks.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'taxInspection', title: 'The taxman is coming', polarity: 'bad', weight: 0, icon: 'key',
+    when: () => false,
+    setup: (s) => {
+      const help = sized(s, 0.01, 1_000_00);
+      const lawyer = sized(s, 0.03, 2_500_00);
+      const fine = sized(s, 0.02, 1_500_00);
+      const big = sized(s, 0.08, 5_000_00);
+      return {
+        story: 'The tax office has picked your company for an inspection of last year\'s accounts.',
+        params: { help, lawyer, fine, big },
+        choices: [
+          { id: 'cooperate', label: `Co-operate fully (${formatGBP(help)})`, hint: 'Eight times in ten it is clean; otherwise a small fine.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => { P('Tax inspection: preparing records', [dr('otherCosts', p.help), cr('cash', p.help)]); if (chance(rng, 0.2)) { P('Tax inspection: small penalty', [dr('otherCosts', p.fine), cr('cash', p.fine)]); return 'They found a few slips and fined you.'; } return 'They left satisfied.'; } },
+          { id: 'lawyer', label: `Hire a tax lawyer (${formatGBP(lawyer)})`, hint: 'Expensive and safe.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Tax lawyer for an inspection', [dr('otherCosts', p.lawyer), cr('cash', p.lawyer)]); st.reputation = Math.min(100, st.reputation + 1); return 'Your lawyer handled everything.'; } },
+          { id: 'stall', label: 'Stall them (free)', hint: 'Half the time they go away; otherwise a big penalty.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng, P, p) => { if (chance(rng, 0.5)) { P('Tax inspection: large penalty', [dr('otherCosts', p.big), cr('cash', p.big)]); st.reputation = Math.max(0, st.reputation - 2); return 'They dug in and found plenty, with interest.'; } return 'They lost interest, this time.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'celebDeal', title: 'A famous face wants in', polarity: 'good', weight: 0, icon: 'star',
+    when: () => false,
+    setup: (s) => {
+      const big = sized(s, 0.03, 2_500_00);
+      const small = sized(s, 0.01, 1_000_00);
+      return {
+        story: 'A well-known personality has offered to be the face of your brand. Their fans are many, and their past is colourful.',
+        params: { big, small },
+        choices: [
+          { id: 'sign', label: `Sign them up (${formatGBP(big)})`, hint: 'Demand +4% for six months, but three times in ten a scandal follows.', impact: [{ label: 'Demand', up: true }, { label: 'Risk', up: false }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => { P('Celebrity endorsement', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'celeb-big', 'A famous face', 6, { demandMult: 1.04 }, true); if (chance(rng, 0.3)) { st.reputation = Math.max(0, st.reputation - 4); st.brand *= 0.97; return 'The campaign took off, then a scandal broke and some of the shine rubbed off.'; } return 'The campaign was a hit.'; } },
+          { id: 'small', label: `A quiet one-off post (${formatGBP(small)})`, hint: 'A smaller, safer lift for four months.', impact: [{ label: 'Demand', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('A one-off endorsement', [dr('marketing', p.small), cr('cash', p.small)]); addTemporary(st, 'celeb-small', 'A friendly post', 4, { demandMult: 1.015 }, true); return 'A nice bump with no drama.'; } },
+          { id: 'decline', label: 'Decline politely', hint: 'Your integrity earns a little respect.', impact: [{ label: 'Reputation', up: true }],
+            apply: (st) => { st.reputation = Math.min(100, st.reputation + 1); return 'You said no, and word got around.'; } },
+        ],
+      };
+    },
+  },
+  {
     id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
     when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
     setup: (s) => {
@@ -1077,6 +1185,9 @@ const REPUTATION: Record<string, number> = {
   'rivalMove.match': 0, 'rivalMove.counter': 1, 'rivalMove.ignore': -1, 'industryShock.adapt': 2, 'industryShock.lobby': 0, 'industryShock.ignore': -1,
   'activist.cut': 0, 'activist.engage': 1, 'activist.refuse': -1, 'cyberAttack.restore': 1, 'cyberAttack.ransom': -1, 'cyberAttack.public': 1,
   'founderRest.family': 2, 'founderRest.grind': -1, 'founderRest.retreat': 1,
+  'insiderTip.fix': 3, 'insiderTip.bury': -3, 'insiderTip.report': 2, 'boardCoup.fight': 0, 'boardCoup.deal': 1, 'boardCoup.step': -1,
+  'disasterSeason.prepare': 2, 'disasterSeason.repair': 0, 'disasterSeason.ignore': -2, 'taxInspection.cooperate': 1, 'taxInspection.lawyer': 1, 'taxInspection.stall': -2,
+  'celebDeal.sign': 0, 'celebDeal.small': 0, 'celebDeal.decline': 1,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

@@ -20,6 +20,8 @@ import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
+import { hireTemps, layoutCheck, setLayout, setMascot, tempsCheck, tierCheck, tenderCheck, tenderWon, TENDERS, MASCOTS, rivalDiscount, play6Of, TIERS } from './model/play6';
+import { applyTender } from './model/play6Advance';
 import { coachCheck, coachFranchises, labCheck, nodeCheck, playOf, popCheck, promote, promoteCheck, refreshCheck, runLab, securityCheck, setSecurity, setSupply, startPop, supplyCheck, takeNode, type Supply } from './model/play5';
 import { acceptCounter, acceptCounterCheck, askCheck, checkCheck, closeCheck, closeDeal, divest, divestCheck, hostileBid, hostileCheck, makeOffer, mergerCheck, mergerOfEquals, offerCheck, raiseBid, raiseBidCheck, runCheck, withdraw, withdrawCheck, type CheckId, type Terms } from './model/mna';
 import { acquireCheck, acquireRival, rivalPrice, bidsFor, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
@@ -55,6 +57,11 @@ export type Action =
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'acquireRival'; index: number }
   | { type: 'tradeSale'; bid: string; ask?: number }
+  | { type: 'temps'; trained: boolean }
+  | { type: 'tiers'; level: number }
+  | { type: 'layout'; order: number[] }
+  | { type: 'tender'; index: number; discount: number }
+  | { type: 'mascot'; id: string }
   | { type: 'supply'; to: string }
   | { type: 'refreshProduct' }
   | { type: 'popup'; tier: number }
@@ -353,6 +360,37 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         mult = action.ask;
       }
       try { tradeSale(s, action.bid, mult); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'temps': {
+      const c = tempsCheck(s, !!action.trained);
+      if (!c.ok) fail(c.reason!);
+      hireTemps(s, !!action.trained);
+      break;
+    }
+    case 'tiers': {
+      const c = tierCheck(s, action.level);
+      if (!c.ok) fail(c.reason!);
+      play6Of(s).tier = action.level as 0 | 1 | 2 | 3;
+      logItem(s, 'action', `Loyalty tier: ${TIERS[action.level].name}`, TIERS[action.level].blurb);
+      break;
+    }
+    case 'layout': {
+      const c = layoutCheck(s, action.order);
+      if (!c.ok) fail(c.reason!);
+      setLayout(s, action.order);
+      break;
+    }
+    case 'tender': {
+      const c = tenderCheck(s, action.index, action.discount);
+      if (!c.ok) fail(c.reason!);
+      applyTender(s, action.index, action.discount, tenderWon(s, action.index, action.discount), c.fee, TENDERS[action.index].demand, TENDERS[action.index].name);
+      void rivalDiscount;
+      break;
+    }
+    case 'mascot': {
+      if (!MASCOTS.some((m) => m.id === action.id)) fail('Unknown mascot.');
+      setMascot(s, action.id);
       break;
     }
     case 'supply': {
