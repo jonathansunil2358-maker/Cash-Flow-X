@@ -54,6 +54,12 @@ construction, and an integrity check proves it every month.
 | Feel | Penny the guide, a seasonal island, sound packs, accessibility settings (font, text size, colour-safe, calm mode), keyboard shortcuts and a replay theatre |
 | Long term | A dynasty family tree with inheritance gems, mastery challenges, and a £100m empire venture |
 | Growing pains | Hiring past 10, 25, 50 and 100 staff moves you to bigger premises (a capitalised fit-out and a higher base rent, with a warning before you hire), and running above 95% of capacity for months builds team strain that wears down quality, reputation and capacity |
+| Deals and money | Buy a named rival (goodwill, integration costs, impairment risk), sell the whole company to one of three bidders, take a venture-capital round (three term sheets, one with a liquidation preference), run a crowdfunding campaign, hedge currency and costs, and file patents for licence income |
+| People and culture | A training academy, office/hybrid/remote work styles, a yearly innovation day, poaching a star from a rival (and rivals poaching yours), and "the heir" start-up origin |
+| Customers and brand | A loyalty programme, a service desk of monthly complaints, influencer deals, five named regular customers and a Black Friday campaign |
+| Big strategy | A group of companies (a second-sector subsidiary), a yearly draft of one of three boons, an economic-cycle desk with a stance, a green track and a charity/ESG rating |
+| Together, v4 | Visit a friend's island with a like or a greeting, a shared holding-company landmark funded from members' dividends, a trust-based cosmetics market, mentor and mentee rewards, and a scenario maker with share codes |
+| Feel, v4 | Seasonal festivals with limited hats, a free-play sandbox (unranked), an island timelapse recorded on your device, and an island radio that reads out your real numbers |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout
