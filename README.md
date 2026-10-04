@@ -60,6 +60,7 @@ construction, and an integrity check proves it every month.
 | Big strategy | A group of companies (a second-sector subsidiary), a yearly draft of one of three boons, an economic-cycle desk with a stance, a green track and a charity/ESG rating |
 | Together, v4 | Visit a friend's island with a like or a greeting, a shared holding-company landmark funded from members' dividends, a trust-based cosmetics market, mentor and mentee rewards, and a scenario maker with share codes |
 | Feel, v4 | Seasonal festivals with limited hats, a free-play sandbox (unranked), an island timelapse recorded on your device, and an island radio that reads out your real numbers |
+| Mergers and acquisitions, v5 | A deal room with new listings all year, four extra due-diligence checks, a synergy forecast, culture fit, haggling against a hidden reserve price, bidding wars, deal structures (cash, shares, earn-out), an acquisition loan, integration plans with trouble events, retention bonuses, a rebrand choice, competition-regulator reviews, hostile bids on rivals, merger of equals, selling an acquired business, a negotiated trade sale and a deal history |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout
