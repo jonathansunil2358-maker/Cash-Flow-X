@@ -89,7 +89,7 @@ export function MarketCard() {
   const collect = async () => { try { const r = await api.collectSales(); if (r.gems > 0) addGems(r.gems, 'items you sold'); else toast('info', 'Nothing to collect yet.'); } catch (e) { toast('error', (e as Error).message); } refresh(); };
   const sold = (v?.mine ?? []).filter((l) => l.status === 'sold' && !l.collected).length;
   return (
-    <Card id="card-market" title="Cosmetics market" subtitle="Sell a hat, decoration or spare card to another player for gems (5% fee). It runs on trust: gems are kept on each player's device, so nothing here touches a score.">
+    <Card id="card-cosmetics" title="Cosmetics market" subtitle="Sell a hat, decoration or spare card to another player for gems (5% fee). It runs on trust: gems are kept on each player's device, so nothing here touches a score.">
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Sell">
           <select value={pick} onChange={(e) => setPick(e.target.value)} className="rounded-lg border border-line bg-page px-2.5 py-1.5 text-sm" aria-label="Item to sell">

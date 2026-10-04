@@ -1522,7 +1522,7 @@ test('V4 Batch E: island visits, the cosmetics market and the scenario maker', a
   await expect(island.getByLabel('Island visit')).toContainText('Visitors');
 
   // Market: the empty market renders, and an item the player does not own cannot be listed.
-  await expect(page.locator('#card-market').getByText('Nothing for sale right now.')).toBeVisible();
+  await expect(page.locator('#card-cosmetics').getByText('Nothing for sale right now.')).toBeVisible();
   await expect(page.locator('#card-mentor')).toBeVisible();
 });
 
