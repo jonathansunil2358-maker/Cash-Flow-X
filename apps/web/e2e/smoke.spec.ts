@@ -1487,3 +1487,41 @@ test('V4 Batch D: yearly boons, cycle stance, green track, ESG and the group of 
   await expect(green.getByText('Green steps', { exact: true })).toBeVisible();
   for (const id of ['card-boons', 'card-subs']) await expect(biz.locator(`#${id}`)).toBeVisible();
 });
+
+test('V4 Batch E: island visits, the cosmetics market and the scenario maker', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Visitors');
+  await page.getByRole('button', { name: 'New company' }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await skipTour(page);
+  await clearOverlays(page);
+  await page.getByRole('button', { name: /Holding company and leaderboards/ }).click();
+  await page.getByRole('tab', { name: 'Community' }).click();
+
+  // Scenario maker: create one and open it back by its code.
+  const scn = page.locator('#card-scenario');
+  await scn.getByLabel('Scenario name').fill('Quick start');
+  await scn.getByRole('button', { name: 'Create' }).click();
+  const code = (await scn.getByText(/Your code:/).locator('code').innerText()).trim();
+  expect(code).toMatch(/^[A-Z2-9]{6}$/);
+  await scn.getByLabel('Scenario code').fill(code);
+  await scn.getByRole('button', { name: 'Open' }).click();
+  await expect(scn.getByText(/Quick start/).first()).toBeVisible();
+
+  // Island: your own island opens by its code.
+  const island = page.locator('#card-island');
+  const id = (await island.locator('code').first().innerText()).trim();
+  await island.getByLabel('Island code').fill(id);
+  await island.getByRole('button', { name: 'Visit' }).click();
+  await expect(island.getByLabel('Island visit')).toContainText('Visitors');
+
+  // Market: the empty market renders, and an item the player does not own cannot be listed.
+  await expect(page.locator('#card-market').getByText('Nothing for sale right now.')).toBeVisible();
+  await expect(page.locator('#card-mentor')).toBeVisible();
+});

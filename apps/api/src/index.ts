@@ -4,6 +4,9 @@ import { cors } from 'hono/cors';
 import { dailyBoard } from './daily';
 import { challengeView, claimWeeklyReward, createChallenge, weeklyView } from './fixed';
 import { answerPuzzle, leagueView } from './league';
+import {
+  buyListing, cancelListing, claimMentor, collectSales, createMentorCode, createScenario, fundLandmark, getScenario, greetIsland, joinMentor, landmarkView, likeIsland, listItem, marketView, mentorView, myScenarios, playedScenario, visitIsland,
+} from './social4';
 import { claimCard, createLink, giftCard, guildRival, hallOfFame, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
 import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
 import { requireUser, signIn, signOut, tokenOf, verifyGoogleIdToken, type AppEnv, type UserRow } from './auth';
@@ -214,6 +217,24 @@ app.post('/coop/:code/revoke', requireUser, async (c) => c.json(await revokeLink
 app.post('/cards/gift', requireUser, async (c) => c.json(await giftCard(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).card)));
 app.post('/cards/claim', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await claimCard(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });
 app.get('/hall', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await hallOfFame(c.env)); });
+app.get('/island/:id', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await visitIsland(c.env, c.get('user'), c.req.param('id')!)); });
+app.post('/island/:id/like', requireUser, async (c) => c.json(await likeIsland(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/island/:id/greet', requireUser, async (c) => c.json(await greetIsland(c.env, c.get('user'), c.req.param('id')!, (await c.req.json().catch(() => ({}))).idx)));
+app.get('/guild/landmark', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await landmarkView(c.env, c.get('user'))); });
+app.post('/guild/landmark/fund', requireUser, async (c) => c.json(await fundLandmark(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).amount)));
+app.get('/market', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await marketView(c.env, c.get('user'))); });
+app.post('/market/list', requireUser, async (c) => { await limit(c, 'plans'); return c.json(await listItem(c.env, c.get('user'), await body(c))); });
+app.post('/market/collect', requireUser, async (c) => c.json(await collectSales(c.env, c.get('user'))));
+app.post('/market/:id/buy', requireUser, async (c) => c.json(await buyListing(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/market/:id/cancel', requireUser, async (c) => c.json(await cancelListing(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/mentor/create', requireUser, async (c) => c.json(await createMentorCode(c.env, c.get('user'))));
+app.post('/mentor/join', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await joinMentor(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });
+app.get('/mentor', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await mentorView(c.env, c.get('user'))); });
+app.post('/mentor/claim', requireUser, async (c) => c.json(await claimMentor(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)));
+app.post('/scenarios', requireUser, async (c) => { await limit(c, 'plans'); return c.json(await createScenario(c.env, c.get('user'), await body(c)), 201); });
+app.get('/scenarios/mine', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await myScenarios(c.env, c.get('user'))); });
+app.get('/scenarios/:code', requireUser, async (c) => c.json(await getScenario(c.env, c.req.param('code'))));
+app.post('/scenarios/:code/played', requireUser, async (c) => c.json(await playedScenario(c.env, c.get('user'), c.req.param('code'))));
 app.get('/guild/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await guildRival(c.env, c.get('user'))); });
 app.get('/rival', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await rivalView(c.env, c.get('user'))); });
 app.get('/replays/:kind/:key', requireUser, async (c) => { c.header('cache-control', 'private, max-age=60'); return c.json(await replayOf(c.env, c.req.param('kind')!, c.req.param('key')!, Number(c.req.query('rank') ?? 1))); });
