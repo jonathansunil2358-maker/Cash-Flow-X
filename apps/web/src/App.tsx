@@ -1,3 +1,4 @@
+import { SceneBoundary } from './components/ErrorBoundary';
 import {
   cosmeticsOf, musicMood, tracksOf, PETS, petMood, petOf, logoOf, luckOf, prestigeBonus, skinOf, dailyStatus, DIFFICULTIES, formatGBP, INDUSTRIES, levelForXp, monthLabel, plSummary, prestigeCheck, prestigeTitle, unlocked, upgradeOptions, xpForLevel,
   type GameState,
@@ -279,9 +280,11 @@ function SceneArea({ game }: { game: GameState }) {
     <section className="relative left-1/2 aspect-[8/5] max-h-[600px] min-h-[300px] w-[min(calc(100vw-32px),880px)] -translate-x-1/2 overflow-hidden lg:left-0 lg:w-full lg:translate-x-0 rounded-[32px] border-[3px] border-outline shadow-[var(--lift)]" aria-label="Your business" data-tour="scene">
       <SkyBackdrop />
       {scene3d ? (
-        <Suspense fallback={<div className="grid h-full place-items-center font-display text-lg text-on-sky">Building your plot…</div>}>
-          <Scene3D game={game} />
-        </Suspense>
+        <SceneBoundary fallback={<div className="grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]"><img src={iconUrl(game.icon)} alt="" className="h-28 w-28" /></div>}>
+          <Suspense fallback={<div className="grid h-full place-items-center font-display text-lg text-on-sky">Building your plot…</div>}>
+            <Scene3D game={game} />
+          </Suspense>
+        </SceneBoundary>
       ) : (
         <div className="relative grid h-full place-items-center rounded-[32px] border-[3px] border-outline bg-[var(--grass)]" style={skin.id === 'default' ? undefined : { background: isNight() ? skin.palette.grassNight : skin.palette.grass }}>
           <img src={iconUrl(game.icon)} alt="" className="h-28 w-28 drop-shadow-[0_6px_0_rgba(0,0,0,0.25)]" />
