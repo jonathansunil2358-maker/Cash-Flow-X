@@ -308,7 +308,7 @@ test('the daily challenge: the same company for everyone, practise or play ranke
   await expect(card.getByText(/Everyone plays the same company for 24 months/)).toBeVisible();
   await expect(card.getByLabel('Time left today')).toHaveText(/^\d\d:\d\d:\d\d$/);
   const name = await card.locator('.font-display').nth(1).innerText();
-  expect(name).toMatch(/^Daily \w+ Ltd$/);
+  expect(name).toMatch(/^Daily [\w-]+ Ltd$/);
 
   // Ranked: it replaces the current company, and can only be done once a day.
   await card.getByRole('button', { name: "Play today's challenge" }).click();
