@@ -3,6 +3,7 @@ import { formatGBP, type Pence } from '../money';
 import { industryOf } from './industries';
 import { rentedExtraSites } from './sites';
 import { baseRentFor, premisesTier } from './growth';
+import { workstyleOf } from './people';
 import { headcount, logItem, newId, type GameState } from './state';
 
 /**
@@ -20,7 +21,7 @@ export function monthlyRent(s: GameState): Pence {
   const ind = industryOf(s);
   // The HQ base rent grows with each move to bigger premises; extra sites rent at the plain base rate.
   const hq = ownsBuilding(s) ? 0 : baseRentFor(ind, premisesTier(headcount(s)));
-  return Math.round((hq + ind.rentBase * rentedExtraSites(s) + ind.rentPerHead * headcount(s)) * s.rentIndex);
+  return Math.round((hq + ind.rentBase * rentedExtraSites(s) + ind.rentPerHead * headcount(s)) * s.rentIndex * workstyleOf(s).rent);
 }
 export const buildingPrice = (s: GameState): Pence => Math.round((industryOf(s).rentBase * s.rentIndex * BUILDING_MONTHS) / 10000) * 10000;
 export const buildingSaving = (s: GameState): Pence => Math.round(industryOf(s).rentBase * s.rentIndex);

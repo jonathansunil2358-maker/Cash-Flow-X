@@ -1,3 +1,4 @@
+import { workstyleOf } from './people';
 import { gbp, type Pence } from '../money';
 import type { Rng } from '../rng';
 import { industryOf, ROLE_IDS, type RoleId } from './industries';
@@ -40,7 +41,7 @@ export function trainingEffect(s: GameState): number {
 /** What morale is heading towards this month. */
 export function moraleTarget(s: GameState): number {
   const stressed = s.ledger.balances.cash < 0 ? MORALE_STRESS : 0;
-  return Math.max(0, Math.min(100, BASELINE_MORALE + PAY_MORALE[s.pay] + trainingEffect(s) - stressed));
+  return Math.max(0, Math.min(100, BASELINE_MORALE + PAY_MORALE[s.pay] + trainingEffect(s) + workstyleOf(s).morale - stressed));
 }
 
 /** Chance that each person leaves this month: none at or above 60 morale, rising as it falls. */

@@ -17,6 +17,7 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
 import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
 import { BOOSTS, type BoostId } from './model/perks';
@@ -54,6 +55,10 @@ export type Action =
   | { type: 'startCrowd'; tier: number }
   | { type: 'hedge'; kind: 'fx' | 'cost' }
   | { type: 'filePatent' }
+  | { type: 'takeCourse'; course: string }
+  | { type: 'setWorkstyle'; style: Workstyle }
+  | { type: 'innovationDay' }
+  | { type: 'headhunt'; role: RoleId }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
   | { type: 'setDesign'; features: number }
@@ -330,6 +335,32 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       const check = hedgeCheck(s, action.kind);
       if (!check.ok) fail(check.reason!);
       buyHedge(s, action.kind);
+      break;
+    }
+    case 'takeCourse': {
+      const check = courseCheck(s, action.course);
+      if (!check.ok) fail(check.reason!);
+      takeCourse(s, action.course);
+      break;
+    }
+    case 'setWorkstyle': {
+      const check = workstyleCheck(s, action.style);
+      if (!check.ok) fail(check.reason!);
+      setWorkstyle(s, action.style);
+      break;
+    }
+    case 'innovationDay': {
+      const check = innovationCheck(s);
+      if (!check.ok) fail(check.reason!);
+      innovationDay(s);
+      break;
+    }
+    case 'headhunt': {
+      const check = headhuntCheck(s, action.role);
+      if (!check.ok) fail(check.reason!);
+      applyActionInPlace(s, { type: 'hire', role: action.role, count: 1 }, false);
+      const from = headhunt(s, action.role);
+      logItem(s, 'milestone', `A star joins from ${from}`, 'Poached for a premium. Their perk is a lasting boost, and the rival is a little weaker.');
       break;
     }
     case 'filePatent': {

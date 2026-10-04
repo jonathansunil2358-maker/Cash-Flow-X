@@ -342,6 +342,8 @@ export interface GameState {
   franchises?: number;
   /** Deals and money (acquisitions, sale, VC, crowdfunding, hedges, patents): see deals.ts. */
   deals?: import('./deals').Deals;
+  /** Training, work style, innovation day and headhunting: see people.ts. */
+  people?: import('./people').People;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

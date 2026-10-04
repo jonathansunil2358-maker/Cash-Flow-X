@@ -1427,3 +1427,23 @@ test('V4 Batch A: venture capital, crowdfunding, hedging, patents, buying a riva
   await expect(sheet.locator('#card-patents').getByRole('button', { name: 'File a patent' })).toBeVisible();
   await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
 });
+
+test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const work = biz.locator('#card-workstyle');
+  await work.getByRole('button', { name: 'Open' }).click();
+  await work.getByRole('button', { name: 'Choose' }).first().click();
+  await expect.poll(async () => (await savedGame(page)).people?.workstyle).toBeTruthy();
+  const inno = biz.locator('#card-innovation');
+  await inno.getByRole('button', { name: 'Open' }).click();
+  await expect(inno.getByRole('button', { name: 'Hold an innovation day' })).toBeVisible();
+  const academy = biz.locator('#card-academy');
+  await academy.getByRole('button', { name: 'Open' }).click();
+  await expect(academy.getByText('Customer service')).toBeVisible();
+});

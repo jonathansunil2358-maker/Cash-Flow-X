@@ -37,6 +37,7 @@ export const ORIGINS: { id: string; name: string; blurb: string }[] = [
   { id: 'origin-banker', name: 'Ex-banker', blurb: 'Banks lend to you more cheaply (1% less) and give a bigger overdraft, but you start with a smaller brand.' },
   { id: 'origin-engineer', name: 'Engineer', blurb: 'Your product quality improves a little every month, but selling does not come naturally: reach is 8% lower.' },
   { id: 'origin-marketer', name: 'Marketer', blurb: 'You start with a stronger brand and it grows 15% faster, but costs run 3% higher.' },
+  { id: 'origin-heir', name: 'The heir', blurb: 'You carry on a family name: a stronger brand to start with and banks 0.5% cheaper, but expectations run costs 2% higher. A fresh start for a new generation.' },
   { id: 'origin-dropout', name: 'Scrappy dropout', blurb: 'You know how to do more with less: costs 3% lower. Banks are wary: borrowing costs 1% more.' },
 ];
 export const ORIGIN_IDS = ORIGINS.map((o) => o.id);

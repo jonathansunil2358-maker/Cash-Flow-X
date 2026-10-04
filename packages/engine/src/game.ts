@@ -164,6 +164,7 @@ export function newGame(opts: NewGameOptions): GameState {
   if (modifiers.includes('slow-market')) s.economy.active.push({ type: 'mod-slow', title: 'Slow market', startMonth: 0, remaining: 100_000, effects: { demandMult: 0.9 } });
   if (modifiers.includes('origin-marketer')) s.brand += 25;
   if (modifiers.includes('origin-banker')) s.brand = Math.max(0, s.brand - 10);
+  if (modifiers.includes('origin-heir')) s.brand += 15;
   recomputeEconomy(s);
 
   const capital = startingCash(difficulty, perks);
