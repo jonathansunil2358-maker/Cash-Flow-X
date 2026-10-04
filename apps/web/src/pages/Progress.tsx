@@ -6,6 +6,7 @@ import {
 import { useState } from 'react';
 import { Button, Card, Field, KeyValue, Meter, MoneyInput } from '../components/ui';
 import { useGame } from '../store';
+import { Fold } from './Strategy';
 
 /** Spend a point per founder level on conveniences (none of them changes the simulation). */
 export function SkillsCard() {
@@ -95,7 +96,7 @@ export function VentureCard({ game }: { game: GameState }) {
   const check = ventureCheck(game, kind, amount);
   const held = game.ventures ?? [];
   return (
-    <Card id="card-venture" title="Side ventures" subtitle={`Back a side venture with up to ${Math.round(VENTURE_CASH_SHARE * 100)}% of your cash, at most ${MAX_VENTURES} at a time. It is a bet inside your company, not a second company: you find out how it went when it settles.`}>
+    <Fold id="card-venture" title="Side ventures" summary={held.length ? `${held.length} running. Open for details.` : 'Back a risky bet inside your company. Open to start one.'} subtitle={`Back a side venture with up to ${Math.round(VENTURE_CASH_SHARE * 100)}% of your cash, at most ${MAX_VENTURES} at a time. It is a bet inside your company, not a second company: you find out how it went when it settles.`}>
       <div className="space-y-3">
         {held.length > 0 && (
           <KeyValue rows={held.map((v) => [VENTURES.find((d) => d.id === v.kind)!.name, `${formatGBP(v.stake, { compact: true })} until month ${v.end + 1}`] as [string, string])} />
@@ -112,7 +113,7 @@ export function VentureCard({ game }: { game: GameState }) {
         <p className="text-xs text-ink-2">{VENTURES.find((v) => v.id === kind)!.blurb}</p>
         {!check.ok && <p className="text-xs text-muted">{check.reason}</p>}
       </div>
-    </Card>
+    </Fold>
   );
 }
 

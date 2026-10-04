@@ -879,6 +879,7 @@ test('Batch F: culture, side ventures, reputation tier, season pass, skills and 
   // Finance: back a venture.
   await openDock(page, 'Finance');
   const venture = page.locator('#card-venture');
+  await venture.getByRole('button', { name: 'Open' }).click();
   await venture.getByLabel('Venture').selectOption('safe');
   await venture.getByRole('button', { name: 'Back it' }).click();
   await expect.poll(async () => ((await savedGame(page)).ventures ?? []).length).toBe(1);
