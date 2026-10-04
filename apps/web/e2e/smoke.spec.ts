@@ -1412,6 +1412,7 @@ test('growing pains: team strain and premises show in the Business panel', async
   await clearOverlays(page);
   await openDock(page, 'Business');
   const sheet = page.getByRole('dialog', { name: 'Business' });
+  await sheet.locator('#card-capacity').getByRole('button', { name: 'Open' }).click();
   await expect(sheet.getByText('Team strain')).toBeVisible();
   await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
 });
@@ -1568,10 +1569,10 @@ test('the Business and Finance panels are split into sections you can reach in o
   await clearOverlays(page);
   await openDock(page, 'Business', { sections: true });
   const biz = page.getByRole('dialog', { name: 'Run the business' });
-  await expect(biz.getByRole('tab', { name: 'People' })).toHaveAttribute('aria-selected', 'true');
+  await expect(biz.getByRole('tab', { name: 'Team', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(biz.locator('#card-team')).toBeVisible();
   await expect(biz.locator('#card-loyalty')).toBeHidden();
-  await biz.getByRole('tab', { name: 'Selling' }).click();
+  await biz.getByRole('tab', { name: 'Customers' }).click();
   await expect(biz.locator('#card-loyalty')).toBeVisible();
   await expect(biz.locator('#card-team')).toBeHidden();
   await biz.getByRole('tab', { name: 'Strategy' }).click();

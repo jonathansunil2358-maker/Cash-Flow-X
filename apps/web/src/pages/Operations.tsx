@@ -17,7 +17,7 @@ import { BoardCard, TeamCard } from './Fun';
 import { RumourCard } from './Surprise';
 import { AdvisorsCard, AutopilotCard, BreakEvenCard, RiskCard } from './Smart';
 import { ContractsCard, InsuranceCard, PressuresCard, SitesCard } from './Growth';
-import { MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
+import { Fold, MoraleCard, ProjectsCard, PromotionsCard, RivalsCard } from './Strategy';
 
 export function Operations({ game }: { game: GameState }) {
   const d = useDerived(game);
@@ -29,14 +29,14 @@ export function Operations({ game }: { game: GameState }) {
       <PageTitle title="Run the business" subtitle="Hiring, pricing, marketing, stock and credit terms. One-off costs (recruitment, equipment, redundancy) post straight away; see Books › Ledger." />
       <Grouped id="business" groups={[
         {
-          id: 'people', label: 'People', blurb: 'Hiring, pay, training and the stars on your team.',
+          id: 'team', label: 'Team', blurb: 'Hire and let go. Everything else about your people is under People.',
           items: <>
             <Card id="card-team" title="Team" subtitle={`Salaries shown include wage inflation (index ${game.salaryIndex.toFixed(3)}). Employer NI & pension add 15%.`}>
               <div className="space-y-4">
                 {ROLE_IDS.map((r) => <RoleRow key={r} game={game} role={r} />)}
               </div>
             </Card>
-            <Card title="Capacity" subtitle="Operations staff (plus you, the founder) set how many customers you can serve.">
+            <Fold id="card-capacity" title="Capacity" summary={`Load ${d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'}. Open for details.`} subtitle="Operations staff (plus you, the founder) set how many customers you can serve.">
               <KeyValue rows={[
                 [ind.model === 'subscription' ? `${ind.unitPlural} you can serve` : `${ind.unitPlural} you can deliver / month`, formatInt(capacity)],
                 ['Current load', d.last ? formatPct(d.last.kpis.utilisation, 0) : '—'],
@@ -45,7 +45,12 @@ export function Operations({ game }: { game: GameState }) {
                 ['Premises', PREMISES_STEPS[premisesTier(headcount(game))] ? `Fits up to ${PREMISES_STEPS[premisesTier(headcount(game))] - 1} staff` : 'Largest site'],
               ]} />
               <p className="mt-2 text-xs text-ink-2">Running above {formatPct(STRAIN_ON, 0)} of capacity for months builds strain, which wears down quality, reputation and how much your team can handle.</p>
-            </Card>
+            </Fold>
+          </>,
+        },
+        {
+          id: 'people', label: 'People', blurb: 'Pay, morale, training and the stars on your team.',
+          items: <>
             <TeamCard game={game} />
             <MoraleCard game={game} />
             <HiringMarketCard game={game} />
@@ -56,12 +61,17 @@ export function Operations({ game }: { game: GameState }) {
           </>,
         },
         {
-          id: 'selling', label: 'Selling', blurb: 'Price, marketing, promotions, customers and your brand.',
+          id: 'pricing', label: 'Pricing', blurb: 'Price, marketing, promotions and credit terms.',
           items: <>
             <PriceCard game={game} />
             <MarketingCard game={game} reach={demand.reach} />
             <PromotionsCard game={game} />
             <TermsCard game={game} />
+          </>,
+        },
+        {
+          id: 'brand', label: 'Customers', blurb: 'Who buys from you, what they think of you, and how to win them.',
+          items: <>
             <SegmentsCard game={game} />
             <DesignCard game={game} />
             <LoyaltyCard game={game} />
@@ -257,7 +267,7 @@ function TermsCard({ game }: { game: GameState }) {
   const cash = d.ind.receivableDays === 0;
   const preview = { ...game, customerDays: cust, supplierDays: supp };
   return (
-    <Card id="card-credit" title="Credit terms (working capital)" subtitle={`The fastest lever on cash. Industry norms: customers pay ${cash ? 'at the point of sale' : `in ${d.ind.receivableDays} days`}; suppliers expect payment in ${d.ind.payableDays} days.`}>
+    <Fold id="card-credit" title="Credit terms (working capital)" summary={`Customers pay in ${game.customerDays} days, you pay suppliers in ${game.supplierDays}. Open to change.`} subtitle={`The fastest lever on cash. Industry norms: customers pay ${cash ? 'at the point of sale' : `in ${d.ind.receivableDays} days`}; suppliers expect payment in ${d.ind.payableDays} days.`}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={`Customer terms: ${cust} days`} hint={cash ? 'Not applicable in this industry.' : `Demand ×${termsDemandMultiplier(preview, d.ind).toFixed(3)}. Longer terms win B2B customers but tie up cash and raise bad debts.`}>
           <input type="range" min={0} max={120} step={5} value={cust} disabled={cash} onChange={(e) => setCust(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
@@ -268,7 +278,7 @@ function TermsCard({ game }: { game: GameState }) {
       </div>
       <Button className="mt-3" variant="primary" disabled={game.status !== 'playing' || (cust === game.customerDays && supp === game.supplierDays)}
         onClick={() => act({ type: 'setCreditTerms', customerDays: cust, supplierDays: supp }, 'Credit terms updated for new invoices.')}>Apply terms</Button>
-    </Card>
+    </Fold>
   );
 }
 
