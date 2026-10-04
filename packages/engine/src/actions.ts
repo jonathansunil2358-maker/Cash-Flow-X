@@ -7,7 +7,7 @@ import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
 import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
-import { resolvePendingEvent, startNamedEvent } from './model/events';
+import { addTemporaryEffect, resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { addFranchise, franchiseCheck } from './model/franchise';
 import { designCheck, setDesign } from './model/design';
@@ -20,6 +20,7 @@ import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
+import { coachCheck, coachFranchises, labCheck, nodeCheck, playOf, popCheck, promote, promoteCheck, refreshCheck, runLab, securityCheck, setSecurity, setSupply, startPop, supplyCheck, takeNode, type Supply } from './model/play5';
 import { acceptCounter, acceptCounterCheck, askCheck, checkCheck, closeCheck, closeDeal, divest, divestCheck, hostileBid, hostileCheck, makeOffer, mergerCheck, mergerOfEquals, offerCheck, raiseBid, raiseBidCheck, runCheck, withdraw, withdrawCheck, type CheckId, type Terms } from './model/mna';
 import { acquireCheck, acquireRival, rivalPrice, bidsFor, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
@@ -54,6 +55,14 @@ export type Action =
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'acquireRival'; index: number }
   | { type: 'tradeSale'; bid: string; ask?: number }
+  | { type: 'supply'; to: string }
+  | { type: 'refreshProduct' }
+  | { type: 'popup'; tier: number }
+  | { type: 'priceLab' }
+  | { type: 'coachFranchises' }
+  | { type: 'promote'; role: string }
+  | { type: 'skill'; id: string }
+  | { type: 'security'; level: number }
   | { type: 'check'; targetId: string; kind: string }
   | { type: 'makeOffer'; targetId: string; price: number }
   | { type: 'acceptCounter'; targetId: string }
@@ -344,6 +353,58 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         mult = action.ask;
       }
       try { tradeSale(s, action.bid, mult); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'supply': {
+      const c = supplyCheck(s, action.to);
+      if (!c.ok) fail(c.reason!);
+      setSupply(s, action.to as Supply);
+      break;
+    }
+    case 'refreshProduct': {
+      const c = refreshCheck(s);
+      if (!c.ok) fail(c.reason!);
+      post(L, m, 'Product refresh', [dr('otherCosts', c.fee), cr('cash', c.fee)], { cf: 'operating' });
+      playOf(s).refreshed = s.month;
+      addTemporaryEffect(s, 'refresh', 'Refreshed product', 9, { demandMult: 1.06 });
+      s.quality = Math.min(100, s.quality + 2);
+      logItem(s, 'milestone', 'You refreshed your product', 'Demand is up 6% for nine months and the product feels new again.');
+      break;
+    }
+    case 'popup': {
+      const c = popCheck(s, action.tier);
+      if (!c.ok) fail(c.reason!);
+      startPop(s, action.tier);
+      break;
+    }
+    case 'priceLab': {
+      const c = labCheck(s);
+      if (!c.ok) fail(c.reason!);
+      runLab(s);
+      break;
+    }
+    case 'coachFranchises': {
+      const c = coachCheck(s);
+      if (!c.ok) fail(c.reason!);
+      coachFranchises(s);
+      break;
+    }
+    case 'promote': {
+      const c = promoteCheck(s, action.role);
+      if (!c.ok) fail(c.reason!);
+      promote(s, action.role as RoleId);
+      break;
+    }
+    case 'skill': {
+      const c = nodeCheck(s, action.id);
+      if (!c.ok) fail(c.reason!);
+      takeNode(s, action.id);
+      break;
+    }
+    case 'security': {
+      const c = securityCheck(s, action.level);
+      if (!c.ok) fail(c.reason!);
+      setSecurity(s, action.level as 0 | 1 | 2);
       break;
     }
     case 'check': {

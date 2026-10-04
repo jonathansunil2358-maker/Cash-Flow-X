@@ -40,6 +40,7 @@ import { advanceStrategy } from './model/strategy';
 import { advanceCustomers } from './model/customers';
 import { advanceDeals, hedgedCostMult } from './model/deals';
 import { advanceMna } from './model/mna';
+import { advancePlay5 } from './model/play5Advance';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
 import { advanceSites, rentedExtraSites } from './model/sites';
@@ -286,6 +287,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceFranchises(s, rng, !!opts.simulation);
   advanceDeals(s, !!opts.simulation);
   advanceMna(s, rng, !!opts.simulation);
+  advancePlay5(s, rng, !!opts.simulation);
   advanceCustomers(s, !!opts.simulation);
   advanceStrategy(s, !!opts.simulation);
   advanceSuppliers(s, rng, !!opts.simulation);

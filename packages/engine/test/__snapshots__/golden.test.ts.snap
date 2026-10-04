@@ -18,18 +18,18 @@ exports[`golden run > 24 months of software with the reference policy 1`] = `
     "totalEquity": 2163277,
   },
   "year2": {
-    "cash": 4849733,
+    "cash": 4349733,
     "customers": 393,
     "deferredRevenue": 4272800,
-    "ebitda": 81689,
-    "equityValue": 35516309,
+    "ebitda": -418311,
+    "equityValue": 68283146,
     "grossProfit": 15353518,
     "headcount": 2,
-    "profit": -51655,
+    "profit": -551655,
     "receivables": 2100679,
     "revenue": 17453800,
     "tax": 0,
-    "totalEquity": 2111622,
+    "totalEquity": 1611622,
   },
 }
 `;

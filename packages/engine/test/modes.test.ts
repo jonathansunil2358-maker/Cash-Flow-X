@@ -45,7 +45,7 @@ describe('boss rounds', () => {
   });
 
   it('one starts at month 36, ends four months later, is deterministic, balanced and replays', () => {
-    const s = game([], 'BOSS');
+    const s = game([], 'BOSS-B');
     play(s, BOSS_EVERY);
     expect(s.status).toBe('playing');
     answer(s);
