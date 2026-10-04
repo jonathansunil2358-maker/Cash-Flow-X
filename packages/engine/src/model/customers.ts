@@ -24,7 +24,7 @@ export function setLoyalty(s: GameState, on: boolean): void {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Service desk: a few complaints a month, answered or not
+// Service desk: a few complaints a month; answering one earns a little reputation
 // ---------------------------------------------------------------------------------------------
 export interface Complaint { id: string; text: string; month: number }
 const TEXTS = ['The delivery was late', 'The price confused me', 'Nobody called me back', 'It did not match the description', 'The staff were rude', 'My order was wrong'];
@@ -109,20 +109,10 @@ export function blackFriday(s: GameState): void {
   logItem(s, 'milestone', 'Black Friday!', 'Demand surges 30% this month. Make sure you have the stock and the people to serve it, or customers will be turned away.');
 }
 
-/** Complaints left for two months sour people on you. Called each month. */
-export function advanceCustomers(s: GameState, simulation: boolean): void {
+/** Monthly upkeep: the loyalty programme's rewards. Called each month. */
+export function advanceCustomers(s: GameState, _simulation: boolean): void {
   if (loyaltyOn(s)) {
     const cost = Math.round(lastRevenue(s) * LOYALTY_COST_RATE);
     if (cost > 0) post(s.ledger, s.month, 'Loyalty programme: points and rewards', [dr('marketing', cost), cr('cash', cost)], { cf: 'operating' });
-  }
-  const old = s.month - 2;
-  if (old >= 0 && s.cust) {
-    const done = new Set(s.cust.resolved ?? []);
-    let ignored = 0;
-    for (let i = 0; i < complaintCount(s, old); i++) if (!done.has(`c${old}-${i}`)) ignored++;
-    if (ignored > 0) {
-      adjustReputation(s, -0.4 * ignored);
-      if (!simulation && ignored >= 2) logItem(s, 'warning', 'Unanswered complaints', `${ignored} complaints went unanswered and people noticed. Reputation slipped.`);
-    }
   }
 }

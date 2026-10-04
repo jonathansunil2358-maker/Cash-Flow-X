@@ -1466,6 +1466,6 @@ test('V4 Batch C: loyalty programme, service desk, influencers, regulars and Bla
   await expect.poll(async () => ((await savedGame(page)).cust?.resolved ?? []).length).toBe(1);
   const reg = biz.locator('#card-regulars');
   await reg.getByRole('button', { name: 'Open' }).click();
-  await expect(reg.getByText('Needs reputation 40.')).toBeVisible();
+  await expect(reg.getByText('Needs reputation 55.')).toBeVisible();
   for (const id of ['card-influencer', 'card-blackfriday']) await expect(biz.locator(`#${id}`)).toBeVisible();
 });

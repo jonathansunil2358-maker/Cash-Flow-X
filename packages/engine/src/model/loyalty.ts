@@ -22,7 +22,7 @@ const QUIRKS = ['always asks for the manager, politely', 'has told the whole str
 export function regularsOf(s: GameState): Regular[] {
   return [0, 1, 2, 3, 4].map((i) => {
     const h = hashSeed(`${s.seedLabel}:reg:${i}`);
-    return { name: `${FIRST[h % FIRST.length]} ${LAST[(h >>> 7) % LAST.length]}`, quirk: QUIRKS[(h >>> 14) % QUIRKS.length], needs: 40 + i * 9 };
+    return { name: `${FIRST[h % FIRST.length]} ${LAST[(h >>> 7) % LAST.length]}`, quirk: QUIRKS[(h >>> 14) % QUIRKS.length], needs: 55 + i * 9 };
   });
 }
 /** How many regulars are happy right now (reputation at or above what each one expects). */

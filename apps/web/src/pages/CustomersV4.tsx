@@ -25,7 +25,7 @@ export function ServiceDeskCard({ game }: { game: GameState }) {
   const list = complaintsOf(game);
   return (
     <Fold id="card-service" title="Service desk" summary={`${list.length} complaint${list.length === 1 ? '' : 's'} waiting. ${custOf(game).fixed ?? 0} fixed so far.`}
-      subtitle={`Each month a few customers complain. Answering one costs a goodwill gesture of ${formatGBP(complaintCost(game), { compact: true })} and lifts reputation a little; complaints left for two months cost reputation.`}>
+      subtitle={`Each month a few customers complain. Answering one costs a goodwill gesture of ${formatGBP(complaintCost(game), { compact: true })} and lifts reputation a little. Ignoring them costs nothing, but they are free reputation for anyone who cares.`}>
       {list.length === 0 ? <p className="text-sm text-ink-2">Nothing waiting. Quiet desk.</p> : (
         <ul className="space-y-2">
           {list.map((c) => {

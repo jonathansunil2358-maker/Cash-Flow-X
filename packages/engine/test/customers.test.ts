@@ -25,11 +25,12 @@ describe('customers and brand', () => {
     expect(modifiersOf(s).churnMult).toBeLessThan(c0);
     expect(() => applyActionInPlace(s, { type: 'setLoyalty', on: true })).toThrow();
     run(s, 3);
+    const withOn = modifiersOf(s).demandMult;
     applyActionInPlace(s, { type: 'setLoyalty', on: false });
-    expect(modifiersOf(s).demandMult).toBeCloseTo(d0, 5);
+    expect(modifiersOf(s).demandMult).toBeCloseTo(withOn / 1.03, 5);
   });
 
-  it('complaints can be answered; ignored ones cost reputation', () => {
+  it('complaints can be answered, and answering them earns reputation', () => {
     const s = company('CUS-SERVICE');
     const first = complaintsOf(s);
     expect(first.length).toBeGreaterThan(0);
