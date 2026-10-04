@@ -29,8 +29,10 @@ async function skipTour(page: Page) {
   await expect(page.locator('#tour-title')).toHaveCount(0);
 }
 
-async function openDock(page: Page, name: string) {
+async function openDock(page: Page, name: string, opts: { sections?: boolean } = {}) {
   await page.getByRole('navigation', { name: 'Actions' }).getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  // The long panels are split into sections; most tests want every card on one page, so show "All".
+  if (!opts.sections && (name === 'Business' || name === 'Finance')) await page.getByRole('tab', { name: 'All', exact: true }).click();
 }
 
 test('onboard, play in real time, books balance, save/load round-trips', async ({ page }) => {
@@ -1556,4 +1558,32 @@ test('V4 Batch F: free play takes your rules and is never ranked', async ({ page
   await expect(page.locator('.cfx-hud__name')).toBeVisible();
   await expect.poll(async () => (await savedGame(page)).sandbox?.cash).toBe(3);
   expect((await savedGame(page)).server).toBeUndefined();
+});
+
+test('the Business and Finance panels are split into sections you can reach in one tap', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business', { sections: true });
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  await expect(biz.getByRole('tab', { name: 'People' })).toHaveAttribute('aria-selected', 'true');
+  await expect(biz.locator('#card-team')).toBeVisible();
+  await expect(biz.locator('#card-loyalty')).toBeHidden();
+  await biz.getByRole('tab', { name: 'Selling' }).click();
+  await expect(biz.locator('#card-loyalty')).toBeVisible();
+  await expect(biz.locator('#card-team')).toBeHidden();
+  await biz.getByRole('tab', { name: 'Strategy' }).click();
+  await expect(biz.locator('#card-cycle')).toBeVisible();
+  // The last section is remembered next time.
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await openDock(page, 'Business', { sections: true });
+  await expect(page.getByRole('dialog', { name: 'Run the business' }).getByRole('tab', { name: 'Strategy' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await openDock(page, 'Finance', { sections: true });
+  const fin = page.getByRole('dialog').first();
+  await expect(fin.getByRole('tab', { name: 'Borrow' })).toHaveAttribute('aria-selected', 'true');
+  await fin.getByRole('tab', { name: 'Deals' }).click();
+  await expect(fin.locator('#card-sale')).toBeVisible();
 });

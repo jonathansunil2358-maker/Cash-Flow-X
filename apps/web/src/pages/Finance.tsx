@@ -5,6 +5,7 @@ import {
   formatGBP, formatPct, leasesCurrentPortion, loanOffer, loanRate, monthLabel, overdraftLimit, ownership, scheduledRepayment, spreadFor, type GameState,
 } from '@cfx/engine';
 import { useState } from 'react';
+import { Grouped } from '../components/Grouped';
 import { Button, Card, Field, KeyValue, MoneyInput, NumberInput, PageTitle, StatusPill } from '../components/ui';
 import { useGame } from '../store';
 
@@ -12,25 +13,28 @@ export function Finance({ game }: { game: GameState }) {
   return (
     <div>
       <PageTitle title="Finance" subtitle="How the business is funded: debt, equity, retained profit. Each choice has a cost: interest and covenants, dilution, or growth you did not fund." />
-      <div className="grid gap-5 lg:grid-cols-2">
-        <LoanCard game={game} />
-        <div className="space-y-5">
-          <CovenantCard game={game} />
-          <OverdraftCard game={game} />
-        </div>
-        <EquityCard game={game} />
-        <DividendCard game={game} />
-        <TreasuryCard game={game} />
-        <VentureCard game={game} />
-        <VcCard game={game} />
-        <CrowdCard game={game} />
-        <HedgeCard game={game} />
-        <PatentCard game={game} />
-        <AcquireCard game={game} />
-        <SaleCard game={game} />
-        <TaxCard game={game} />
-        {game.leases.length > 0 && <LeasesCard game={game} />}
-      </div>
+      <Grouped id="finance" gridClass="grid gap-5 lg:grid-cols-2" groups={[
+        {
+          id: 'borrow', label: 'Borrow', blurb: 'Loans, your overdraft and the covenants banks hold you to.',
+          items: <><LoanCard game={game} /><div className="space-y-5"><CovenantCard game={game} /><OverdraftCard game={game} /></div>{game.leases.length > 0 && <LeasesCard game={game} />}</>,
+        },
+        {
+          id: 'equity', label: 'Equity', blurb: 'Raising money from investors, paying yourself, and funds.',
+          items: <><EquityCard game={game} /><VcCard game={game} /><CrowdCard game={game} /><DividendCard game={game} /></>,
+        },
+        {
+          id: 'invest', label: 'Invest', blurb: 'Put spare cash to work, and protect it.',
+          items: <><TreasuryCard game={game} /><VentureCard game={game} /><HedgeCard game={game} /><PatentCard game={game} /></>,
+        },
+        {
+          id: 'deals', label: 'Deals', blurb: 'Buy a rival or sell the company.',
+          items: <><AcquireCard game={game} /><SaleCard game={game} /></>,
+        },
+        {
+          id: 'tax', label: 'Tax', blurb: 'What you owe the taxman.',
+          items: <TaxCard game={game} />,
+        },
+      ]} />
     </div>
   );
 }

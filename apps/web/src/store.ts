@@ -973,7 +973,13 @@ export const useGame = create<Store>((set, get) => {
 
     openSheet(sheet, tab, scrollTo) {
       set({ sheet, sceneFocus: null, ...(tab ? { booksTab: tab } : {}) });
-      if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250);
+      if (scrollTo) {
+        // Once the panel is on screen: switch to the section that holds the card, then bring it into view.
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('cfx:reveal', { detail: scrollTo }));
+          setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+        }, 250);
+      }
     },
 
     setSceneFocus(sceneFocus) {
