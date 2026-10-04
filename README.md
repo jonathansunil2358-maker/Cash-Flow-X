@@ -53,6 +53,7 @@ construction, and an integrity check proves it every month.
 | Together | Co-op links where a friend advises or watches your live company (only you can act), trading cards you can gift, a holding-company rivalry, a monthly season theme and a hall-of-fame skyline |
 | Feel | Penny the guide, a seasonal island, sound packs, accessibility settings (font, text size, colour-safe, calm mode), keyboard shortcuts and a replay theatre |
 | Long term | A dynasty family tree with inheritance gems, mastery challenges, and a £100m empire venture |
+| Growing pains | Hiring past 10, 25, 50 and 100 staff moves you to bigger premises (a capitalised fit-out and a higher base rent, with a warning before you hire), and running above 95% of capacity for months builds team strain that wears down quality, reputation and capacity |
 | Leaderboards | Net worth, prestige count and holding companies; all-time and monthly seasons with gem rewards; Hardcore badge |
 
 ## Repository layout

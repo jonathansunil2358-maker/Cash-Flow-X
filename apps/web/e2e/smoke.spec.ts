@@ -308,7 +308,7 @@ test('the daily challenge: the same company for everyone, practise or play ranke
   await expect(card.getByText(/Everyone plays the same company for 24 months/)).toBeVisible();
   await expect(card.getByLabel('Time left today')).toHaveText(/^\d\d:\d\d:\d\d$/);
   const name = await card.locator('.font-display').nth(1).innerText();
-  expect(name).toMatch(/^Daily \w+ Ltd$/);
+  expect(name).toMatch(/^Daily [\w-]+ Ltd$/);
 
   // Ranked: it replaces the current company, and can only be done once a day.
   await card.getByRole('button', { name: "Play today's challenge" }).click();
@@ -1400,4 +1400,16 @@ test('V3 Batch F: mastery challenges, dynasty and the empire venture', async ({ 
   await expect(missions.locator('#card-dynasty').getByText('Finish a company')).toBeVisible();
   await expect(missions.locator('#card-dynasty').getByRole('button', { name: 'No inheritance waiting' })).toBeDisabled();
   await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+});
+
+test('growing pains: team strain and premises show in the Business panel', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const sheet = page.getByRole('dialog', { name: 'Business' });
+  await expect(sheet.getByText('Team strain')).toBeVisible();
+  await expect(sheet.getByText(/^Fits up to \d+ staff|Largest site/)).toBeVisible();
 });

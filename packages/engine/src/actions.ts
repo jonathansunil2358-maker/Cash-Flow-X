@@ -17,6 +17,7 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
 import { BOOSTS, type BoostId } from './model/perks';
 import { prestigeCheck, prestigeThreshold } from './model/prestige';
 import { prestigeBonus, prestigeTitle } from './model/rank';
@@ -184,7 +185,15 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       const role = ind.roles[action.role];
       const recruitment = recruitmentFee(s, action.role) * action.count;
       const equipment = ind.equipmentPerHire * action.count;
-      requireFunds(s, recruitment + equipment, 'recruitment and equipment');
+      // Growing past a staff threshold means moving to bigger premises (a capitalised fit-out).
+      const move = premisesMove(s, ind, action.count);
+      const fitOut = move?.fitOut ?? 0;
+      requireFunds(s, recruitment + equipment + fitOut, fitOut ? 'recruitment, equipment and the move to bigger premises' : 'recruitment and equipment');
+      if (move && fitOut > 0) {
+        post(L, m, 'Fit-out of bigger premises', [dr('ppe', fitOut), cr('cash', fitOut)], { cf: 'investing', cfLabel: 'Purchase of property, plant & equipment' });
+        s.ppeAssets.push({ id: newId(s, 'A'), label: 'Premises fit-out', cost: fitOut, lifeMonths: FIT_OUT_LIFE_MONTHS, accumulated: 0 });
+        logItem(s, 'notice', 'Moved to bigger premises', `Your team outgrew its space at ${move.staffLimit} staff. Fit-out ${formatGBP(fitOut)} capitalised over 7 years, and base rent rises.`);
+      }
       const label = `${action.count} × ${role.title}`;
       post(L, m, `Recruitment fees: ${label}`, [dr('recruitment', recruitment), cr('cash', recruitment)], { cf: 'operating' });
       if (equipment > 0) {

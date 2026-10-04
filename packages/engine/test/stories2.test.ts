@@ -12,7 +12,8 @@ describe('new story events', () => {
       const def = CHOICE_EVENTS.find((e) => e.id === id);
       expect(def, id).toBeDefined();
       for (const roll of [0, 0.5, 0.999]) {
-        const probe = play(newGame({ companyName: 'S', industryId: 'software', seed: `ST-${id}`, difficulty: 'easy' }), 30);
+        const probe = play(newGame({ companyName: 'S', industryId: 'software', seed: `ST-${id}`, difficulty: 'easy' }), 20);
+        expect(probe.status, `${id} probe`).toBe('playing');
         probe.ledger.balances.cash += 200_000_00;
         probe.ledger.balances.shareCapital -= 200_000_00;
         probe.morale = 40;

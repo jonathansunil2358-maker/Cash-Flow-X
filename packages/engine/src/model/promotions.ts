@@ -17,6 +17,9 @@ const MIN_SETUP_FEE: Pence = gbp(500);
 /** Seasonal demand multiplier for the month being simulated (mean 1.0 over the year). */
 export const seasonFactor = (s: GameState, ind: IndustryConfig): number => ind.seasonality[monthOfYear(s.month)] ?? 1;
 
+/** The seasonal multiplier for any month number (used to look ahead). */
+export const seasonalFactor = (ind: IndustryConfig, month: number): number => ind.seasonality[monthOfYear(month)] ?? 1;
+
 /** The price customers actually pay this month, after any promotion. */
 export const effectivePrice = (s: GameState): Pence =>
   s.promo ? Math.round(s.price * (1 - s.promo.discountPct / 100)) : s.price;
