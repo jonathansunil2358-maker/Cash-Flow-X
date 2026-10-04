@@ -19,7 +19,7 @@ function gen(seed: string): () => number {
   };
 }
 
-export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris';
+export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud';
 export const MINI_GEMS = (points: number): number => (points >= 85 ? 12 : points >= 60 ? 7 : points >= 30 ? 3 : 0);
 
 export interface MiniResult { day: string; points: number }
@@ -166,4 +166,117 @@ export function tetrisScore(t: Tetris, placement: Record<string, number>): { poi
   const overdrawnWeeks = bal.filter((b) => b < 0).length;
   const worst = lowest < 0 ? -lowest : 0;
   return { points: Math.max(0, 100 - overdrawnWeeks * 18 - Math.min(40, Math.round(worst / 1000_00) * 6)), lowest, valid };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Boardroom pitch: three directors, each with a different thing they care about
+// ---------------------------------------------------------------------------------------------
+export interface Director { name: string; title: string; wants: string }
+const DIRECTORS = ['Dame Alice Marlow', 'Raj Chowdhury', 'Ingrid Sørensen', 'Colm Brady', 'Mei Tanaka', 'Hassan Idris'];
+const DIRECTOR_TITLES = ['Chair', 'Finance director', 'Operations lead', 'Investor representative', 'Customer champion'];
+export function directorsOf(day: string): Director[] {
+  const r = gen(`board|${day}`);
+  const ids = ['growth', 'margin', 'profit', 'liquidity', 'debt', 'runway'];
+  const pool = [...ids];
+  const names = [...DIRECTORS];
+  return DIRECTOR_TITLES.slice(0, 3).map((title) => ({ name: names.splice(Math.floor(r() * names.length), 1)[0], title, wants: pool.splice(Math.floor(r() * pool.length), 1)[0] }));
+}
+/** One number per director. A strong number they care about wins 34; a weak one loses 10. */
+export function boardroomScore(s: GameState, day: string, picks: readonly string[]): { points: number; notes: string[] } {
+  const metrics = pitchMetrics(s);
+  const dirs = directorsOf(day);
+  let points = 0;
+  const notes: string[] = [];
+  dirs.forEach((d, i) => {
+    const m = metrics.find((x) => x.id === picks[i]);
+    if (!m) { notes.push(`${d.name} got nothing from you.`); return; }
+    if (m.id === d.wants) {
+      points += m.strong ? 34 : 4;
+      notes.push(`${d.name} wanted ${m.label.toLowerCase()}: ${m.strong ? 'strong, and they noticed.' : 'weak, and they noticed that too.'}`);
+    } else {
+      points += m.strong ? 12 : -10;
+      notes.push(`${d.name} did not care about ${m.label.toLowerCase()}: ${m.strong ? 'it is strong but off-topic.' : 'it is weak and off-topic.'}`);
+    }
+  });
+  return { points: Math.max(0, Math.min(100, points)), notes };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Crisis call centre: pick the calls that fit your hour
+// ---------------------------------------------------------------------------------------------
+export interface Call { id: string; who: string; issue: string; urgency: number; minutes: number }
+const ISSUES = ['A late delivery', 'A faulty item', 'A billing mistake', 'A recall query', 'A refund demand', 'A press enquiry', 'A broken website link', 'A lost parcel', 'A missing invoice'];
+const WHO = ['Ms Patel', 'A big client', 'Mr Evans', 'A local journalist', 'Ms Okoye', 'A regular', 'A new customer', 'Mr Jansen', 'A supplier'];
+export const CALL_BUDGET = 30;
+export function callsOf(day: string): Call[] {
+  const r = gen(`calls|${day}`);
+  return Array.from({ length: 8 }, (_, i) => ({ id: `c${i}`, who: WHO[Math.floor(r() * WHO.length)], issue: ISSUES[Math.floor(r() * ISSUES.length)], urgency: 1 + Math.floor(r() * 5), minutes: 5 * (1 + Math.floor(r() * 4)) }));
+}
+/** Best total urgency within the time budget (small enough to brute force). */
+export function bestCalls(calls: readonly Call[]): number {
+  let best = 0;
+  for (let m = 0; m < 1 << calls.length; m++) {
+    let u = 0; let t = 0;
+    for (let i = 0; i < calls.length; i++) if (m & (1 << i)) { u += calls[i].urgency; t += calls[i].minutes; }
+    if (t <= CALL_BUDGET && u > best) best = u;
+  }
+  return best;
+}
+export function callScore(calls: readonly Call[], chosen: readonly string[]): { points: number; urgency: number; minutes: number; over: boolean } {
+  const picked = calls.filter((c) => chosen.includes(c.id));
+  const urgency = picked.reduce((a, c) => a + c.urgency, 0);
+  const minutes = picked.reduce((a, c) => a + c.minutes, 0);
+  if (minutes > CALL_BUDGET) return { points: 0, urgency, minutes, over: true };
+  return { points: Math.round((urgency / Math.max(1, bestCalls(calls))) * 100), urgency, minutes, over: false };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Auction house: win lots below their worth, against hidden rival bids
+// ---------------------------------------------------------------------------------------------
+export interface Lot { id: string; name: string; worth: Pence; rivals: Pence[] }
+const LOTS = ['a warehouse lease', 'a famous brand name', 'a patent bundle', 'a delivery fleet', 'a shop on the high street', 'a customer list'];
+export function auctionOf(day: string): Lot[] {
+  const r = gen(`auction|${day}`);
+  const names = [...LOTS];
+  return Array.from({ length: 3 }, (_, i) => {
+    const worth = (20 + Math.floor(r() * 60)) * 1000_00;
+    const rivals = Array.from({ length: 3 }, () => Math.round((worth * (0.45 + r() * 0.6)) / 1000_00) * 1000_00);
+    return { id: `l${i}`, name: names.splice(Math.floor(r() * names.length), 1)[0], worth, rivals };
+  });
+}
+export const AUCTION_STEPS = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
+export function auctionScore(lots: readonly Lot[], bids: Readonly<Record<string, Pence>>): { points: number; profit: Pence; won: number } {
+  let profit = 0; let best = 0; let won = 0;
+  for (const l of lots) {
+    const top = Math.max(...l.rivals);
+    const bid = bids[l.id] ?? 0;
+    if (bid > top) { profit += l.worth - bid; won++; }
+    best += Math.max(0, l.worth - (top + 1000_00));
+  }
+  return { points: best <= 0 ? 0 : Math.max(0, Math.min(100, Math.round((profit / best) * 100))), profit, won };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Spot the fraud: two fake invoices among twelve
+// ---------------------------------------------------------------------------------------------
+export interface Invoice { id: string; supplier: string; ref: string; amount: Pence; day: string }
+const SUPPLIERS = ['Brightwater Ltd', 'Corbel Supplies', 'Delta Print', 'Elm & Oak', 'Fenwick Freight', 'Granite IT', 'Hollis Cleaning', 'Ivy Catering', 'Juno Packaging', 'Kestrel Tools', 'Lumen Energy', 'Marlow Paper'];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+export const invoicesOf = (day: string): { lines: Invoice[]; fakes: string[] } => {
+  const r = gen(`fraud|${day}`);
+  const lines: Invoice[] = SUPPLIERS.map((supplier, i) => ({ id: `i${i}`, supplier, ref: `INV-${1000 + i * 7 + Math.floor(r() * 5)}`, amount: (300 + Math.floor(r() * 4700)) * 100 + Math.floor(r() * 99), day: `${WEEKDAYS[Math.floor(r() * 5)]} ${1 + Math.floor(r() * 27)}` }));
+  const a = 3 + Math.floor(r() * 3);
+  const b = 6 + Math.floor(r() * 6);
+  // Fake one: a later invoice that reuses an earlier reference number. Fake two: a round amount dated on a weekend.
+  lines[a].ref = lines[a - 2].ref;
+  lines[b].amount = (1000 + Math.floor(r() * 4000)) * 100;
+  lines[b].day = `${WEEKDAYS[5 + Math.floor(r() * 2)]} ${1 + Math.floor(r() * 27)}`;
+  return { lines, fakes: [lines[a].id, lines[b].id] };
+};
+export function fraudScore(day: string, flagged: readonly string[]): { found: number; falseAlarms: number; points: number } {
+  const { fakes } = invoicesOf(day);
+  const set = new Set(flagged);
+  const found = fakes.filter((f) => set.has(f)).length;
+  const falseAlarms = flagged.filter((f) => !fakes.includes(f)).length;
+  return { found, falseAlarms, points: Math.max(0, found * 50 - falseAlarms * 20) };
 }

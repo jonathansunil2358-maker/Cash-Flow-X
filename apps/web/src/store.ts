@@ -7,6 +7,7 @@ import {
   type BoxOpening, type Profile, type Rng,
   claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
   claimFestival as claimFestivalOn,
+  type MiniKind,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -129,7 +130,7 @@ interface Store {
   claimInheritance: () => void;
   claimFestival: () => void;
   takeSpareCard: (id: string) => boolean;
-  finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
+  finishMini: (kind: MiniKind, day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
   claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;

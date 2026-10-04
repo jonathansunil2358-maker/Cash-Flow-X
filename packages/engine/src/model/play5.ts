@@ -257,3 +257,26 @@ export const play5Overdraft = (s: GameState): number => (hasNode(s, 'fin3') ? 1.
 /** Everything above that modifiers.ts caches on (so a change in one of them is never missed). */
 export const play5Key = (s: GameState): string => `${supplyOf(s)}${Math.floor(productAge(s) / 6)}${mgrOf(s).map((m) => m.role[0] + m.trait[0]).join('')}${skillsKey(s)}`;
 const skillsKey = (s: GameState): string => (s.play5?.skills ?? []).join('');
+
+// ---------------------------------------------------------------------------------------------
+// Awards night and the company timeline (read-only, built from what already happened)
+// ---------------------------------------------------------------------------------------------
+export interface YearRecap { year: number; revenue: Pence; profit: Pence; best: { month: number; profit: Pence }; worst: { month: number; profit: Pence }; awards: string[]; staff: number }
+export function yearRecap(s: GameState, year: number): YearRecap | null {
+  const rows = s.history.filter((h) => Math.floor(h.month / 12) === year);
+  if (rows.length < 12) return null;
+  const pl = rows.map((r) => ({ month: r.month, ...plSummary(r.period.pl) }));
+  const profit = (x: { profit: Pence }): Pence => x.profit;
+  const best = pl.reduce((a, b) => (profit(b) > profit(a) ? b : a));
+  const worst = pl.reduce((a, b) => (profit(b) < profit(a) ? b : a));
+  return {
+    year, revenue: pl.reduce((a, x) => a + x.revenue, 0), profit: pl.reduce((a, x) => a + x.profit, 0),
+    best: { month: best.month, profit: best.profit }, worst: { month: worst.month, profit: worst.profit },
+    awards: (s.awards ?? []).filter((a) => a.year === year).map((a) => a.id), staff: rows.at(-1)?.kpis.headcount ?? 0,
+  };
+}
+export const recapYears = (s: GameState): number[] => { const out: number[] = []; for (let y = 0; y < Math.floor(s.month / 12); y++) if (yearRecap(s, y)) out.push(y); return out; };
+export interface TimelineItem { month: number; title: string; text: string }
+export function timelineOf(s: GameState): TimelineItem[] {
+  return s.log.filter((l) => l.kind === 'milestone').map((l) => ({ month: l.month, title: l.title, text: l.text })).reverse().slice(0, 80);
+}

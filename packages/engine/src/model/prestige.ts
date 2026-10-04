@@ -100,7 +100,7 @@ export interface Profile {
   cards?: Record<string, number>;
   cardsSeen?: string[];
   /** Today's results of the daily mini-games (see minigames.ts). */
-  minis?: Partial<Record<'negotiate' | 'pitch' | 'stocktake' | 'tetris', { day: string; points: number }>>;
+  minis?: Partial<Record<'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud', { day: string; points: number }>>;
   /** The strongest rival of your last company, remembered (see nemesis.ts), and finished campaign chapters. */
   nemesis?: { name: string; boss: string; catchphrase: string; company: string; stake: number };
   campaign?: number[];

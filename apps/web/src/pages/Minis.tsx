@@ -1,5 +1,5 @@
 import {
-  formatGBP, miniOf, MINI_GEMS, negOffer, negScore, negStart, negotiationOf, PITCH_PICKS, pitchMetrics, pitchPriorities, pitchScore, stockScore, stockTakeOf, stockWrong, tetrisBalances, tetrisOf,
+  AUCTION_STEPS, auctionOf, auctionScore, boardroomScore, CALL_BUDGET, callScore, callsOf, directorsOf, formatGBP, fraudScore, invoicesOf, miniOf, type MiniKind, MINI_GEMS, negOffer, negScore, negStart, negotiationOf, PITCH_PICKS, pitchMetrics, pitchPriorities, pitchScore, stockScore, stockTakeOf, stockWrong, tetrisBalances, tetrisOf,
   tetrisScore, utcDay, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
@@ -7,7 +7,7 @@ import { Button, Card } from '../components/ui';
 import { useGame } from '../store';
 import { Fold } from './Strategy';
 
-const doneNote = (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', profile: ReturnType<typeof useGame.getState>['profile'], day: string) => {
+const doneNote = (kind: MiniKind, profile: ReturnType<typeof useGame.getState>['profile'], day: string) => {
   const r = miniOf(profile, kind);
   return r && r.day === day ? `Today's game is done: ${r.points} points. A new one tomorrow.` : null;
 };
@@ -132,17 +132,148 @@ export function TetrisCard() {
   );
 }
 
-/** The four daily games together. */
+/** The eight daily games together. */
 export function GamesCards({ game }: { game: GameState }) {
   return (
     <>
-      <Card fold id="card-games" title="Daily games" subtitle="Four small games a day, each paying gems for a good score. They never change your company.">
-        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush and Cash-flow tetris.</p>
+      <Card fold id="card-games" title="Daily games" subtitle="Eight small games a day, each paying gems for a good score. They never change your company.">
+        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush, Cash-flow tetris, Boardroom pitch, Crisis call centre, Auction house and Spot the fraud.</p>
       </Card>
       <NegotiationCard />
       <PitchCard game={game} />
       <StockTakeCard />
       <TetrisCard />
+      <BoardroomCard game={game} />
+      <CallCentreCard />
+      <AuctionCard />
+      <FraudCard />
     </>
+  );
+}
+
+const pitchLabel = (id: string, game: GameState): string => pitchMetrics(game).find((m) => m.id === id)?.label ?? id;
+
+/** Three directors, three different worries: lead with a strong number for each. */
+export function BoardroomCard({ game }: { game: GameState }) {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const dirs = directorsOf(day);
+  const metrics = pitchMetrics(game);
+  const [picks, setPicks] = useState<string[]>(['', '', '']);
+  const [result, setResult] = useState<{ points: number; notes: string[] } | null>(null);
+  const done = doneNote('boardroom', profile, day);
+  const go = () => { const r = boardroomScore(game, day, picks); setResult(r); finishMini('boardroom', day, r.points); };
+  return (
+    <Fold id="card-boardroom" title="Boardroom pitch" summary={done ?? 'Three directors, three worries. Open to play.'}
+      subtitle="Each director wants to hear about a different number. Lead with a strong one for each. Their worries are written below, but they are not shy about changing the subject.">
+      <ul className="space-y-3">
+        {dirs.map((d, i) => (
+          <li key={d.name} className="text-sm">
+            <b>{d.name}</b>, {d.title}. Cares about <b>{pitchLabel(d.wants, game).toLowerCase()}</b>.
+            <select aria-label={`What to tell ${d.name}`} value={picks[i]} disabled={!!result || !!done} onChange={(e) => setPicks(picks.map((p, j) => (j === i ? e.target.value : p)))} className="ml-2 rounded-lg border border-line bg-page px-2 py-1">
+              <option value="">Choose…</option>
+              {metrics.map((m) => <option key={m.id} value={m.id}>{m.label}: {m.value}</option>)}
+            </select>
+          </li>
+        ))}
+      </ul>
+      {!result && !done && <Button className="mt-3" variant="primary" disabled={picks.some((p) => !p)} onClick={go}>Make the case</Button>}
+      {result && <div role="status" className="mt-3 space-y-1 text-sm"><p className="font-black">The board scored you {result.points} out of 100.</p><ul className="list-disc pl-5 text-xs text-ink-2">{result.notes.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Eight calls, one hour: handle the most urgent set you can fit. */
+export function CallCentreCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const calls = useMemo(() => callsOf(day), [day]);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [result, setResult] = useState<ReturnType<typeof callScore> | null>(null);
+  const done = doneNote('callcentre', profile, day);
+  const used = calls.filter((c) => chosen.includes(c.id)).reduce((a, c) => a + c.minutes, 0);
+  const toggle = (id: string) => setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  const go = () => { const r = callScore(calls, chosen); setResult(r); finishMini('callcentre', day, r.points); };
+  return (
+    <Fold id="card-callcentre" title="Crisis call centre" summary={done ?? 'Pick the calls that fit your hour. Open to play.'}
+      subtitle={`A recall has flooded the phones. You have ${CALL_BUDGET} minutes. Each call has an urgency (1 to 5 stars) and takes some minutes. Pick the set that handles the most urgency without running over.`}>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {calls.map((c) => (
+          <li key={c.id}>
+            <button type="button" role="checkbox" aria-checked={chosen.includes(c.id)} disabled={!!result || !!done} aria-label={`${c.who}: ${c.issue}, urgency ${c.urgency}, ${c.minutes} minutes`}
+              className={`cfx-tile w-full !p-2 text-left ${chosen.includes(c.id) ? 'ring-4 ring-[var(--coin)]' : ''}`} onClick={() => toggle(c.id)}>
+              <span className="cfx-tile__name !text-base">{chosen.includes(c.id) ? '☎ ' : ''}{c.who}</span>
+              <span className="cfx-tile__meta">{c.issue} · {'★'.repeat(c.urgency)} · {c.minutes} min</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className={`mt-2 text-sm font-black ${used > CALL_BUDGET ? 'text-critical-text' : ''}`}>{used} of {CALL_BUDGET} minutes used</p>
+      {!result && !done && <Button className="mt-2" variant="primary" onClick={go}>Take the calls</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.over ? `You ran over the hour (${result.minutes} minutes): 0 points.` : `You handled ${result.urgency} stars of urgency: ${result.points} points.`}</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Sealed bids against three hidden rivals: win each lot for less than it is worth. */
+export function AuctionCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const lots = useMemo(() => auctionOf(day), [day]);
+  const [bids, setBids] = useState<Record<string, number>>(() => Object.fromEntries(lots.map((l) => [l.id, Math.round(l.worth * 0.7)])));
+  const [result, setResult] = useState<ReturnType<typeof auctionScore> | null>(null);
+  const done = doneNote('auction', profile, day);
+  const go = () => { const r = auctionScore(lots, bids); setResult(r); finishMini('auction', day, r.points); };
+  return (
+    <Fold id="card-auction" title="Auction house" summary={done ?? 'Three lots, hidden rival bids. Open to play.'}
+      subtitle="Each lot has a value to you. Three rivals have already sealed their bids. Bid more than the highest and you win it and pocket the difference; bid too much and you lose money; bid too little and someone else wins.">
+      <ul className="space-y-2">
+        {lots.map((l) => (
+          <li key={l.id} className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1">Lot: {l.name}, worth <b>{formatGBP(l.worth, { compact: true })}</b></span>
+            <select aria-label={`Bid for ${l.name}`} value={bids[l.id]} disabled={!!result || !!done} onChange={(e) => setBids({ ...bids, [l.id]: Number(e.target.value) })} className="rounded-lg border border-line bg-page px-2 py-1">
+              {AUCTION_STEPS.map((p) => <option key={p} value={Math.round(l.worth * p)}>{Math.round(p * 100)}% ({formatGBP(Math.round(l.worth * p), { compact: true })})</option>)}
+            </select>
+            {result && <span className="text-xs text-ink-2">Top rival: {formatGBP(Math.max(...l.rivals), { compact: true })}</span>}
+          </li>
+        ))}
+      </ul>
+      {!result && !done && <Button className="mt-3" variant="primary" onClick={go}>Place the bids</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">You won {result.won} lot{result.won === 1 ? '' : 's'} for a profit of {formatGBP(result.profit, { compact: true })}: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Two of twelve invoices are fake: one reuses an earlier reference number, one is a round sum dated on a weekend. */
+export function FraudCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const { lines } = useMemo(() => invoicesOf(day), [day]);
+  const [flagged, setFlagged] = useState<string[]>([]);
+  const [result, setResult] = useState<ReturnType<typeof fraudScore> | null>(null);
+  const done = doneNote('fraud', profile, day);
+  const toggle = (id: string) => setFlagged((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
+  const go = () => { const r = fraudScore(day, flagged); setResult(r); finishMini('fraud', day, r.points); };
+  return (
+    <Fold id="card-fraud" title="Spot the fraud" summary={done ?? 'Two of twelve invoices are fake. Open to play.'}
+      subtitle="Two invoices are fakes. One is a later invoice that reuses an earlier reference number. The other is a round-pound sum dated on a Saturday or Sunday. Flag them; every wrong flag costs you.">
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {lines.map((l) => (
+          <li key={l.id}>
+            <button type="button" role="checkbox" aria-checked={flagged.includes(l.id)} disabled={!!result || !!done} aria-label={`${l.supplier}, ${l.ref}, ${formatGBP(l.amount)}, ${l.day}`}
+              className={`cfx-tile w-full !p-2 text-left ${flagged.includes(l.id) ? 'ring-4 ring-[var(--coin)]' : ''}`} onClick={() => toggle(l.id)}>
+              <span className="cfx-tile__name !text-base">{flagged.includes(l.id) ? '⚑ ' : ''}{l.supplier}</span>
+              <span className="cfx-tile__meta">{l.ref} · {formatGBP(l.amount)} · {l.day}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {!result && !done && <Button className="mt-3" variant="primary" onClick={go}>Report them ({flagged.length} flagged)</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">You found {result.found} of 2 with {result.falseAlarms} false alarm{result.falseAlarms === 1 ? '' : 's'}: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
   );
 }

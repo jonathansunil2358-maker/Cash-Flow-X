@@ -1476,6 +1476,37 @@ test('M&A v5: deal room, checks, haggling, terms, hostile bids and the deal book
   await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
 });
 
+test('V5: supply chain, lifecycle, pop-ups, pricing lab, managers, focus, security, awards night and four more daily games', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Business' });
+  for (const id of ['card-supply', 'card-lifecycle', 'card-popup', 'card-lab', 'card-managers', 'card-focus', 'card-security']) await expect(biz.locator(`#${id}`)).toBeVisible();
+  await biz.locator('#card-supply').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-supply').getByRole('button', { name: 'Cheapest worldwide' }).click();
+  await expect(biz.locator('#card-supply').getByRole('button', { name: 'Cheapest worldwide' })).toHaveAttribute('aria-pressed', 'true');
+  await biz.locator('#card-security').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-security').getByRole('button', { name: 'Managed' }).click();
+  await expect(biz.locator('#card-security').getByRole('button', { name: 'Managed' })).toHaveAttribute('aria-pressed', 'true');
+  await biz.locator('#card-lab').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-lab').getByRole('button', { name: /^Run a test/ }).click();
+  await expect(biz.locator('#card-lab').getByText(/Price \+5%/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  for (const id of ['card-awardsnight', 'card-timeline', 'card-boardroom', 'card-callcentre', 'card-auction', 'card-fraud']) await expect(m.locator(`#${id}`)).toBeVisible();
+  await m.locator('#card-fraud').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-fraud').getByRole('button', { name: /^Report them/ }).click();
+  await expect(m.locator('#card-fraud').getByRole('status')).toContainText('0 points');
+  await m.locator('#card-callcentre').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-callcentre').getByRole('button', { name: 'Take the calls' }).click();
+  await expect(m.locator('#card-callcentre').getByRole('status')).toContainText('0 points');
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));

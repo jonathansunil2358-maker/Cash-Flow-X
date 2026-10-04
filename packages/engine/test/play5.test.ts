@@ -124,3 +124,40 @@ describe('version 5 fun', () => {
     expect(stateChecksum(replay(toSubmission(g)))).toBe(stateChecksum(g));
   });
 });
+
+import { auctionOf, auctionScore, bestCalls, boardroomScore, callScore, callsOf, directorsOf, fraudScore, invoicesOf, pitchMetrics, CALL_BUDGET } from '../src/index';
+describe('four new daily games', () => {
+  it('boardroom: matching a strong number to each director scores best', () => {
+    const s = company('P5-BOARD');
+    const day = '2026-10-04';
+    const dirs = directorsOf(day);
+    expect(new Set(dirs.map((d) => d.wants)).size).toBe(3);
+    const best = boardroomScore(s, day, dirs.map((d) => d.wants)).points;
+    const worst = boardroomScore(s, day, ['x', 'y', 'z']).points;
+    expect(best).toBeGreaterThanOrEqual(worst);
+    expect(pitchMetrics(s)).toHaveLength(6);
+  });
+  it('call centre: the best set fits the hour and scores 100; over the hour scores 0', () => {
+    const calls = callsOf('2026-10-04');
+    expect(calls).toHaveLength(8);
+    let bestSet: string[] = []; let bu = -1;
+    for (let m = 0; m < 256; m++) { const ids = calls.filter((_, i) => m & (1 << i)).map((c) => c.id); const r = callScore(calls, ids); if (!r.over && r.urgency > bu) { bu = r.urgency; bestSet = ids; } }
+    expect(callScore(calls, bestSet).points).toBe(100);
+    expect(bu).toBe(bestCalls(calls));
+    expect(callScore(calls, calls.map((c) => c.id)).over).toBe(calls.reduce((a, c) => a + c.minutes, 0) > CALL_BUDGET);
+  });
+  it('auction: bidding just over the top rival wins the most profit', () => {
+    const lots = auctionOf('2026-10-04');
+    const perfect = Object.fromEntries(lots.map((l) => [l.id, Math.max(...l.rivals) + 1000_00]));
+    expect(auctionScore(lots, perfect).points).toBeGreaterThanOrEqual(90);
+    expect(auctionScore(lots, Object.fromEntries(lots.map((l) => [l.id, 1]))).points).toBe(0);
+  });
+  it('fraud: flagging the two fakes scores 100 and a wrong flag costs points', () => {
+    const { lines, fakes } = invoicesOf('2026-10-04');
+    expect(lines).toHaveLength(12);
+    expect(fakes).toHaveLength(2);
+    expect(fraudScore('2026-10-04', fakes).points).toBe(100);
+    const wrong = lines.find((l) => !fakes.includes(l.id))!.id;
+    expect(fraudScore('2026-10-04', [...fakes, wrong]).points).toBe(80);
+  });
+});
