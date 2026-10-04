@@ -112,6 +112,15 @@ export const SCENARIOS: Record<string, Scenario> = {
     ],
     months: 24,
   },
+  freeplay: {
+    id: 'freeplay',
+    name: 'Free play: your rules',
+    kind: 'sandbox',
+    industryId: null,
+    summary: 'No leaderboard, no pressure: pick your sector and set how much start-up cash and demand you want. For learning and fun.',
+    briefing: ['Choose any sector.', 'Set the start-up cash and how strong demand is.', 'This company is never ranked and earns no Legacy points.'],
+    months: null,
+  },
   speedrun: {
     id: 'speedrun',
     name: 'Speedrun: a £1m company, fast',

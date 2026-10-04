@@ -6,6 +6,7 @@ import {
   adoptPet as adoptPetOn, nameEom as nameEomOn, setBuildingName as setBuildingNameOn, writeDiary as writeDiaryOn, buyHat as buyHatOn, wearHat as wearHatOn, buyLand as buyLandOn, claimTrail as claimTrailOn, buyTrack as buyTrackOn, selectTrack as selectTrackOn, IRONMAN_ID, recordSprint as recordSprintOn, recordInterview as recordInterviewOn, addBoxes, addPassPoints, grantAwardBoxes, payPlayGems, payPrestigeGems, recordAnswer, seeTerm as seeTermOn, type PuzzleKind, newMilestones, claimPass as claimPassTier, learnSkill as learnSkillOn, planSlotsOf, deletePlan, savePlan, awardPrestige, buyDecor as buyDecorItem, setLogo as setLogoOnProfile, toggleDecor as toggleDecorItem, yearReview, type Logo, type YearReview, claimAlbumPage, grantSticker, openBox as openBoxReward, claimQuest as claimQuestReward, recordQuest, utcDay, type QuestEvent, buySkin, compactForServer, ownerStakeOf, equipSkin, isFixedScenario, isTitleId, RULES_VERSION, spendGemsOnBoost, stateChecksum, XP_REWARDS, type Action, type BoostId, type DifficultyId, type GameState, type NewGameOptions, type OfflineSummary,
   type BoxOpening, type Profile, type Rng,
   claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
+  claimFestival as claimFestivalOn,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -126,6 +127,7 @@ interface Store {
   marketTake: (kind: string, item: string) => boolean;
   marketGive: (kind: string, item: string, price: number) => boolean;
   claimInheritance: () => void;
+  claimFestival: () => void;
   takeSpareCard: (id: string) => boolean;
   finishMini: (kind: 'negotiate' | 'pitch' | 'stocktake' | 'tetris', day: string, points: number) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
@@ -773,6 +775,16 @@ export const useGame = create<Store>((set, get) => {
       set({ profile: persistProfile(addCardOn(get().profile, id)) });
       get().toast('good', `A gift arrived: ${cardDef(id)?.name ?? 'a card'}!`);
       playSound('success');
+    },
+
+    claimFestival() {
+      try {
+        const before = get().profile;
+        const next = claimFestivalOn(before);
+        set({ profile: persistProfile(next) });
+        get().toast('good', `Festival treat: +${next.gems - before.gems} gems.`);
+        playSound('success');
+      } catch (e) { get().toast('error', (e as Error).message); }
     },
 
     claimInheritance() {

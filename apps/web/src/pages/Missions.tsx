@@ -8,7 +8,7 @@ import { useGame } from '../store';
 import { ChallengeCard } from './Challenges';
 import { DailyChallengeCard } from './Daily';
 import { QuestsCard, TrophyCard } from './Fun';
-import { TheatreCard } from './Feel';
+import { FestivalCard, RadioCard, TheatreCard, TimelapseCard } from './Feel';
 import { MuseumCard, TrailsCard } from './Collect';
 import { GamesCards } from './Minis';
 import { DiaryCard, DocumentaryCard, EomCard, NemesisCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
@@ -122,6 +122,9 @@ export function Missions({ game }: { game: GameState }) {
       <ShareSeedCard game={game} />
       <DocumentaryCard game={game} />
       <TheatreCard game={game} />
+      <RadioCard game={game} />
+      <TimelapseCard game={game} />
+      <FestivalCard />
       <TrailsCard />
       <MasteryCard />
       <ChallengesCard sector={game.industryId} />

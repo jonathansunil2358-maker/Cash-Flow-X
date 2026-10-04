@@ -348,6 +348,8 @@ export interface GameState {
   cust?: import('./loyalty').Cust;
   /** Subsidiaries, boons, cycle stance, green steps and giving: see strategy.ts. */
   strat?: import('./strategy').Strat;
+  /** Free play: start-up cash and demand multipliers chosen at the start (never ranked). */
+  sandbox?: { cash: number; demand: number };
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

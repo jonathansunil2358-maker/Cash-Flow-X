@@ -1525,3 +1525,35 @@ test('V4 Batch E: island visits, the cosmetics market and the scenario maker', a
   await expect(page.locator('#card-market').getByText('Nothing for sale right now.')).toBeVisible();
   await expect(page.locator('#card-mentor')).toBeVisible();
 });
+
+test('V4 Batch F: island radio, timelapse and festivals, then free play', async ({ page }) => {
+  test.setTimeout(150_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const missions = page.getByRole('dialog', { name: 'Missions' });
+  await expect(missions.getByLabel('Radio bulletin')).toContainText(g.companyName);
+  await expect(missions.locator('#card-festival')).toBeVisible();
+  await missions.getByRole('button', { name: 'Make a timelapse' }).click();
+  await expect(missions.getByLabel('Timelapse')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+
+});
+
+test('V4 Batch F: free play takes your rules and is never ranked', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cfx:pref:scene3d', 'false'); });
+  await page.reload();
+  await signIn(page, 'Sandbox');
+  await page.getByRole('button', { name: /Free play/ }).click();
+  await page.getByRole('button', { name: 'Next: name it' }).click();
+  await page.getByRole('button', { name: 'Next: difficulty' }).click();
+  await page.getByLabel('Start-up cash multiplier').fill('3');
+  await page.getByRole('button', { name: 'Open for business' }).click();
+  await expect(page.locator('.cfx-hud__name')).toBeVisible();
+  await expect.poll(async () => (await savedGame(page)).sandbox?.cash).toBe(3);
+  expect((await savedGame(page)).server).toBeUndefined();
+});

@@ -63,6 +63,8 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
   const [mods, setMods] = useState<string[]>([]);
   const [culture, setCulture] = useState<string | null>(null);
   const [origin, setOrigin] = useState<string | null>(null);
+  const [sbCash, setSbCash] = useState(1);
+  const [sbDemand, setSbDemand] = useState(1);
   const [seed, setSeed] = useState(() => {
     try { const q = new URLSearchParams(window.location.search).get('seed'); return q && /^[A-Za-z0-9-]{1,32}$/.test(q) ? q.toUpperCase() : randomSeedLabel(); } catch { return randomSeedLabel(); }
   });
@@ -82,7 +84,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
     setBusy(true);
     await start({
     companyName: name.trim() || defaultName, industryId: ind.id, seed: seed.trim() || randomSeedLabel(), scenarioId,
-    difficulty, equipmentFinance: finance, icon, modifiers: difficulty === 'hard' || caseStudy ? [] : [...mods, ...(culture ? [culture] : []), ...(origin ? [origin] : [])],
+    difficulty, equipmentFinance: finance, icon, ...(scenarioId === 'freeplay' ? { sandbox: { cash: sbCash, demand: sbDemand } } : {}), modifiers: difficulty === 'hard' || caseStudy ? [] : [...mods, ...(culture ? [culture] : []), ...(origin ? [origin] : [])],
     });
     setBusy(false);
   };
@@ -124,6 +126,9 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
               </button>
             )}
             <button type="button" className="cfx-btn is-lg w-full" onClick={() => { setScenarioId('standard'); setStep('sector'); }}>New company</button>
+            <button type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId('freeplay'); setStep('sector'); }}>
+              Free play: your rules (unranked)
+            </button>
             <button type="button" className="cfx-btn is-soft w-full" onClick={() => { setScenarioId('speedrun'); setStep('sector'); }}>
               Speedrun: a £1m company, fast{profile.speedBest ? ` (your best: ${profile.speedBest} months)` : ''}
             </button>
@@ -360,6 +365,19 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
               <button type="button" className="cfx-btn is-soft is-sm" aria-label="Random seed" onClick={() => setSeed(randomSeedLabel())}>↻</button>
             </div>
           </details>
+
+          {scenarioId === 'freeplay' && (
+            <section className="cfx-panel !p-3" aria-label="Free play rules">
+              <div className="font-display text-lg">Your rules</div>
+              <label className="mt-2 block text-sm font-bold">Start-up cash: ×{sbCash.toFixed(1)}
+                <input type="range" min={0.5} max={5} step={0.5} value={sbCash} onChange={(e) => setSbCash(Number(e.target.value))} className="w-full" aria-label="Start-up cash multiplier" />
+              </label>
+              <label className="mt-2 block text-sm font-bold">Demand: ×{sbDemand.toFixed(1)}
+                <input type="range" min={0.5} max={2} step={0.1} value={sbDemand} onChange={(e) => setSbDemand(Number(e.target.value))} className="w-full" aria-label="Demand multiplier" />
+              </label>
+              <p className="mt-1 text-xs text-ink-2">Never ranked and earns no Legacy points.</p>
+            </section>
+          )}
 
           <div className="mt-auto flex gap-2">
             <button type="button" className="cfx-btn is-soft" onClick={() => setStep('identity')}>Back</button>
