@@ -1447,3 +1447,25 @@ test('V4 Batch B: training academy, where we work, innovation day and poaching a
   await academy.getByRole('button', { name: 'Open' }).click();
   await expect(academy.getByText('Customer service')).toBeVisible();
 });
+
+test('V4 Batch C: loyalty programme, service desk, influencers, regulars and Black Friday', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const loy = biz.locator('#card-loyalty');
+  await loy.getByRole('button', { name: 'Open' }).click();
+  await loy.getByRole('button', { name: 'Launch the programme' }).click();
+  await expect.poll(async () => (await savedGame(page)).cust?.loyalty).toBe(true);
+  const desk = biz.locator('#card-service');
+  await desk.getByRole('button', { name: 'Open' }).click();
+  await desk.getByRole('button', { name: 'Make it right' }).first().click();
+  await expect.poll(async () => ((await savedGame(page)).cust?.resolved ?? []).length).toBe(1);
+  const reg = biz.locator('#card-regulars');
+  await reg.getByRole('button', { name: 'Open' }).click();
+  await expect(reg.getByText('Needs reputation 40.')).toBeVisible();
+  for (const id of ['card-influencer', 'card-blackfriday']) await expect(biz.locator(`#${id}`)).toBeVisible();
+});

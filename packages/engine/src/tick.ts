@@ -36,6 +36,7 @@ import { exportUpkeep } from './model/export';
 import { advanceBoss } from './model/boss';
 import { advanceAudit } from './model/audit';
 import { advanceVentures } from './model/venture';
+import { advanceCustomers } from './model/customers';
 import { advanceDeals, hedgedCostMult } from './model/deals';
 import { advanceAwards } from './model/awards';
 import { advanceBoard } from './model/board';
@@ -282,6 +283,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   advanceVentures(s, rng, !!opts.simulation);
   advanceFranchises(s, rng, !!opts.simulation);
   advanceDeals(s, !!opts.simulation);
+  advanceCustomers(s, !!opts.simulation);
   advanceSuppliers(s, rng, !!opts.simulation);
 
   // 11. Close the month

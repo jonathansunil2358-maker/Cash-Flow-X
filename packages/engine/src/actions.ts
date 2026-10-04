@@ -17,6 +17,7 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
 import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
 import { FIT_OUT_LIFE_MONTHS, premisesMove } from './model/growth';
@@ -58,6 +59,10 @@ export type Action =
   | { type: 'takeCourse'; course: string }
   | { type: 'setWorkstyle'; style: Workstyle }
   | { type: 'innovationDay' }
+  | { type: 'setLoyalty'; on: boolean }
+  | { type: 'resolveComplaint'; id: string }
+  | { type: 'influencer'; tier: string }
+  | { type: 'blackFriday' }
   | { type: 'headhunt'; role: RoleId }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
@@ -347,6 +352,30 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       const check = workstyleCheck(s, action.style);
       if (!check.ok) fail(check.reason!);
       setWorkstyle(s, action.style);
+      break;
+    }
+    case 'setLoyalty': {
+      const check = loyaltyCheck(s, !!action.on);
+      if (!check.ok) fail(check.reason!);
+      setLoyalty(s, !!action.on);
+      break;
+    }
+    case 'resolveComplaint': {
+      const check = complaintCheck(s, String(action.id));
+      if (!check.ok) fail(check.reason!);
+      resolveComplaint(s, String(action.id));
+      break;
+    }
+    case 'influencer': {
+      const check = influencerCheck(s, String(action.tier));
+      if (!check.ok) fail(check.reason!);
+      signInfluencer(s, String(action.tier));
+      break;
+    }
+    case 'blackFriday': {
+      const check = blackFridayCheck(s);
+      if (!check.ok) fail(check.reason!);
+      blackFriday(s);
       break;
     }
     case 'innovationDay': {

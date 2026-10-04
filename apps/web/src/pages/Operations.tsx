@@ -4,6 +4,7 @@ import {
   MAX_HIRE_AT_ONCE, recruitmentFee, ROLE_IDS, supplierCostMultiplier, termsDemandMultiplier, upgradeOptions, type GameState, type RoleId,
 } from '@cfx/engine';
 import { useState } from 'react';
+import { BlackFridayCard, InfluencerCard, LoyaltyCard, RegularsCard, ServiceDeskCard } from './CustomersV4';
 import { AcademyCard, HeadhuntCard, InnovationCard, WorkstyleCard } from './PeopleV4';
 import { DesignCard, ExportCard, FranchiseCard, HiringMarketCard, PropertyCard, ReviewsCard, SegmentsCard, SupplierCard } from './Depth';
 import { Button, Card, Field, Info, KeyValue, MoneyInput, NumberInput, PageTitle } from '../components/ui';
@@ -65,6 +66,11 @@ export function Operations({ game }: { game: GameState }) {
         <RumourCard game={game} />
         <TeamCard game={game} />
         <SegmentsCard game={game} />
+        <LoyaltyCard game={game} />
+        <ServiceDeskCard game={game} />
+        <InfluencerCard game={game} />
+        <RegularsCard game={game} />
+        <BlackFridayCard game={game} />
         <SupplierCard game={game} />
         <FranchiseCard game={game} />
         <DesignCard game={game} />

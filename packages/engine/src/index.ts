@@ -24,6 +24,8 @@ export * from './model/modifiers';
 export * from './model/venture';
 export * from './model/deals';
 export * from './model/people';
+export * from './model/loyalty';
+export * from './model/customers';
 export * from './model/boss';
 export * from './model/suppliers';
 export * from './model/franchise';
