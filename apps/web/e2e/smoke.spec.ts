@@ -1469,3 +1469,21 @@ test('V4 Batch C: loyalty programme, service desk, influencers, regulars and Bla
   await expect(reg.getByText('Needs reputation 55.')).toBeVisible();
   for (const id of ['card-influencer', 'card-blackfriday']) await expect(biz.locator(`#${id}`)).toBeVisible();
 });
+
+test('V4 Batch D: yearly boons, cycle stance, green track, ESG and the group of companies', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Run the business' });
+  const cycle = biz.locator('#card-cycle');
+  await cycle.getByRole('button', { name: 'Open' }).click();
+  await cycle.getByRole('button', { name: 'Choose' }).first().click();
+  await expect.poll(async () => (await savedGame(page)).strat?.stance).toBeTruthy();
+  const green = biz.locator('#card-green');
+  await green.getByRole('button', { name: 'Open' }).click();
+  await expect(green.getByText('Green steps', { exact: true })).toBeVisible();
+  for (const id of ['card-boons', 'card-subs']) await expect(biz.locator(`#${id}`)).toBeVisible();
+});

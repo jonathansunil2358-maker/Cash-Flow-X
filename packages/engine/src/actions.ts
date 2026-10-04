@@ -1,7 +1,7 @@
 import { cr, dr, post } from './ledger/journal';
 import { formatGBP, type Pence } from './money';
 import { completeAcquisition } from './model/acquisitions';
-import { industryOf, ROLE_IDS, type RoleId } from './model/industries';
+import { industryOf, ROLE_IDS, type IndustryId, type RoleId } from './model/industries';
 import { loanOffer, MAX_TERM, MIN_TERM, overdraftLimit, spreadFor } from './model/loans';
 import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
@@ -17,6 +17,7 @@ import { marketCheck, openMarket } from './model/export';
 import { replyCheck, replyToReview } from './model/reviews';
 import { setSupplier, supplierCheck, type SupplierId } from './model/suppliers';
 import { startVenture, ventureCheck, type VentureKind } from './model/venture';
+import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
 import { acquireCheck, acquireRival, buyHedge, crowdCheck, filePatent, hedgeCheck, patentCheck, saleCheck, startCrowd, takeVc, tradeSale, vcCheck } from './model/deals';
@@ -63,6 +64,11 @@ export type Action =
   | { type: 'resolveComplaint'; id: string }
   | { type: 'influencer'; tier: string }
   | { type: 'blackFriday' }
+  | { type: 'foundSub'; sector: IndustryId }
+  | { type: 'pickBoon'; id: string }
+  | { type: 'setStance'; stance: 'defensive' | 'neutral' | 'expansion' }
+  | { type: 'goGreen'; step: string }
+  | { type: 'donate'; amount: Pence }
   | { type: 'headhunt'; role: RoleId }
   | { type: 'setSupplier'; supplier: SupplierId }
   | { type: 'addFranchise' }
@@ -370,6 +376,36 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
       const check = influencerCheck(s, String(action.tier));
       if (!check.ok) fail(check.reason!);
       signInfluencer(s, String(action.tier));
+      break;
+    }
+    case 'foundSub': {
+      const check = subCheck(s, String(action.sector));
+      if (!check.ok) fail(check.reason!);
+      foundSub(s, action.sector);
+      break;
+    }
+    case 'pickBoon': {
+      const check = boonCheck(s, String(action.id));
+      if (!check.ok) fail(check.reason!);
+      pickBoon(s, String(action.id));
+      break;
+    }
+    case 'setStance': {
+      const check = stanceCheck(s, String(action.stance));
+      if (!check.ok) fail(check.reason!);
+      setStance(s, action.stance);
+      break;
+    }
+    case 'goGreen': {
+      const check = greenCheck(s, String(action.step));
+      if (!check.ok) fail(check.reason!);
+      goGreen(s, String(action.step));
+      break;
+    }
+    case 'donate': {
+      const check = donateCheck(s, action.amount);
+      if (!check.ok) fail(check.reason!);
+      donate(s, action.amount);
       break;
     }
     case 'blackFriday': {
