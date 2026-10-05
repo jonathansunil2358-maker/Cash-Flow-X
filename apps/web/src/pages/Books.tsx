@@ -53,7 +53,7 @@ export function FinancePanel({ game }: { game: GameState }) {
   const needed = LEVEL_UNLOCKS.find((u) => u.feature === 'acquisitions')!.level;
   return (
     <div className="space-y-4">
-      <Tabs value={tab} onChange={setTab} items={[{ id: 'funding', label: 'Funding' }, ...(ONLINE ? [{ id: 'investors' as const, label: offers ? `Investors (${offers})` : 'Investors' }] : []), { id: 'deals', label: canDeal ? 'M&A' : `M&A (level ${needed})` }]} />
+      <Tabs value={tab} onChange={setTab} items={[{ id: 'funding', label: 'Funding' }, ...(ONLINE || game.outsideHolders.length > 0 ? [{ id: 'investors' as const, label: offers ? `Investors (${offers})` : 'Investors' }] : []), { id: 'deals', label: canDeal ? 'M&A' : `M&A (level ${needed})` }]} />
       {tab === 'funding' && <><Finance game={game} /><CalendarCard game={game} /><ListingCard game={game} /></>}
       {tab === 'investors' && <Investors game={game} />}
       {tab === 'deals' && (canDeal ? <Deals game={game} /> : (

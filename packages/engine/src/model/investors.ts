@@ -1,6 +1,6 @@
 import { cr, dr, post } from '../ledger/journal';
-import { allocate, formatGBP, type Pence } from '../money';
-import { logItem, type GameState, type OutsideHolder } from './state';
+import { allocate, formatGBP, formatPct, type Pence } from '../money';
+import { logItem, ownership, type GameState, type OutsideHolder } from './state';
 import { valuationOf } from './valuation';
 
 /** Outside investors may own at most this share of a company. */
@@ -41,7 +41,7 @@ export function acceptInvestment(
   s.shares.total += shares;
   s.outsideHolders.push({
     id: inv.investmentId, investorId: inv.investorId, investorName: inv.investorName.slice(0, 24), shares, invested: inv.amount,
-    dividends: 0, buyout: 0, status: 'active',
+    dividends: 0, buyout: 0, status: 'active', since: s.month,
   });
   logItem(s, 'action', `${inv.investorName} invested ${formatGBP(inv.amount)}`,
     `New shares at a ${formatGBP(inv.preMoney)} pre-money valuation. Outside investors now own ${(outsideFraction(s) * 100).toFixed(1)}%.`);
@@ -81,4 +81,67 @@ export function buyOutHolders(s: GameState, holderIds?: string[]): Pence {
   logItem(s, 'action', 'Investors bought out',
     `Paid ${formatGBP(pay)} to ${holders.length} investor${holders.length > 1 ? 's' : ''}${pay < totalOwed ? ` (${formatGBP(totalOwed - pay)} shortfall written off)` : ''}.`);
   return pay;
+}
+
+/** Record shares issued to outside investors (angels, funds) so they can be bought back later. */
+export function addOutsideHolder(s: GameState, name: string, shares: number, invested: Pence, investorId = 'angel'): void {
+  s.outsideHolders.push({
+    id: `${investorId}-${s.month}-${s.outsideHolders.length}`, investorId, investorName: name.slice(0, 24), shares, invested,
+    dividends: 0, buyout: 0, status: 'active', since: s.month,
+  });
+}
+
+/** Holders you can bargain with: angels, funds and sellers. Players in your holding company are paid at fair value only. */
+export const isNegotiable = (h: OutsideHolder): boolean => ['vc', 'seller', 'angel'].includes(h.investorId);
+
+/** Months a new investor must stay before you can buy their shares back. */
+export const BUYBACK_LOCKUP = 6;
+const MAX_PREMIUM = 0.35;
+
+export interface BuybackQuote {
+  ok: boolean;
+  reason?: string;
+  shares: number;
+  /** What those shares are worth at your current equity valuation. */
+  fair: Pence;
+  /** Extra they ask for, as a fraction (0 for players, up to 35% for angels and funds who have done well). */
+  premium: number;
+  price: Pence;
+}
+
+/** The price to buy `pct` percent (10 to 100) of one investor's position back. */
+export function buybackQuote(s: GameState, holderId: string, pct: number): BuybackQuote {
+  const bad = (reason: string): BuybackQuote => ({ ok: false, reason, shares: 0, fair: 0, premium: 0, price: 0 });
+  const h = activeHolders(s).find((x) => x.id === holderId);
+  if (!h) return bad('That investor is not a shareholder.');
+  if (!Number.isInteger(pct) || pct < 10 || pct > 100) return bad('Choose between 10% and 100% of their stake.');
+  if (s.status !== 'playing') return bad('The company is not trading.');
+  if (h.since !== undefined && s.month - h.since < BUYBACK_LOCKUP) return bad(`They are locked in until month ${h.since + BUYBACK_LOCKUP}.`);
+  const shares = pct === 100 ? h.shares : Math.max(1, Math.floor((h.shares * pct) / 100));
+  const equity = valuationOf(s).equityValue;
+  if (equity <= 0) return bad('The company has no valuation to buy shares at.');
+  const fair = Math.round((equity * shares) / s.shares.total);
+  const gain = h.invested > 0 ? (equity * h.shares) / s.shares.total / h.invested - 1 : 0;
+  const premium = isNegotiable(h) ? Math.min(MAX_PREMIUM, 0.1 + 0.08 * Math.max(0, gain)) : 0;
+  const price = Math.round(fair * (1 + premium));
+  if (price < 1_000_00) return bad('That stake is worth less than £1,000: buy more of it at once.');
+  if (price > s.ledger.balances.cash) return { ok: false, reason: `You need ${formatGBP(price)} in the bank.`, shares, fair, premium, price };
+  return { ok: true, shares, fair, premium, price };
+}
+
+/** Buy shares back from one investor (a buy-back: cash out, shares cancelled, charged to retained earnings). */
+export function buyBackFrom(s: GameState, holderId: string, pct: number): Pence {
+  const q = buybackQuote(s, holderId, pct);
+  if (!q.ok) throw new Error(q.reason);
+  const h = s.outsideHolders.find((x) => x.id === holderId)!;
+  post(s.ledger, s.month, `Shares bought back from ${h.investorName}`, [dr('retainedEarnings', q.price), cr('cash', q.price)], {
+    cf: 'financing', cfLabel: 'Purchase of own shares',
+  });
+  h.shares -= q.shares;
+  h.buyout += q.price;
+  s.shares.total -= q.shares;
+  if (h.shares <= 0) h.status = 'bought-out';
+  logItem(s, 'action', `Bought back shares from ${h.investorName}`,
+    `Paid ${formatGBP(q.price)} for ${formatPct(q.shares / (s.shares.total + q.shares))} of the company${q.premium > 0 ? `, ${(q.premium * 100).toFixed(0)}% above fair value because they did well` : ' at fair value'}. You now own ${(ownership(s) * 100).toFixed(1)}%.`);
+  return q.price;
 }

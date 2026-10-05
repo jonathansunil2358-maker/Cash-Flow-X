@@ -6,7 +6,7 @@ import { loanOffer, MAX_TERM, MIN_TERM, overdraftLimit, spreadFor } from './mode
 import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
-import { acceptInvestment, buyOutHolders, distributeDividend } from './model/investors';
+import { acceptInvestment, addOutsideHolder, buyBackFrom, buyOutHolders, distributeDividend } from './model/investors';
 import { addTemporaryEffect, resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
 import { addFranchise, franchiseCheck } from './model/franchise';
@@ -140,6 +140,7 @@ export type Action =
   | { type: 'setGuildLevel'; level: number }
   | { type: 'acceptInvestment'; investmentId: string; investorId: string; investorName: string; amount: Pence; preMoney: Pence }
   | { type: 'buyOutInvestors'; holderIds: string[] }
+  | { type: 'buyBackShares'; holderId: string; pct: number }
   | { type: 'retire' };
 
 export class ActionError extends Error {}
@@ -756,6 +757,7 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         cf: 'financing', cfLabel: 'Proceeds from issue of shares (net of costs)',
       });
       s.shares.total += newShares;
+      addOutsideHolder(s, action.amount < 250_000_00 ? 'Angel investors' : 'Venture investors', newShares, action.amount - fee);
       s.lastEquityRaiseMonth = m;
       logItem(s, 'action', `Raised ${formatGBP(action.amount)} of equity`,
         `Pre-money valuation ${formatGBP(terms.preMoney)}. Your ownership fell from ${(before * 100).toFixed(1)}% to ${(ownership(s) * 100).toFixed(1)}%.`);
@@ -962,6 +964,14 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
     case 'buyOutInvestors': {
       if (!Array.isArray(action.holderIds) || !action.holderIds.length) fail('Choose investors to buy out.');
       buyOutHolders(s, action.holderIds);
+      break;
+    }
+    case 'buyBackShares': {
+      try {
+        buyBackFrom(s, action.holderId, action.pct);
+      } catch (e) {
+        fail((e as Error).message);
+      }
       break;
     }
     case 'setAway': {

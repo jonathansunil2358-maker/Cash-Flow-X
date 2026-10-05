@@ -310,7 +310,7 @@ function finishDeal(s: GameState, t: AcquisitionTarget, talk: Talk, terms: Terms
     const pre = Math.max(1, s.history.at(-1)?.valuation?.equityValue ?? 1);
     const n = sharesFor(s, c.shares, pre);
     s.shares.total += n;
-    s.outsideHolders.push({ id: `deal-${t.id}`, investorId: 'seller', investorName: t.name.slice(0, 24), shares: n, invested: c.shares, dividends: 0, buyout: 0, status: 'active' });
+    s.outsideHolders.push({ id: `deal-${t.id}`, investorId: 'seller', investorName: t.name.slice(0, 24), shares: n, invested: c.shares, dividends: 0, buyout: 0, status: 'active', since: s.month });
   }
   const rebrand = Math.round(price * BRAND_INFO[terms.brand].costPct);
   if (rebrand > 0) post(s.ledger, s.month, `Rebranding costs: ${t.name}`, [dr('dealCosts', rebrand), cr('cash', rebrand)], { cf: 'operating' });
