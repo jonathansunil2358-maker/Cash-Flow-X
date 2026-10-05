@@ -1,4 +1,5 @@
-import { PolicyGroupCard } from './Policies';
+import { PolicyGroupCard, TopicCard } from './Policies';
+import { TOPICS } from '@cfx/engine';
 import { CouncilCard, OutsourceCard, RangeCard, StockControlCard, TrainingBudgetCard } from './Play7';
 import { LayoutCard, TempsCard, TenderCard, TiersCard } from './Play6';
 import { ManagersCard, FocusCard, FranchiseStandardsCard, LifecycleCard, PopupCard, PriceLabCard, SecurityCard, SupplyChainCard } from './Play5';
@@ -131,6 +132,10 @@ export function Operations({ game }: { game: GameState }) {
             <SecurityCard game={game} />
             <RumourCard game={game} />
           </>,
+        },
+        {
+          id: 'manage', label: 'Management', blurb: 'Dials and timed initiatives for every part of running a business, from accounting to exits.',
+          items: <>{TOPICS.map((t) => <TopicCard key={t.id} game={game} topic={t.id} />)}</>,
         },
         {
           id: 'tools', label: 'Tools', blurb: 'Advisers, risk, break-even and standing orders.',
