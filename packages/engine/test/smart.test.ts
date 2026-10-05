@@ -88,9 +88,10 @@ describe('autopilot rules', () => {
   it('set marketing from sales each month, are not in the action log, and replay identically', () => {
     const s = play(fresh('ecommerce', 'AUTO'), 6);
     applyActionInPlace(s, { type: 'setRules', rules: [{ kind: 'marketingPct', pct: 10 }] });
-    const logBefore = s.actionLog.length;
+    const countOf = () => s.actionLog.filter((a) => (a as { action: { type: string } }).action.type !== 'resolveEvent').length;
+    const logBefore = countOf();
     play(s, 8, false);
-    expect(s.actionLog.length).toBe(logBefore);
+    expect(countOf()).toBe(logBefore);
     const rev = s.history.at(-2)!;
     expect(s.marketingBudget).toBeGreaterThan(0);
     expect(rev).toBeDefined();

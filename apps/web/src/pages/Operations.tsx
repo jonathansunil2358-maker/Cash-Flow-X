@@ -1,3 +1,4 @@
+import { PolicyGroupCard } from './Policies';
 import { CouncilCard, OutsourceCard, RangeCard, StockControlCard, TrainingBudgetCard } from './Play7';
 import { LayoutCard, TempsCard, TenderCard, TiersCard } from './Play6';
 import { ManagersCard, FocusCard, FranchiseStandardsCard, LifecycleCard, PopupCard, PriceLabCard, SecurityCard, SupplyChainCard } from './Play5';
@@ -57,6 +58,7 @@ export function Operations({ game }: { game: GameState }) {
             <TeamCard game={game} />
             <MoraleCard game={game} />
             <HiringMarketCard game={game} />
+            <PolicyGroupCard game={game} group="people" />
             <HeadhuntCard game={game} />
             <AcademyCard game={game} />
             <WorkstyleCard game={game} />
@@ -77,6 +79,7 @@ export function Operations({ game }: { game: GameState }) {
         {
           id: 'brand', label: 'Customers', blurb: 'Who buys from you, what they think of you, and how to win them.',
           items: <>
+            <PolicyGroupCard game={game} group="customers" />
             <SegmentsCard game={game} />
             <DesignCard game={game} />
             <LoyaltyCard game={game} />
@@ -102,6 +105,7 @@ export function Operations({ game }: { game: GameState }) {
             <PropertyCard game={game} />
             <InsuranceCard game={game} />
             <PressuresCard game={game} />
+            <PolicyGroupCard game={game} group="ops" />
             <SupplyChainCard game={game} />
             <LifecycleCard game={game} />
             <PopupCard game={game} />

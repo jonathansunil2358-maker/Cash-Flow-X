@@ -1576,6 +1576,28 @@ test('V7: council, outsourcing, training budget, range, monuments, yearbook, bad
   await expect(m.locator('#card-badges').getByLabel('Badges')).toBeVisible();
 });
 
+test('V8: policy dials in four panels', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Business' });
+  for (const id of ['card-pol-ops', 'card-pol-people', 'card-pol-customers']) await expect(biz.locator(`#${id}`)).toBeVisible();
+  await biz.locator('#card-pol-customers').getByRole('button', { name: 'Open' }).click();
+  const sponsor = biz.locator('#card-pol-customers [data-policy="sponsor"]');
+  await sponsor.getByRole('button', { name: 'Sponsor a team' }).click();
+  await expect(sponsor.getByRole('button', { name: 'Sponsor a team' })).toHaveAttribute('aria-pressed', 'true');
+  await biz.locator('#card-pol-people').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-pol-people [data-policy="socialclub"]').getByRole('button', { name: 'Fund a club' }).click();
+  await expect(biz.locator('#card-pol-people [data-policy="socialclub"]').getByRole('button', { name: 'Fund a club' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await openDock(page, 'Finance');
+  await expect(page.getByRole('dialog', { name: 'Finance' }).locator('#card-pol-finance')).toBeVisible();
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));

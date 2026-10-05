@@ -1,5 +1,6 @@
 import { AcquireCard, CrowdCard, HedgeCard, PatentCard, SaleCard, VcCard } from './DealsV4';
 import { DealBookCard, DealRoom, HostileCard } from './DealsV5';
+import { PolicyGroupCard } from './Policies';
 import { VentureCard } from './Progress';
 import {
   COVENANT_MAX_DEBT_EBITDA, COVENANT_MIN_INTEREST_COVER, covenantTest, distributableReserves, EQUITY_FEE, equityRaiseTerms,
@@ -26,7 +27,7 @@ export function Finance({ game }: { game: GameState }) {
         },
         {
           id: 'invest', label: 'Invest', blurb: 'Put spare cash to work, and protect it.',
-          items: <><TreasuryCard game={game} /><VentureCard game={game} /><HedgeCard game={game} /><PatentCard game={game} /></>,
+          items: <><PolicyGroupCard game={game} group="finance" /><TreasuryCard game={game} /><VentureCard game={game} /><HedgeCard game={game} /><PatentCard game={game} /></>,
         },
         {
           id: 'deals', label: 'Deals', blurb: 'Buy a rival or sell the company.',
