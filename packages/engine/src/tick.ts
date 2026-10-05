@@ -24,6 +24,7 @@ import { valuationOf } from './model/valuation';
 import { scheduleIntoQueue, takeDue, writeDownQueue } from './model/workingCapital';
 import { advanceContracts, contractUnits, maybeOffer, serveContracts } from './model/contracts';
 import { advanceListing, LISTED_MONTHLY_COST } from './model/listing';
+import { advanceWorld, revalueHoldings } from './model/world';
 import { premiumFor } from './model/insurance';
 import { complianceCost, RENT_INFLATION, wageInflation } from './model/pressure';
 import { runAutopilot } from './model/autopilot';
@@ -148,6 +149,7 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
   const mods = modifiersOf(s);
   s.marketSize *= 1 + ind.marketGrowth;
   updateCompetitors(s, ind, rng, s.history.at(-1)?.kpis.marketShare ?? 0);
+  advanceWorld(s, !!opts.simulation);
   s.quality = Math.min(100, Math.max(1,
     s.quality + ind.founderQuality + mods.qualityPerMonth + ind.qualityPerRnd * Math.pow(s.staff.rnd, 0.85) * moraleProductivity(s.morale) - ind.qualityDecay * s.quality));
   s.brand = s.brand * 0.9 + (s.marketingBudget / ind.marketingPerBrandPoint) * mods.brandGainMult;
@@ -266,6 +268,8 @@ export function tickInPlace(s: GameState, opts: TickOptions = {}): void {
       s.fundValue += change;
     }
   }
+
+  revalueHoldings(s, P);
 
   // 10. Year-end impairment and tax
   const yearEnd = m % 12 === 11;

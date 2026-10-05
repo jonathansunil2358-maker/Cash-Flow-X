@@ -62,10 +62,11 @@ describe('holding company investments', () => {
     const pre = valuationOf(s).equityValue;
     const cashBefore = s.ledger.balances.cash;
     const ownBefore = ownership(s);
+    const outsideBefore = outsideFraction(s);
     applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: Math.round(pre * 0.1), preMoney: pre });
     expect(s.ledger.balances.cash - cashBefore).toBe(Math.round(pre * 0.1));
     expect(ownership(s)).toBeLessThan(ownBefore);
-    expect(outsideFraction(s)).toBeCloseTo(0.1 / 1.1, 3);
+    expect(outsideFraction(s)).toBeCloseTo((outsideBefore + 0.1) / 1.1, 3);
     expect(() => applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I2', investorId: 'U3', investorName: 'Leo', amount: pre, preMoney: pre }))
       .toThrow(/49%/);
     expect(() => applyActionInPlace(s, { type: 'acceptInvestment', investmentId: 'I1', investorId: 'U2', investorName: 'Maya', amount: 5_000_00, preMoney: pre }))

@@ -129,11 +129,14 @@ export const RIVAL_TRAITS: Record<RivalTrait, { name: string; blurb: string }> =
 const TRAIT_ORDER: RivalTrait[] = ['slasher', 'snob', 'copycat'];
 /** Each rival has a fixed personality, set by its place in the sector's list (so old games get them too). */
 export const rivalTrait = (index: number): RivalTrait => TRAIT_ORDER[index % TRAIT_ORDER.length];
+/** A rival's personality and boss: fixed when it appears, so they stay with it as other rivals come and go. */
+export const traitOf = (c: { trait?: RivalTrait }, index: number): RivalTrait => c.trait ?? rivalTrait(index);
+export const bossOfRival = (c: { bossIx?: number }, index: number) => bossOf(c.bossIx ?? index);
 
 export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, lastShare: number): void {
   const aggression = DIFFICULTIES[s.difficulty].rivalAggression * rivalPressure(s);
   s.competitors.forEach((c, i) => {
-    const trait = rivalTrait(i);
+    const trait = traitOf(c, i);
     const catchUp = 0.02 * Math.max(0, s.quality - c.quality) * (trait === 'snob' ? 1.8 : trait === 'copycat' ? 2 : trait === 'slasher' ? 0.5 : 1);
     c.quality = Math.min(100, Math.max(10, c.quality + 0.1 + catchUp + (rng.next() - 0.5) * 0.4));
     const drift = 1 + (rng.next() - 0.5) * 0.02;
@@ -156,26 +159,26 @@ export function updateCompetitors(s: GameState, ind: IndustryConfig, rng: Rng, l
   const hasSlasher = s.competitors.length > 0;
   if ((rising || dominating) && !s.competitors.some((c) => c.cutMonths > 0) && chance(rng, Math.min(1, 0.5 * aggression * (hasSlasher ? 1 : 1)))) {
     // Snobs never start price wars; slashers are first in line.
-    const eligible = s.competitors.map((c, i) => ({ c, trait: rivalTrait(i) })).filter((x) => x.trait !== 'snob');
-    const pool = eligible.length ? eligible : s.competitors.map((c, i) => ({ c, trait: rivalTrait(i) }));
+    const eligible = s.competitors.map((c, i) => ({ c, trait: traitOf(c, i) })).filter((x) => x.trait !== 'snob');
+    const pool = eligible.length ? eligible : s.competitors.map((c, i) => ({ c, trait: traitOf(c, i) }));
     const best = pool.reduce((b, x) => ((x.trait === 'slasher' ? 1.3 : 1) * x.c.strength * x.c.quality > (b.trait === 'slasher' ? 1.3 : 1) * b.c.strength * b.c.quality ? x : b));
     const rival = best.c;
     const slasher = best.trait === 'slasher';
     const cut = (slasher ? 0.07 : 0.04) + rng.next() * (slasher ? 0.06 : 0.04);
     rival.cutMonths = 3 + Math.min(3, Math.floor(rng.next() * 4));
     rival.price = Math.max(Math.round(rival.price * (1 - cut)), Math.round(rival.normalPrice * (slasher ? 0.78 : RIVAL_PRICE_FLOOR)));
-    const boss = bossOf(s.competitors.indexOf(rival));
+    const boss = bossOfRival(rival, s.competitors.indexOf(rival));
     logItem(s, 'event', `${rival.name} cuts prices`,
       `${rival.name} dropped prices by about ${Math.round(cut * 100)}% for the next ${rival.cutMonths} months to win back customers from you. ${boss.name}: "${boss.catchphrase}"`);
   }
 
   const year = yearOf(s.month);
   s.competitors.forEach((c, i) => {
-    if (c.lastLaunchYear !== year && chance(rng, 0.03 * aggression * (rivalTrait(i) === 'snob' ? 2 : 1))) {
+    if (c.lastLaunchYear !== year && chance(rng, 0.03 * aggression * (traitOf(c, i) === 'snob' ? 2 : 1))) {
       const step = 3 + Math.min(3, Math.floor(rng.next() * 4));
       c.quality = Math.min(100, c.quality + step);
       c.lastLaunchYear = year;
-      logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. ${bossOf(i).name} is gloating. Time to look at your own product.`);
+      logItem(s, 'event', `${c.name} launches a new product`, `${c.name}'s quality jumped by ${step} points. ${bossOfRival(c, i).name} is gloating. Time to look at your own product.`);
     }
   });
 }

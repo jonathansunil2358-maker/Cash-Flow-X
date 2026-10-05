@@ -1,7 +1,7 @@
 import {
   formatGBP, formatPct, grossPayroll, HEADS_PER_PROJECT, leaveChance, MAX_TRAINING_SPEND, monthlyProjectCost, monthLabel, moraleProductivity,
   moraleTarget, PAY_MORALE, PAY_MULT, PROJECTS, projectCheck, projectSlots, projectSuccessChance, PROMO_DIP, PROMO_DISCOUNTS, PROMO_MAX_MONTHS,
-  promoCheck, trainingEffect, INDUSTRIES, bossOf, RIVAL_TRAITS, rivalTrait, type GameState, type PayLevel,
+  promoCheck, trainingEffect, INDUSTRIES, bossOfRival, RIVAL_TRAITS, traitOf, type GameState, type PayLevel,
 } from '@cfx/engine';
 import { useState, type ReactNode } from 'react';
 import { Button, Card, Field, KeyValue, Meter, MoneyInput, StatusPill } from '../components/ui';
@@ -201,9 +201,9 @@ export function RivalsCard({ game }: { game: GameState }) {
           return (
             <li key={c.name} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2.5">
               <div>
-                <div className="font-medium text-ink">{c.name} <span className="text-xs font-bold text-ink-2">· {RIVAL_TRAITS[rivalTrait(i)].name}</span></div>
-                <div className="text-[11px] text-ink-2">{RIVAL_TRAITS[rivalTrait(i)].blurb}</div>
-                <div className="text-[11px] italic text-ink-2">{bossOf(i).name}: “{bossOf(i).catchphrase}”</div>
+                <div className="font-medium text-ink">{c.name} <span className="text-xs font-bold text-ink-2">· {RIVAL_TRAITS[traitOf(c, i)].name}</span></div>
+                <div className="text-[11px] text-ink-2">{RIVAL_TRAITS[traitOf(c, i)].blurb}</div>
+                <div className="text-[11px] italic text-ink-2">{bossOfRival(c, i).name}: “{bossOfRival(c, i).catchphrase}”</div>
                 <div className="text-xs text-ink-2">Quality {Math.round(c.quality)} · price {formatGBP(c.price, { pence: true })}</div>
               </div>
               {c.cutMonths > 0

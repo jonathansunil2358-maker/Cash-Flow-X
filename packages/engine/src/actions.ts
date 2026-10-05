@@ -6,6 +6,7 @@ import { loanOffer, MAX_TERM, MIN_TERM, overdraftLimit, spreadFor } from './mode
 import { annualise, currentBalanceSheet, trailingPL } from './model/metrics';
 import { DIFFICULTIES } from './model/difficulty';
 import { GUILD_LEVELS } from './model/guild';
+import { tradeStock } from './model/world';
 import { acceptInvestment, addOutsideHolder, buyBackFrom, buyOutHolders, distributeDividend } from './model/investors';
 import { addTemporaryEffect, resolvePendingEvent, startNamedEvent } from './model/events';
 import { modifiersOf } from './model/modifiers';
@@ -141,6 +142,7 @@ export type Action =
   | { type: 'acceptInvestment'; investmentId: string; investorId: string; investorName: string; amount: Pence; preMoney: Pence }
   | { type: 'buyOutInvestors'; holderIds: string[] }
   | { type: 'buyBackShares'; holderId: string; pct: number }
+  | { type: 'tradeStock'; side: 'buy' | 'sell'; rivalId: number; shares: number }
   | { type: 'retire' };
 
 export class ActionError extends Error {}
@@ -964,6 +966,15 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
     case 'buyOutInvestors': {
       if (!Array.isArray(action.holderIds) || !action.holderIds.length) fail('Choose investors to buy out.');
       buyOutHolders(s, action.holderIds);
+      break;
+    }
+    case 'tradeStock': {
+      if (action.side !== 'buy' && action.side !== 'sell') fail('Choose buy or sell.');
+      try {
+        tradeStock(s, action.side, action.rivalId, action.shares, (memo, lines, cf, cfLabel) => post(L, m, memo, lines, cf ? { cf, cfLabel } : { cf: 'operating' }));
+      } catch (e) {
+        fail((e as Error).message);
+      }
       break;
     }
     case 'buyBackShares': {

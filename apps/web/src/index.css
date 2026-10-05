@@ -331,3 +331,8 @@ html[data-colours='safe'] { --go: #0072b2; --go-edge: #004f7d; --danger: #d55e00
 html[data-colours='safe'] .text-good-text { color: #004f7d; }
 html[data-colours='safe'] .text-critical-text { color: #9a4300; }
 html[data-calm='on'] *, html[data-calm='on'] *::before, html[data-calm='on'] *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+
+/* Scrolling ticker on the Stocks tab. */
+@keyframes cfx-ticker { to { transform: translateX(-50%); } }
+.cfx-ticker { animation: cfx-ticker 40s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .cfx-ticker { animation: none; } }

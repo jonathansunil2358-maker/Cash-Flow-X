@@ -144,7 +144,7 @@ describe('stock market listing', () => {
 
   it('floats shares at a discount, dilutes the owner, brings in cash, then prices the company each month', () => {
     let s: GameState | null = null;
-    for (const seed of ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12']) {
+    for (const seed of ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12', 'L13', 'L14', 'L15', 'L16', 'L17', 'L18', 'L19', 'L20', 'L21', 'L22', 'L23', 'L24']) {
       const t = newGame({ companyName: 'L', industryId: 'software', seed, difficulty: 'easy' });
       for (let i = 0; i < 100 && t.status === 'playing' && !listCheck(t).allowed; i++) step(t);
       if (listCheck(t).allowed) { s = t; break; }
