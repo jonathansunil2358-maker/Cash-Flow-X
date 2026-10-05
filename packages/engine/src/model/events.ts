@@ -1274,9 +1274,11 @@ function impactOf(c: EvChoice): { label: string; up: boolean }[] {
   if (c.income) out.push({ label: 'Cash', up: true });
   return out;
 }
+/** Icon names that have no picture are shown with the nearest one that does. */
+const ICON_ALIAS: Record<string, string> = { chat: 'laptop', handshake: 'shield', coin: 'diamond', gem: 'diamond', lightbulb: 'bolt', alert: 'flame', flag: 'mountain' };
 function buildEvent(spec: EvSpec): ChoiceEventDef {
   return {
-    id: spec.id, title: spec.title, polarity: spec.good ? 'good' : 'bad', weight: 0, icon: spec.icon,
+    id: spec.id, title: spec.title, polarity: spec.good ? 'good' : 'bad', weight: 0, icon: ICON_ALIAS[spec.icon] ?? spec.icon,
     when: () => false,
     setup: (s) => {
       const params: Record<string, number> = {};

@@ -1598,6 +1598,25 @@ test('V8: policy dials in four panels', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Finance' }).locator('#card-pol-finance')).toBeVisible();
 });
 
+test('V9: the Management section has a card for every topic, with dials and initiatives', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Business' });
+  for (const id of ['accounting', 'tax', 'lending', 'equity', 'mna', 'property', 'supply', 'pricing', 'marketing', 'rnd', 'hr', 'quality', 'insurance', 'legal', 'rivals', 'macro', 'export', 'expansion', 'sustainability', 'it', 'service', 'governance', 'exit', 'tools']) {
+    await expect(biz.locator(`#card-topic-${id}`)).toBeVisible();
+  }
+  const tax = biz.locator('#card-topic-tax');
+  await tax.getByRole('button', { name: 'Open' }).click();
+  await expect(tax.getByRole('heading', { name: 'Initiatives' })).toBeVisible();
+  const first = tax.locator('[data-initiative]').first();
+  await first.getByRole('button', { name: /^Start/ }).click();
+  await expect(first.getByText(/Under way/)).toBeVisible();
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));

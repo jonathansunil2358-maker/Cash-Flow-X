@@ -20,7 +20,7 @@ import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
-import { policyCheck, setPolicy } from './model/play8';
+import { initiativeCheck, policyCheck, setPolicy, startInitiative } from './model/play8';
 import { budgetCheck, councilCheck, COUNCIL, outsourceCheck, outsourceFee, rangeCheck, startRange, play7Of } from './model/play7';
 import { hireTemps, layoutCheck, setLayout, setMascot, tempsCheck, tierCheck, tenderCheck, tenderWon, TENDERS, MASCOTS, rivalDiscount, play6Of, TIERS } from './model/play6';
 import { applyTender } from './model/play6Advance';
@@ -60,6 +60,7 @@ export type Action =
   | { type: 'acquireRival'; index: number }
   | { type: 'tradeSale'; bid: string; ask?: number }
   | { type: 'policy'; id: string; option: number }
+  | { type: 'initiative'; id: string }
   | { type: 'council'; id: string }
   | { type: 'stockControl'; level: number }
   | { type: 'trainingBudget'; ops: number; rnd: number; sales: number }
@@ -368,6 +369,12 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         mult = action.ask;
       }
       try { tradeSale(s, action.bid, mult); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'initiative': {
+      const c = initiativeCheck(s, action.id);
+      if (!c.ok) fail(c.reason!);
+      startInitiative(s, action.id);
       break;
     }
     case 'policy': {
