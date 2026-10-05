@@ -1,10 +1,72 @@
+import { gbp } from '../../money';
 import type { IndustryConfig } from '../industries';
 import type { UpgradeDef } from '../upgrades';
 
-/**
- * Sector: Bakery chain. Until a full configuration is written here, the game uses a renamed copy of the
- * "restaurant" configuration (see sectors/index.ts), so the sector is playable but not tuned.
- * To finish it, replace `config` and `upgrades` with real values (see industries.ts and upgrades.ts for examples).
- */
-export const config: IndustryConfig | null = null;
-export const upgrades: UpgradeDef[] | null = null;
+/** Sector: Bakery chain. Cheap ingredients, high-volume small tickets, stock that goes stale overnight, and an oven that caps output. */
+export const config: IndustryConfig = {
+  id: 'bakery',
+  look: 'restaurant',
+  icon: 'coffee',
+  name: 'Bakery chain',
+  emoji: '🥖',
+  tagline: 'Early starts, cheap flour, bread that goes stale by tomorrow.',
+  difficulty: 'Challenging',
+  description:
+    'Run a chain of neighbourhood bakeries. Customers pay at the till, ingredients are cheap so each sale keeps a fat margin, but you bake before you know what will sell and about 20% of unsold stock goes stale each month. Ovens and early-morning staff cap how much you can make, and rent on a busy high street is the big fixed cost.',
+  model: 'unit',
+  unitSingular: 'sale',
+  unitPlural: 'sales',
+  basePrice: gbp(5.8),
+  priceElasticity: 1.5,
+  unitCost: gbp(1.8),
+  annualPrepaidShare: 0,
+  baseChurn: 0,
+  stockCoverDefault: 0.2,
+  spoilage: 0.2,
+  receivableDays: 6,
+  payableDays: 21,
+  marketSize: 70000,
+  marketGrowth: 0.004,
+  seasonality: [0.92, 0.94, 0.98, 1.04, 1.0, 0.96, 0.94, 0.95, 1.0, 1.02, 1.05, 1.2],
+  roles: {
+    ops: { title: 'Bakers & counter staff', salary: gbp(22000), effect: '+1,900 sales/month of capacity each' },
+    rnd: { title: 'Pastry chefs (recipes)', salary: gbp(32000), effect: 'Improve the quality of your bakes and reviews' },
+    sales: { title: 'Wholesale & events', salary: gbp(28000), effect: 'Multiply the reach of your marketing' },
+  },
+  founderCapacity: 2000,
+  capacityPerOps: 1900,
+  founderQuality: 2,
+  qualityPerRnd: 1.2,
+  qualityDecay: 0.06,
+  startQuality: 38,
+  salesReachBoost: 0.25,
+  marketingPerBrandPoint: gbp(130),
+  rentBase: gbp(3600),
+  rentPerHead: gbp(70),
+  equipmentPerHire: gbp(500),
+  equipmentLifeMonths: 60,
+  recruitmentPct: 0.05,
+  startingCapex: { amount: gbp(30000), label: 'Ovens and shop fit-out', lifeMonths: 84 },
+  automationScale: gbp(70000),
+  multiples: { evEbitda: 6, evRevenue: 0.7 },
+  targetEbitdaMargin: 0.12,
+  capexPctRevenue: 0.04,
+  nwcPctRevenue: -0.02,
+  competitors: [
+    { name: 'Crumb & Co', quality: 52, priceFactor: 1.15, strength: 1.0 },
+    { name: 'Greggory\'s Express', quality: 40, priceFactor: 0.7, strength: 1.4 },
+    { name: 'Hearth & Rye', quality: 62, priceFactor: 1.4, strength: 0.8 },
+  ],
+  benchmarks: { grossMargin: 0.62, ebitdaMargin: 0.1, currentRatio: 0.9, receivableDays: 5, inventoryDays: 4 },
+};
+
+export const upgrades: UpgradeDef[] = [
+  { id: 'ovens', name: 'Deck oven bank', description: '+20% baking capacity per level.', icon: 'flame', maxLevel: 5, baseCost: gbp(11_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { capacity: 0.2 } },
+  { id: 'coffee', name: 'Coffee corner', description: '+12% reach per level.', icon: 'coffee', maxLevel: 4, baseCost: gbp(6_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.12 } },
+  { id: 'sourdough', name: 'Sourdough proving room', description: '+0.4 bake quality a month per level.', icon: 'star', maxLevel: 5, baseCost: gbp(8_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4 } },
+  { id: 'proofer', name: 'Cold-proof retarder', description: '25% less bread going stale per level.', icon: 'diamond', maxLevel: 3, baseCost: gbp(7_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { spoilage: -0.25 }, requires: { id: 'ovens', level: 1 } },
+  { id: 'vans', name: 'Wholesale delivery vans', description: '+10% market size per level.', icon: 'car', maxLevel: 3, baseCost: gbp(18_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1 }, requires: { id: 'coffee', level: 1 } },
+  { id: 'mill', name: 'Stone mill and flour deal', description: 'Ingredient costs 3% lower and 12% less bread stale per level.', icon: 'leaf', maxLevel: 4, baseCost: gbp(12_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03, spoilage: -0.12 }, requires: { id: 'proofer', level: 1 } },
+  { id: 'loyalty', name: 'Loyalty stamp app', description: '+10% reach per level.', icon: 'heart', maxLevel: 4, baseCost: gbp(6_500), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.1 }, requires: { id: 'coffee', level: 2 } },
+  { id: 'cakes', name: 'Celebration cake studio', description: '+12% market size per level.', icon: 'crown', maxLevel: 3, baseCost: gbp(24_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.12 }, requires: { id: 'vans', level: 1 } },
+];
