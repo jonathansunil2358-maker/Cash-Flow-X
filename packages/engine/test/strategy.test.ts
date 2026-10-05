@@ -63,6 +63,7 @@ describe('big strategy', () => {
 
   it('donations lift reputation and ESG, with a cooldown', () => {
     const s = company('STR-GIVE');
+    s.reputation = 50;
     const rep = s.reputation;
     applyActionInPlace(s, { type: 'donate', amount: 5_000_00 });
     expect(s.reputation).toBeGreaterThan(rep);

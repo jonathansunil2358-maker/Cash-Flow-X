@@ -19,7 +19,7 @@ function gen(seed: string): () => number {
   };
 }
 
-export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud';
+export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar';
 export const MINI_GEMS = (points: number): number => (points >= 85 ? 12 : points >= 60 ? 7 : points >= 30 ? 3 : 0);
 
 export interface MiniResult { day: string; points: number }
@@ -279,4 +279,92 @@ export function fraudScore(day: string, flagged: readonly string[]): { found: nu
   const found = fakes.filter((f) => set.has(f)).length;
   const falseAlarms = flagged.filter((f) => !fakes.includes(f)).length;
   return { found, falseAlarms, points: Math.max(0, found * 50 - falseAlarms * 20) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Forecast challenge: predict next month's takings from today's numbers
+// ---------------------------------------------------------------------------------------------
+export function forecastScore(guess: Pence, actual: Pence): number {
+  if (actual <= 0) return guess <= 0 ? 100 : 0;
+  return Math.max(0, Math.round(100 - (Math.abs(guess - actual) / actual) * 500));
+}
+
+// ---------------------------------------------------------------------------------------------
+// Hiring interview: one of four is not what their CV says
+// ---------------------------------------------------------------------------------------------
+export interface InterviewCandidate { id: string; name: string; claimed: number; attitude: number; ask: Pence; reference: string; trueSkill: number }
+const CAND_NAMES = ['Ada', 'Ben', 'Chloe', 'Dev', 'Esme', 'Finn', 'Gita', 'Hugo'];
+const GOOD_REFS = ['"Reliable, every single day."', '"Always learning new things."', '"The team loves working with them."', '"Hit every target."'];
+const BAD_REFS = ['"Great talker. Their results were harder to find."', '"Told us they ran the project. They sat in on it."', '"Wonderful in interviews."'];
+export function interviewCandidates(day: string): InterviewCandidate[] {
+  const r = gen(`hire|${day}`);
+  const names = [...CAND_NAMES];
+  const liar = Math.floor(r() * 4);
+  return Array.from({ length: 4 }, (_, i) => {
+    const trueSkill = 3 + Math.floor(r() * 7);
+    const claimed = i === liar ? Math.min(10, trueSkill + 3) : trueSkill;
+    return {
+      id: `h${i}`, name: names.splice(Math.floor(r() * names.length), 1)[0], claimed, attitude: 3 + Math.floor(r() * 7), ask: (30 + Math.floor(r() * 30)) * 1000_00,
+      reference: i === liar ? BAD_REFS[Math.floor(r() * BAD_REFS.length)] : GOOD_REFS[Math.floor(r() * GOOD_REFS.length)], trueSkill,
+    };
+  });
+}
+export const candidateValue = (c: InterviewCandidate): number => c.trueSkill * 0.6 + c.attitude * 0.4;
+export function hiringScore(cands: readonly InterviewCandidate[], pick: string): { points: number; best: string } {
+  const best = cands.reduce((a, b) => (candidateValue(b) > candidateValue(a) ? b : a));
+  const c = cands.find((x) => x.id === pick);
+  return { points: c ? Math.round((candidateValue(c) / candidateValue(best)) * 100) : 0, best: best.id };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Supply route planner: connect every supplier at the lowest total cost
+// ---------------------------------------------------------------------------------------------
+export interface Route { id: string; a: number; b: number; cost: number }
+export interface RouteGraph { nodes: string[]; routes: Route[] }
+export function routeGraphOf(day: string): RouteGraph {
+  const r = gen(`routes|${day}`);
+  const nodes = ['Warehouse', 'Supplier A', 'Supplier B', 'Supplier C', 'Supplier D', 'Supplier E', 'Hub'];
+  const routes: Route[] = [];
+  const has = (a: number, b: number) => routes.some((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+  for (let i = 1; i < nodes.length; i++) { const a = Math.floor(r() * i); routes.push({ id: `r${routes.length}`, a, b: i, cost: 2 + Math.floor(r() * 9) }); }
+  while (routes.length < 11) { const a = Math.floor(r() * nodes.length); const b = Math.floor(r() * nodes.length); if (a !== b && !has(a, b)) routes.push({ id: `r${routes.length}`, a, b, cost: 2 + Math.floor(r() * 9) }); }
+  return { nodes, routes };
+}
+const connected = (n: number, edges: readonly Route[]): boolean => {
+  const p = Array.from({ length: n }, (_, i) => i);
+  const f = (x: number): number => (p[x] === x ? x : (p[x] = f(p[x])));
+  for (const e of edges) p[f(e.a)] = f(e.b);
+  return new Set(Array.from({ length: n }, (_, i) => f(i))).size === 1;
+};
+export const cheapestNetwork = (g: RouteGraph): number => {
+  const p = Array.from({ length: g.nodes.length }, (_, i) => i);
+  const f = (x: number): number => (p[x] === x ? x : (p[x] = f(p[x])));
+  let total = 0;
+  for (const e of [...g.routes].sort((a, b) => a.cost - b.cost)) if (f(e.a) !== f(e.b)) { p[f(e.a)] = f(e.b); total += e.cost; }
+  return total;
+};
+export function routeScore(g: RouteGraph, chosen: readonly string[]): { points: number; cost: number; valid: boolean } {
+  const edges = g.routes.filter((x) => chosen.includes(x.id));
+  const cost = edges.reduce((a, e) => a + e.cost, 0);
+  if (!connected(g.nodes.length, edges)) return { points: 0, cost, valid: false };
+  return { points: Math.round((cheapestNetwork(g) / cost) * 100), cost, valid: true };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Price war survival: a rival with a rhythm
+// ---------------------------------------------------------------------------------------------
+export const WAR_WEEKS = 6;
+export const WAR_PRICES = [8, 10, 12, 14];
+export const WAR_COST = 6;
+export function warRival(day: string): number[] {
+  const r = gen(`war|${day}`);
+  const cycle = Array.from({ length: 3 }, () => 8 + Math.floor(r() * 6));
+  return Array.from({ length: WAR_WEEKS }, (_, i) => cycle[i % 3]);
+}
+export const warProfit = (price: number, rival: number): number => Math.max(0, Math.round(100 * (1 + (rival - price) * 0.12))) * (price - WAR_COST);
+export function warScore(day: string, prices: readonly number[]): { points: number; profit: number } {
+  const rival = warRival(day);
+  let profit = 0; let best = 0;
+  rival.forEach((rv, i) => { profit += warProfit(prices[i] ?? WAR_PRICES[0], rv); best += Math.max(...WAR_PRICES.map((p) => warProfit(p, rv))); });
+  return { points: best > 0 ? Math.max(0, Math.round((profit / best) * 100)) : 0, profit };
 }

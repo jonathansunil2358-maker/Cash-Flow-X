@@ -3,7 +3,7 @@ import {
 } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { Button, Card, Field, NumberInput, TextInput } from '../components/ui';
-import { api, type IslandView, type VentureView, type WarView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
+import { api, type IslandView, type BossView, type DealShape, type VentureView, type WarView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
 import { useAccount } from '../lib/account';
 import { useGame } from '../store';
 
@@ -236,6 +236,53 @@ export function TradeWarCard() {
           {v.last.reward?.claimed && ' Reward claimed.'}
         </p>
       )}
+    </Card>
+  );
+}
+
+/** Supply another player (or be supplied by them) for four weeks; each side collects a few gems a week. */
+export function SupplyDealsCard() {
+  const { addGems, toast } = useGame();
+  const [list, setList] = useState<DealShape[]>([]);
+  const [buyer, setBuyer] = useState('');
+  const refresh = () => api.deals().then((r) => setList(r.deals)).catch(() => setList([]));
+  useEffect(() => { refresh(); }, []);
+  const run = async (fn: () => Promise<unknown>, ok?: string) => { try { await fn(); if (ok) toast('success', ok); } catch (e) { toast('error', (e as Error).message); } refresh(); };
+  return (
+    <Card fold id="card-deals" title="Supplier deals" subtitle="Offer to supply a friend's company using their island code. If they accept, you both collect a few gems each week for four weeks.">
+      <div className="flex gap-2">
+        <TextInput value={buyer} onChange={(e) => setBuyer(e.target.value)} aria-label="Buyer's island code" placeholder="Buyer's island code" />
+        <Button disabled={buyer.trim().length < 8} onClick={() => run(() => api.dealOffer(buyer.trim()), 'Offer sent.')}>Offer</Button>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {list.length === 0 && <li className="text-ink-2">No deals yet.</li>}
+        {list.map((d) => (
+          <li key={d.id} className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">{d.role === 'supplier' ? 'You supply' : 'Supplied by'} <b>{d.partner}</b> · {d.status === 'offered' ? 'waiting for an answer' : `${d.daysLeft} days left`}</span>
+            {d.status === 'offered' && d.role === 'buyer' && <Button variant="primary" onClick={() => run(() => api.dealAccept(d.id), 'Deal accepted.')}>Accept</Button>}
+            {d.status === 'offered' && <Button onClick={() => run(() => api.dealDecline(d.id))}>{d.role === 'buyer' ? 'Decline' : 'Withdraw'}</Button>}
+            {d.status === 'active' && d.claimable && <Button variant="primary" onClick={() => run(async () => { const r = await api.dealClaim(d.id); addGems(r.gems, 'supplier deal'); }, 'Collected.')}>Collect {d.gems} gems</Button>}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** A weekly boss every player chips away at together. */
+export function CoopBossCard() {
+  const { addGems, toast } = useGame();
+  const [v, setV] = useState<BossView | null>(null);
+  const refresh = () => api.boss().then(setV).catch(() => setV(null));
+  useEffect(() => { refresh(); }, []);
+  if (!v) return null;
+  const pct = Math.min(100, Math.round((v.damage / v.goal) * 100));
+  return (
+    <Card fold id="card-boss" title={`This week: ${v.boss}`} subtitle="Everyone who plays can strike once a day (bigger companies hit harder). Beat the boss together by the end of the week, and anyone who struck on three days shares the reward.">
+      <div className="h-4 w-full overflow-hidden rounded-full border-2 border-outline bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={v.goal} aria-valuenow={Math.min(v.goal, v.damage)} aria-label="Boss health"><div className="h-full bg-[var(--go)]" style={{ width: `${pct}%` }} /></div>
+      <p className="mt-1 text-sm">{v.damage} of {v.goal} damage · {v.fighters} fighter{v.fighters === 1 ? '' : 's'} · you: {v.mine} ({v.myDays} day{v.myDays === 1 ? '' : 's'})</p>
+      <Button className="mt-2" variant="primary" disabled={v.hitToday || v.damage >= v.goal} onClick={async () => { try { setV(await api.bossHit()); } catch (e) { toast('error', (e as Error).message); } }}>{v.hitToday ? 'Struck today' : 'Strike!'}</Button>
+      {v.last && <p className="mt-3 text-sm">Last week, {v.last.boss}: {v.last.beaten ? 'beaten!' : 'it got away.'}{v.last.reward && !v.last.reward.claimed && <Button className="ml-2" variant="primary" onClick={async () => { try { const r = await api.bossClaim(); addGems(r.gems, 'co-op boss'); refresh(); } catch (e) { toast('error', (e as Error).message); } }}>Claim {v.last.reward.gems} gems</Button>}{v.last.reward?.claimed && ' Reward claimed.'}</p>}
     </Card>
   );
 }

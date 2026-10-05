@@ -7,6 +7,7 @@ import { answerPuzzle, leagueView } from './league';
 import {
   buyListing, cancelListing, claimMentor, collectSales, createMentorCode, createScenario, fundLandmark, getScenario, greetIsland, joinMentor, landmarkView, likeIsland, listItem, marketView, mentorView, myScenarios, playedScenario, visitIsland,
 } from './social4';
+import { acceptDeal, bossView, claimBoss, claimDeal, dealsView, declineDeal, hitBoss, offerDeal } from './social6';
 import { claimVenture, claimWar, contributeVenture, createVenture, joinVenture, ventureView, warView } from './social5';
 import { claimCard, createLink, giftCard, guildRival, hallOfFame, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
 import { claimCommunity, communityView, deletePlanShared, listPlans, publishPlan, replayOf, rivalView, togglePlanLike, tournamentView } from './community';
@@ -228,6 +229,14 @@ app.post('/market/list', requireUser, async (c) => { await limit(c, 'plans'); re
 app.post('/market/collect', requireUser, async (c) => c.json(await collectSales(c.env, c.get('user'))));
 app.post('/market/:id/buy', requireUser, async (c) => c.json(await buyListing(c.env, c.get('user'), c.req.param('id')!)));
 app.post('/market/:id/cancel', requireUser, async (c) => c.json(await cancelListing(c.env, c.get('user'), c.req.param('id')!)));
+app.get('/deals', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await dealsView(c.env, c.get('user'))); });
+app.post('/deals/offer', requireUser, async (c) => c.json(await offerDeal(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).buyerId)));
+app.post('/deals/:id/accept', requireUser, async (c) => c.json(await acceptDeal(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/deals/:id/decline', requireUser, async (c) => c.json(await declineDeal(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/deals/:id/claim', requireUser, async (c) => c.json(await claimDeal(c.env, c.get('user'), c.req.param('id')!)));
+app.get('/boss', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await bossView(c.env, c.get('user'))); });
+app.post('/boss/hit', requireUser, async (c) => c.json(await hitBoss(c.env, c.get('user'))));
+app.post('/boss/claim', requireUser, async (c) => c.json(await claimBoss(c.env, c.get('user'))));
 app.get('/venture', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await ventureView(c.env, c.get('user'))); });
 app.post('/venture/create', requireUser, async (c) => c.json(await createVenture(c.env, c.get('user'))));
 app.post('/venture/join', requireUser, async (c) => { await limit(c, 'auth'); return c.json(await joinVenture(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).code)); });

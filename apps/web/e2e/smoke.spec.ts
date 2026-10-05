@@ -1507,6 +1507,41 @@ test('V5: supply chain, lifecycle, pop-ups, pricing lab, managers, focus, securi
   await expect(m.locator('#card-callcentre').getByRole('status')).toContainText('0 points');
 });
 
+test('V6: temps, tiers, layout, tenders, mascot, book and four more daily games', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Business' });
+  for (const id of ['card-temps', 'card-tiers', 'card-layout', 'card-tender']) await expect(biz.locator(`#${id}`)).toBeVisible();
+  await biz.locator('#card-tiers').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-tiers').getByRole('button', { name: 'Silver' }).click();
+  await expect(biz.locator('#card-tiers').getByRole('button', { name: 'Silver' })).toHaveAttribute('aria-pressed', 'true');
+  await biz.locator('#card-layout').getByRole('button', { name: 'Open' }).click();
+  await expect(biz.locator('#card-layout').getByRole('button', { name: /^Lock in this layout/ })).toBeVisible();
+  await biz.locator('#card-tender').getByRole('button', { name: 'Open' }).click();
+  await expect(biz.locator('#card-tender').getByRole('button', { name: 'Bid' }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  for (const id of ['card-mascot', 'card-inspection', 'card-evcards', 'card-book', 'card-forecast', 'card-hiring', 'card-routes', 'card-pricewar']) await expect(m.locator(`#${id}`)).toBeVisible();
+  await m.locator('#card-mascot').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-mascot').getByRole('button', { name: /Owl/ }).click();
+  await expect(m.locator('#card-mascot').getByRole('button', { name: /Owl/ })).toHaveAttribute('aria-pressed', 'true');
+  await m.locator('#card-routes').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-routes').getByRole('button', { name: 'Build the network' }).click();
+  await expect(m.locator('#card-routes').getByRole('status')).toContainText('0 points');
+  await m.locator('#card-hiring').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-hiring').getByRole('button', { name: /^Hire / }).first().click();
+  await expect(m.locator('#card-hiring').getByRole('status')).toContainText('points');
+  await m.locator('#card-pricewar').getByRole('button', { name: 'Open' }).click();
+  for (let i = 0; i < 6; i++) await m.locator('#card-pricewar').getByRole('button', { name: '£10' }).click();
+  await expect(m.locator('#card-pricewar').getByRole('status')).toContainText('points');
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
@@ -1609,6 +1644,8 @@ test('V4 Batch E: island visits, the cosmetics market and the scenario maker', a
   await vent.getByRole('button', { name: 'Start a venture' }).click();
   await expect(vent.locator('code')).toHaveText(/^[A-Z2-9]{6}$/);
   await expect(vent.getByText('waiting for a partner')).toBeVisible();
+  await expect(page.locator('#card-deals')).toBeVisible();
+  await expect(page.locator('#card-boss')).toBeVisible();
 });
 
 test('V4 Batch F: island radio, timelapse and festivals, then free play', async ({ page }) => {
