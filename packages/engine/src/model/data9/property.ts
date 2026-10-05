@@ -44,8 +44,8 @@ export const events: EvSpec[] = [
       S('bluff', 'Threaten to move out', 'A bluff that may or may not work.', '', { gamble: { p: 0.4, good: { c: E(0.99, 12) }, bad: { c: E(1.03, 12), morale: -1 }, goodText: 'The landlord blinked and kept the rent as it was.', badText: 'The landlord called your bluff, and the rise stuck.' } })] },
   // 528 Dilapidations bills at lease end
   { id: 'e9_property_dilaps', title: 'A dilapidations bill', icon: 'alert', good: false, per: 1.2, cd: 30, min: 24,
-    story: 'Your lease is ending, and the landlord has sent a list of repairs they say you owe, called dilapidations: scuffed walls, a worn carpet and a leaking tap. The bill looks fat.', choices: [
-      S('pay', 'Pay the bill', 'Costly, and it closes the matter.', 'You paid, collected your deposit and left on good terms.', { k: 0.06, acct: 'otherCosts' }),
+    story: 'Your lease is coming to an end and being renewed, and the landlord has sent a list of repairs they say you owe, called dilapidations: scuffed walls, a worn carpet and a leaking tap. The bill looks fat.', choices: [
+      S('pay', 'Pay the bill', 'Costly, and it closes the matter.', 'You paid, and the lease was renewed on good terms.', { k: 0.06, acct: 'otherCosts' }),
       S('surveyor', 'Challenge it with a surveyor', 'Costs fees, and may shrink the bill a lot.', '', { k: 0.025, acct: 'otherCosts', gamble: { p: 0.6, good: { morale: 1 }, bad: { c: E(1.015, 4) }, goodText: 'The surveyor spotted that half the list was normal wear and tear, and the bill fell.', badText: 'The landlord\'s list held up, and you paid most of it anyway.' } }),
       S('repair', 'Do the repairs yourselves first', 'Cheaper, and it takes a couple of weekends.', 'Staff spent two weekends painting and patching, and the landlord found little to complain about.', { k: 0.035, acct: 'otherCosts', eff: { morale: -1 } })] },
   // 529 Landlord who sells the building
