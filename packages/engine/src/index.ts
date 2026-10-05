@@ -27,6 +27,8 @@ export * from './model/mna';
 export * from './model/play5';
 export * from './model/play5Advance';
 export * from './model/play6';
+export * from './model/play7';
+export { advancePlay7 } from './model/play7Advance';
 export { applyTender } from './model/play6Advance';
 export * from './model/people';
 export * from './model/loyalty';

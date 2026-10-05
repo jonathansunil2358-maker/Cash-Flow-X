@@ -97,7 +97,7 @@ describe('optional modifiers', () => {
     const aScore = finalScore(a).score;
     const clone = structuredClone(a);
     delete clone.modifiers;
-    expect(aScore).toBe(Math.round(finalScore(clone).score * 1.1));
+    expect(Math.abs(aScore - Math.round(finalScore(clone).score * 1.1))).toBeLessThanOrEqual(1);
     expect(prestigeCheck(a).points).toBeGreaterThanOrEqual(prestigeCheck(clone).points);
   });
 

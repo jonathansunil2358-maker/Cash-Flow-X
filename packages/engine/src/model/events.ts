@@ -1024,6 +1024,104 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
   {
+    id: 'leakAlert', title: 'A leak to a rival', polarity: 'bad', weight: 0, icon: 'key',
+    when: () => false,
+    setup: (s) => {
+      const guard = sized(s, 0.02, 800_00);
+      const bait = sized(s, 0.01, 800_00);
+      const rival = s.competitors[0]?.name ?? 'A rival';
+      return {
+        story: `Someone is passing your plans to ${rival}. You do not know who, but the details they copied are recent.`,
+        params: { guard, bait },
+        choices: [
+          { id: 'guard', label: `Pay for counter-intelligence (${formatGBP(guard)})`, hint: 'Close the leak and keep your edge.', impact: [{ label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Counter-intelligence', [dr('otherCosts', p.guard), cr('cash', p.guard)]); st.reputation = Math.min(100, st.reputation + 1); return 'The leak was found and plugged.'; } },
+          { id: 'bait', label: `Feed them false numbers (${formatGBP(bait)})`, hint: 'Clever, and a gamble: it works six times in ten.', impact: [{ label: 'Demand', up: true }, { label: 'Risk', up: false }],
+            apply: (st, rng, P, p) => { P('A decoy plan', [dr('otherCosts', p.bait), cr('cash', p.bait)]); if (chance(rng, 0.6)) { addTemporary(st, 'leak-decoy', 'A rival chased a decoy', 4, { demandMult: 1.02 }, true); return 'They followed your fake plan and wasted months.'; } addTemporary(st, 'leak-caught', 'A rival saw through it', 3, { demandMult: 0.98 }, true); return 'They saw through it and pressed their advantage.'; } },
+          { id: 'ignore', label: 'Ignore it', hint: 'Free, but the rival gains for three months.', impact: [{ label: 'Demand', up: false }],
+            apply: (st) => { addTemporary(st, 'leak-ignored', 'A rival used your plans', 3, { demandMult: 0.97 }, true); return 'The rival moved first on your own ideas.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'recallDrill', title: 'A surprise recall drill', polarity: 'good', weight: 0, icon: 'flag',
+    when: () => false,
+    setup: (s) => {
+      const records = sized(s, 0.015, 800_00);
+      const fine = sized(s, 0.03, 800_00);
+      return {
+        story: 'A regulator is running a surprise drill: can you trace a faulty batch back to its suppliers and forward to customers in a day?',
+        params: { records, fine },
+        choices: [
+          { id: 'ready', label: `Run it properly (${formatGBP(records)})`, hint: 'Pay for a records clean-up and pass with flying colours.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Records clean-up for a recall drill', [dr('otherCosts', p.records), cr('cash', p.records)]); st.reputation = Math.min(100, st.reputation + 3); return 'You traced everything in hours and the regulator praised you.'; } },
+          { id: 'wing', label: 'Wing it (free)', hint: 'Half the time it goes fine; otherwise a fine and a poor report.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng, P, p) => { if (chance(rng, 0.5)) return 'It went fine, with a few nervous moments.'; P('Fine after a failed recall drill', [dr('otherCosts', p.fine), cr('cash', p.fine)]); st.reputation = Math.max(0, st.reputation - 2); return 'Your records were a mess and you were fined.'; } },
+          { id: 'skip', label: 'Decline to take part', hint: 'No fine, but customers hear you refused.', impact: [{ label: 'Reputation', up: false }],
+            apply: (st) => { st.reputation = Math.max(0, st.reputation - 1); return 'Refusing looked bad, though it cost nothing.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'viralPost', title: 'A post about you goes viral', polarity: 'good', weight: 0, icon: 'star',
+    when: () => false,
+    setup: (s) => {
+      const boost = sized(s, 0.015, 800_00);
+      return {
+        story: 'A customer\'s post about your company is everywhere. Thousands of strangers are looking at your name right now.',
+        params: { boost },
+        choices: [
+          { id: 'thank', label: 'Thank them warmly (free)', hint: 'Authentic and safe: a modest, free lift.', impact: [{ label: 'Demand', up: true }],
+            apply: (st) => { addTemporary(st, 'viral-thanks', 'A warm reply', 3, { demandMult: 1.02 }, true); st.brand *= 1.01; return 'Your friendly reply was shared too.'; } },
+          { id: 'amplify', label: `Boost it with ads (${formatGBP(boost)})`, hint: 'A bigger lift, but 25% of the time it looks pushy and backfires.', impact: [{ label: 'Demand', up: true }, { label: 'Risk', up: false }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => { P('Boosting a viral post', [dr('marketing', p.boost), cr('cash', p.boost)]); if (chance(rng, 0.25)) { st.reputation = Math.max(0, st.reputation - 2); return 'People called it cynical, and the wave turned.'; } addTemporary(st, 'viral-boost', 'A viral wave', 4, { demandMult: 1.05 }, true); return 'You rode the wave brilliantly.'; } },
+          { id: 'ignore', label: 'Say nothing', hint: 'The moment passes.', impact: [],
+            apply: () => 'The wave came and went without you.' },
+        ],
+      };
+    },
+  },
+  {
+    id: 'supplierScare', title: 'Suppliers get nervous', polarity: 'bad', weight: 0, icon: 'bolt',
+    when: () => false,
+    setup: (s) => {
+      const reassure = sized(s, 0.02, 800_00);
+      return {
+        story: 'A rumour that you are short of cash has reached your suppliers. Several have asked to be paid on delivery from now on.',
+        params: { reassure },
+        choices: [
+          { id: 'reassure', label: `Show them your books (${formatGBP(reassure)})`, hint: 'Pay for a quick audit letter and calm everyone down.', impact: [{ label: 'Reputation', up: true }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('An audit letter for suppliers', [dr('otherCosts', p.reassure), cr('cash', p.reassure)]); st.reputation = Math.min(100, st.reputation + 1); return 'The suppliers relaxed and normal terms returned.'; } },
+          { id: 'cod', label: 'Pay on delivery for a while (free)', hint: 'Costs a bit more for three months.', impact: [{ label: 'Costs', up: false }],
+            apply: (st) => { addTemporary(st, 'scare-cod', 'Paying on delivery', 3, { unitCostMult: 1.03 }, true); return 'You paid up front, and it squeezed your cash a little.'; } },
+          { id: 'shop', label: 'Switch suppliers (free)', hint: 'A scramble: costs +5% for two months, but you lose the worriers.', impact: [{ label: 'Costs', up: false }],
+            apply: (st) => { addTemporary(st, 'scare-shop', 'New suppliers', 2, { unitCostMult: 1.05 }, true); st.morale = Math.max(0, st.morale - 1); return 'The new suppliers needed settling in.'; } },
+        ],
+      };
+    },
+  },
+  {
+    id: 'mentorWarn', title: 'Your mentor has a warning', polarity: 'good', weight: 0, icon: 'chat',
+    when: () => false,
+    setup: (s) => {
+      const prep = sized(s, 0.03, 800_00);
+      return {
+        story: 'Your mentor takes you aside: "I have seen this pattern before. A downturn is coming, and soon." They might be wrong.',
+        params: { prep },
+        choices: [
+          { id: 'prepare', label: `Prepare for a downturn (${formatGBP(prep)})`, hint: 'Trim costs and build a cushion. If it comes, it hurts less.', impact: [{ label: 'Risk', up: true }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => { P('Preparing for a downturn', [dr('otherCosts', p.prep), cr('cash', p.prep)]); if (chance(rng, 0.5)) addTemporary(st, 'warn-mild', 'A mild downturn', 6, { demandMult: 0.97 }, true); return 'You trimmed costs and slept better.'; } },
+          { id: 'gamble', label: 'Press on (free)', hint: 'Half the time the downturn hits hard; half the time it never comes and you gain.', impact: [{ label: 'Risk', up: false }],
+            apply: (st, rng) => { if (chance(rng, 0.5)) { addTemporary(st, 'warn-hard', 'A downturn', 6, { demandMult: 0.92 }, true); return 'The downturn came, and you were not ready.'; } addTemporary(st, 'warn-boom', 'A surprise boom', 6, { demandMult: 1.03 }, true); return 'Your mentor was wrong, and you gained from not slowing down.'; } },
+          { id: 'ask', label: 'Ask them to explain (free)', hint: 'The team feels listened to.', impact: [{ label: 'Morale', up: true }],
+            apply: (st) => { st.morale = Math.min(100, st.morale + 2); return 'It was a good conversation, and you learned a lot.'; } },
+        ],
+      };
+    },
+  },
+  {
     id: 'whistle', title: 'You hear something troubling', polarity: 'bad', weight: 0.6, icon: 'key',
     when: (s) => s.month >= 12 && lastRevenue(s) > 0 && !doneOnce(s, 'whistle'),
     setup: (s) => {
@@ -1188,6 +1286,9 @@ const REPUTATION: Record<string, number> = {
   'insiderTip.fix': 3, 'insiderTip.bury': -3, 'insiderTip.report': 2, 'boardCoup.fight': 0, 'boardCoup.deal': 1, 'boardCoup.step': -1,
   'disasterSeason.prepare': 2, 'disasterSeason.repair': 0, 'disasterSeason.ignore': -2, 'taxInspection.cooperate': 1, 'taxInspection.lawyer': 1, 'taxInspection.stall': -2,
   'celebDeal.sign': 0, 'celebDeal.small': 0, 'celebDeal.decline': 1,
+  'leakAlert.guard': 1, 'leakAlert.bait': 0, 'leakAlert.ignore': -1, 'recallDrill.ready': 3, 'recallDrill.wing': -1, 'recallDrill.skip': -1,
+  'viralPost.thank': 1, 'viralPost.amplify': 0, 'viralPost.ignore': 0, 'supplierScare.reassure': 1, 'supplierScare.cod': 0, 'supplierScare.shop': 0,
+  'mentorWarn.prepare': 2, 'mentorWarn.gamble': -1, 'mentorWarn.ask': 1,
   'ipoDay.bell': 0, 'ipoDay.roadshow': 0, 'ipoDay.quiet': 0,
   'spy.spy': 0, 'spy.report': 0, 'spy.decline': 0, 'prank.join': 0, 'prank.treat': 1, 'prank.work': 0,
 };

@@ -19,7 +19,7 @@ function gen(seed: string): () => number {
   };
 }
 
-export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar';
+export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar' | 'lease' | 'trend' | 'adbudget' | 'payroll';
 export const MINI_GEMS = (points: number): number => (points >= 85 ? 12 : points >= 60 ? 7 : points >= 30 ? 3 : 0);
 
 export interface MiniResult { day: string; points: number }
@@ -367,4 +367,71 @@ export function warScore(day: string, prices: readonly number[]): { points: numb
   let profit = 0; let best = 0;
   rival.forEach((rv, i) => { profit += warProfit(prices[i] ?? WAR_PRICES[0], rv); best += Math.max(...WAR_PRICES.map((p) => warProfit(p, rv))); });
   return { points: best > 0 ? Math.max(0, Math.round((profit / best) * 100)) : 0, profit };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lease haggle: a landlord with a hidden walk-away rent (reuses the negotiation rules)
+// ---------------------------------------------------------------------------------------------
+export function leaseOf(day: string): Negotiation {
+  const n = negotiationOf(`${day}|lease`);
+  return { ...n, item: 'a three-year lease on a shop unit' };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Spot the trend: three noisy charts, call each one
+// ---------------------------------------------------------------------------------------------
+export interface TrendChart { id: string; points: number[]; up: boolean }
+export function trendsOf(day: string): TrendChart[] {
+  const r = gen(`trend|${day}`);
+  return Array.from({ length: 3 }, (_, i) => {
+    const up = r() < 0.5;
+    const slope = (up ? 1 : -1) * (1.5 + r() * 2);
+    let v = 100;
+    const points = Array.from({ length: 12 }, () => { v += slope + (r() - 0.5) * 14; return Math.round(v * 10) / 10; });
+    return { id: `t${i}`, points, up };
+  });
+}
+export function trendScore(charts: readonly TrendChart[], calls: Readonly<Record<string, boolean>>): { points: number; right: number } {
+  const right = charts.filter((c) => calls[c.id] === c.up).length;
+  return { right, points: right === 3 ? 100 : right === 2 ? 60 : right === 1 ? 30 : 0 };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ad budget: ten units across four channels with diminishing returns
+// ---------------------------------------------------------------------------------------------
+export const AD_UNITS = 10;
+export const AD_CHANNELS = ['Search', 'Social', 'Radio', 'Posters'];
+export const adWeights = (day: string): number[] => { const r = gen(`ads|${day}`); return AD_CHANNELS.map(() => Math.round((3 + r() * 9) * 10) / 10); };
+export const adReturn = (weights: readonly number[], alloc: readonly number[]): number => alloc.reduce((a, n, i) => a + weights[i] * Math.sqrt(n), 0);
+export function bestAds(weights: readonly number[]): number {
+  let best = 0;
+  for (let a = 0; a <= AD_UNITS; a++) for (let b = 0; a + b <= AD_UNITS; b++) for (let c = 0; a + b + c <= AD_UNITS; c++) best = Math.max(best, adReturn(weights, [a, b, c, AD_UNITS - a - b - c]));
+  return best;
+}
+export function adScore(weights: readonly number[], alloc: readonly number[]): { points: number; total: number } {
+  const total = alloc.reduce((a, n) => a + n, 0);
+  if (alloc.length !== AD_CHANNELS.length || total !== AD_UNITS || alloc.some((n) => !Number.isInteger(n) || n < 0)) return { points: 0, total };
+  return { points: Math.round((adReturn(weights, alloc) / bestAds(weights)) * 100), total };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Payroll puzzle: cover demand in six slots with three-slot shifts
+// ---------------------------------------------------------------------------------------------
+export const PAYROLL_SLOTS = 6;
+export const SHIFT_LEN = 3;
+export const demandOf = (day: string): number[] => { const r = gen(`payroll|${day}`); return Array.from({ length: PAYROLL_SLOTS }, () => 1 + Math.floor(r() * 5)); };
+export const covered = (starts: readonly number[]): number[] => Array.from({ length: PAYROLL_SLOTS }, (_, j) => starts.reduce((a, n, i) => a + (i <= j && j < i + SHIFT_LEN ? n : 0), 0));
+export function cheapestRota(demand: readonly number[]): number {
+  let best = Infinity;
+  for (let a = 0; a <= 5; a++) for (let b = 0; b <= 5; b++) for (let c = 0; c <= 5; c++) for (let d = 0; d <= 5; d++) {
+    const cov = covered([a, b, c, d]);
+    if (cov.every((x, j) => x >= demand[j])) best = Math.min(best, a + b + c + d);
+  }
+  return best;
+}
+export function payrollScore(demand: readonly number[], starts: readonly number[]): { points: number; staff: number; ok: boolean } {
+  const staff = starts.reduce((a, n) => a + n, 0);
+  const cov = covered(starts);
+  if (starts.length !== 4 || !cov.every((x, j) => x >= demand[j])) return { points: 0, staff, ok: false };
+  return { points: Math.round((cheapestRota(demand) / staff) * 100), staff, ok: true };
 }
