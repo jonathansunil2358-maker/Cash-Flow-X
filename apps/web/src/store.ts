@@ -17,7 +17,7 @@ import { consumeUpgrade, loadGame, loadProfile, readPref, saveGame, saveProfile,
 
 /** Panels opened from the dock and HUD. */
 export type Sheet = 'team' | 'upgrades' | 'finance' | 'missions' | 'books' | 'legacy' | 'social' | 'settings';
-export type BooksTab = 'overview' | 'statements' | 'analysis' | 'forecast' | 'valuation' | 'market' | 'ledger';
+export type BooksTab = 'overview' | 'statements' | 'analysis' | 'forecast' | 'valuation' | 'market' | 'stocks' | 'ledger';
 export type Speed = 0 | 1 | 2 | 4;
 
 /** Real milliseconds per game month at x1. */

@@ -1813,3 +1813,29 @@ test('Missions and Settings are split into sections, and their cards start folde
   await st.getByRole('tab', { name: 'Account' }).click();
   await expect(st.getByRole('button', { name: 'Main menu' })).toBeVisible();
 });
+
+test('the Stocks tab shows listed rivals with moving prices, a market index and market news', async ({ page }) => {
+  await freshCompany(page, 'Stocks');
+  for (let i = 0; i < 2; i++) {
+    await clearOverlays(page);
+    await page.clock.runFor(10_500);
+  }
+  await clearOverlays(page);
+  await openDock(page, 'Books');
+  await page.getByRole('tab', { name: 'Stocks' }).click();
+  await expect(page.getByText('Market index')).toBeVisible();
+  await expect(page.getByLabel('Live share prices')).toBeAttached();
+  // The sector's strongest rivals are already listed: open one and see the trade panel.
+  const first = page.getByRole('button', { name: /Value £/ }).first();
+  await expect(first).toBeVisible();
+  await first.click();
+  await expect(page.getByLabel(/^Shares of /)).toBeVisible();
+  await expect(page.getByText(/Companies in your market/)).toBeVisible();
+  await expect(page.getByText('Market news')).toBeVisible();
+  // The price ticks on screen between monthly closes.
+  const price = first.locator('.font-display').nth(1);
+  const before = await price.textContent();
+  let changed = false;
+  for (let i = 0; i < 6 && !changed; i++) { await page.clock.runFor(1300); changed = (await price.textContent()) !== before; }
+  expect(changed).toBe(true);
+});

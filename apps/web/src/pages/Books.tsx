@@ -15,6 +15,7 @@ import { ForecastPage } from './Forecast';
 import { LedgerPage } from './Ledger';
 import { Investors } from './Investors';
 import { Market } from './Market';
+import { Stocks } from './Stocks';
 import { ValuationPage } from './Valuation';
 
 const TABS: { id: BooksTab; label: string }[] = [
@@ -24,6 +25,7 @@ const TABS: { id: BooksTab; label: string }[] = [
   { id: 'forecast', label: 'Forecast' },
   { id: 'valuation', label: 'Valuation' },
   { id: 'market', label: 'Market' },
+  { id: 'stocks', label: 'Stocks' },
   { id: 'ledger', label: 'Ledger' },
 ];
 
@@ -39,6 +41,7 @@ export function Books({ game }: { game: GameState }) {
       {booksTab === 'forecast' && <ForecastPage game={game} />}
       {booksTab === 'valuation' && <ValuationPage game={game} />}
       {booksTab === 'market' && <Market game={game} />}
+      {booksTab === 'stocks' && <Stocks game={game} />}
       {booksTab === 'ledger' && <LedgerPage game={game} />}
     </div>
   );
