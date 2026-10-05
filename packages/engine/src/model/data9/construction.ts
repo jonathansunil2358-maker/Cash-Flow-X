@@ -36,7 +36,7 @@ export const policies: PolicyDef[] = [
   { id: 'construction_snagging', group: 'ops', name: 'Snagging and defect checks', blurb: 'Snagging is the final walk-round where small defects such as a crooked door or a missing seal are listed and fixed before handover. Missed snags come back later as expensive callbacks.', options: [
     off,
     opt('Walk-round before handover', 'The site manager inspects every job before the client does. Fewer complaints and callbacks, but a few days added per job.', { q: 0.04, cap: 0.99 }, 0.3),
-    opt('Independent inspector', 'A paid third party checks every job. Almost nothing slips through and clients tell their friends, at a steady fee.', { q: 0.08, rep: 0.04, cap: 0.98 }, 0.7)] },
+    opt('Independent inspector', 'A paid third party checks every job. Almost nothing slips through and clients tell their friends, at a steady fee.', { q: 0.05, rep: 0.04, cap: 0.98 }, 0.7)] },
 
   { id: 'construction_stage_payments', group: 'finance', name: 'Stage payment schedule', blurb: 'Stage payments mean the client pays in instalments as each phase finishes, such as foundations, roof and fit-out. You buy materials before each stage, so how the instalments are set decides whether you run short of cash.', options: [
     off,
