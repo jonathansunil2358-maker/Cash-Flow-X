@@ -412,7 +412,7 @@ export const useGame = create<Store>((set, get) => {
         if (qe) set({ profile: persistProfile(recordQuest(get().profile, utcDay(), qe)) });
         if (success) get().toast('success', success);
         // Runs that end, and holding company deals, are verified straight away.
-        if (next.status !== 'playing' || ['acceptInvestment', 'buyOutInvestors', 'payDividend'].includes(action.type)) void get().syncNow();
+        if (next.status !== 'playing' || ['acceptInvestment', 'buyOutInvestors', 'buyBackShares', 'payDividend'].includes(action.type)) void get().syncNow();
         return true;
       } catch (e) {
         if (e instanceof ActionError) {

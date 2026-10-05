@@ -146,6 +146,8 @@ export interface OutsideHolder {
   /** Paid when bought out (prestige, leaving the holding company). */
   buyout: Pence;
   status: 'active' | 'bought-out';
+  /** Month they bought in (for the lock-up before a buy-back). Older holders have none. */
+  since?: number;
 }
 
 export interface AnnualCohort {

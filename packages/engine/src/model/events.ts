@@ -12,6 +12,7 @@ import { mentorOf } from './story';
 import { cultureOf, eventChanceMult } from './modifiers-opt';
 import { headcount, logItem, ownership, totalCustomers, type EventEffects, type GameState, type PendingEvent } from './state';
 import { valuationOf } from './valuation';
+import { addOutsideHolder } from './investors';
 import { scheduleIntoQueue } from './workingCapital';
 
 export type Polarity = 'good' | 'bad';
@@ -1368,6 +1369,7 @@ function issueSharesForCash(s: GameState, P: Poster, amount: Pence, preMoney: Pe
   const newShares = Math.round((s.shares.total * amount) / Math.max(1, preMoney));
   P(`${label}: shares issued`, [dr('cash', amount), cr('shareCapital', amount)], 'financing', 'Proceeds from issue of shares (net of costs)');
   s.shares.total += newShares;
+  addOutsideHolder(s, 'Angel investors', newShares, amount);
   return `Raised ${formatGBP(amount)}. Your ownership fell from ${(before * 100).toFixed(1)}% to ${(ownership(s) * 100).toFixed(1)}%.`;
 }
 

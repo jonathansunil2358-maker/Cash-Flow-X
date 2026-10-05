@@ -44,8 +44,9 @@ describe('deals and money', () => {
     for (const i of [0, 1, 2]) {
       const s = company(`DEAL-VC-${i}`);
       expect(vcOffers(s)[i].amount).toBeGreaterThan(0);
+      const held = s.outsideHolders.length;
       applyActionInPlace(s, { type: 'takeVc', offer: i });
-      expect(s.outsideHolders.length).toBe(1);
+      expect(s.outsideHolders.length).toBe(held + 1);
       expect(checkIntegrity(s)).toEqual([]);
       expect(() => applyActionInPlace(s, { type: 'takeVc', offer: i })).toThrow();
       if (i === 2) expect(s.deals?.vcPref).toBeGreaterThan(0);
