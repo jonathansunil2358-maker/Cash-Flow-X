@@ -65,7 +65,7 @@ describe('new mechanics under replay', () => {
 
 describe('forecast with the new mechanics', () => {
   it('first forecast month matches the real next month for revenue, with a promotion and seasonality', () => {
-    const s = newGame({ companyName: 'F', industryId: 'ecommerce', seed: 'FORECAST', difficulty: 'easy' });
+    const s = newGame({ companyName: 'F', industryId: 'ecommerce', seed: 'FORECAST-B', difficulty: 'easy' });
     applyActionInPlace(s, { type: 'hire', role: 'ops', count: 1 });
     applyActionInPlace(s, { type: 'hire', role: 'sales', count: 1 });
     applyActionInPlace(s, { type: 'setMarketing', amount: 100_000 });

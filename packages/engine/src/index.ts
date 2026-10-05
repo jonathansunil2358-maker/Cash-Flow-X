@@ -88,6 +88,7 @@ export * from './scenarios';
 export * from './forecast';
 export * from './replay';
 export * from './model/investors';
+export * from './model/world';
 export * from './model/guild';
 export * from './sync';
 export * from './model/promotions';

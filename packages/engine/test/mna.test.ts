@@ -153,7 +153,7 @@ describe('mergers and acquisitions v5', () => {
   });
 
   it('a merger of equals needs a partner of similar size and is paid in shares', () => {
-    const s = company('MNA-MOE');
+    const s = company('MNA-MOE-B');
     for (const t of s.targets) t.annualRevenue = 1;
     expect(() => applyActionInPlace(s, { type: 'mergerOfEquals', targetId: s.targets[0].id })).toThrow();
     const t = s.targets[0];

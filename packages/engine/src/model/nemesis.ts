@@ -1,5 +1,5 @@
 import { formatGBP } from '../money';
-import { bossOf } from './story';
+import { bossOfRival } from './market';
 import type { Profile } from './prestige';
 import type { GameState } from './state';
 
@@ -14,7 +14,7 @@ export function rememberNemesis<T extends Pick<Profile, 'nemesis'>>(p: T, s: Gam
   if (!s.competitors.length) return p;
   let best = 0;
   s.competitors.forEach((c, i) => { if (c.strength * c.quality > s.competitors[best].strength * s.competitors[best].quality) best = i; });
-  const boss = bossOf(best);
+  const boss = bossOfRival(s.competitors[best], best);
   return { ...p, nemesis: { name: s.competitors[best].name, boss: boss.name, catchphrase: boss.catchphrase, company: s.companyName, stake } };
 }
 

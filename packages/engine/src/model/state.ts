@@ -31,6 +31,42 @@ export interface Competitor {
   normalPrice: Pence;
   /** Calendar year of the last product launch (a rival launches at most once a year). */
   lastLaunchYear: number;
+  /** The living market (world.ts): rivals found after the start have an id; older games assign them on first use. */
+  id?: number;
+  /** Month the company appeared (0 for the sector's original rivals). */
+  born?: number;
+  /** Fixed personality and boss, so they survive other rivals leaving. */
+  trait?: 'slasher' | 'snob' | 'copycat';
+  bossIx?: number;
+  /** Listed on the stock market: shares in issue, the price now, last month's price, the IPO price and recent prices. */
+  listed?: boolean;
+  shares?: number;
+  px?: number;
+  pxPrev?: number;
+  ipoPx?: number;
+  pxHist?: Pence[];
+}
+
+export interface WorldNews { month: number; kind: 'founded' | 'failed' | 'merger' | 'ipo' | 'takeover'; text: string }
+
+/** The wider market the rivals live in: who has come and gone, the mood of the stock market, and your own share portfolio. */
+export interface World {
+  nextId: number;
+  /** Total rival strength the market can carry; entrants and mergers trade against it, so the market stays about as tough. */
+  budget: number;
+  /** Market mood, a mean-reverting random walk that lifts and drops every listed share together. */
+  mood: number;
+  /** An index of all listed rivals, starting at 1000, one point a month (oldest first, last 36). */
+  index: number[];
+  news: WorldNews[];
+  founded: number;
+  failed: number;
+  mergers: number;
+  ipos: number;
+  /** Shares of listed rivals the company owns, by rival id. `carry` is what the books hold them at (always shares x price). */
+  holdings: Record<string, { shares: number; carry: Pence }>;
+  /** Rivals that vanished this month while you held their shares: settled by the tick. */
+  gone?: Record<string, { kind: 'acquired' | 'failed'; px: Pence }>;
 }
 
 export type PayLevel = 'below' | 'market' | 'above';
@@ -449,6 +485,7 @@ export interface GameState {
   economy: Economy;
   marketSize: number;
   competitors: Competitor[];
+  world?: World;
   targets: AcquisitionTarget[];
   acquisitions: Acquisition[];
 

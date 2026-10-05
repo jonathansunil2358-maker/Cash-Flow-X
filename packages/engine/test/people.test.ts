@@ -18,7 +18,7 @@ const run = (s: GameState, months: number) => { for (let i = 0; i < months && s.
 
 describe('people and culture', () => {
   it('courses cost money, move their stat, and have a cooldown', () => {
-    const s = company('PEO-COURSE');
+    const s = company('PEO-COURSE-B');
     const q = s.quality;
     expect(courseCheck(s, 'technical').ok).toBe(true);
     applyActionInPlace(s, { type: 'takeCourse', course: 'technical' });
