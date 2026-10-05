@@ -6,6 +6,7 @@ import { industryOf, ROLE_IDS, type RoleId } from './industries';
 import { plSummary } from '../ledger/statements';
 import { boostActive, perkEffects } from './perks';
 import { claimPayout, outageDemand } from './insurance';
+import { EVENTS8, type EvChoice, type EvEff, type EvSpec } from './data8';
 import { PERSONALITIES, rosterOf } from './roster';
 import { mentorOf } from './story';
 import { cultureOf, eventChanceMult } from './modifiers-opt';
@@ -1241,6 +1242,68 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     },
   },
 ];
+
+
+// ---------------------------------------------------------------------------------------------
+// Data-driven business events (see data8.ts)
+// ---------------------------------------------------------------------------------------------
+function applyEvEff(st: GameState, id: string, title: string, e: EvEff | undefined): void {
+  if (!e) return;
+  if (e.d) addTemporary(st, `${id}-d`, title, e.d[1], { demandMult: e.d[0] }, true);
+  if (e.c) addTemporary(st, `${id}-c`, title, e.c[1], { unitCostMult: e.c[0] }, true);
+  if (e.morale) st.morale = Math.max(0, Math.min(100, st.morale + e.morale));
+  if (e.rep) st.reputation = Math.max(0, Math.min(100, st.reputation + e.rep));
+  if (e.brand) st.brand *= e.brand;
+  if (e.quality) st.quality = Math.max(0, Math.min(100, st.quality + e.quality));
+}
+const IMPACT: Record<string, { label: string; up: boolean }> = {
+  d: { label: 'Demand', up: true }, c: { label: 'Costs', up: false }, morale: { label: 'Morale', up: true }, rep: { label: 'Reputation', up: true }, brand: { label: 'Brand', up: true }, quality: { label: 'Quality', up: true },
+};
+function impactOf(c: EvChoice): { label: string; up: boolean }[] {
+  const out: { label: string; up: boolean }[] = [];
+  const e = c.eff ?? {};
+  for (const k of Object.keys(e) as (keyof EvEff)[]) {
+    const v = e[k]; if (v === undefined) continue;
+    const meta = IMPACT[k]; if (!meta) continue;
+    const num = Array.isArray(v) ? v[0] : v;
+    const good = k === 'c' ? num < 1 : k === 'd' || k === 'brand' ? num >= 1 : num >= 0;
+    out.push({ label: meta.label, up: good });
+  }
+  if (c.gamble) out.push({ label: 'Risk', up: false });
+  if (c.k) out.push({ label: 'Cash', up: false });
+  if (c.income) out.push({ label: 'Cash', up: true });
+  return out;
+}
+function buildEvent(spec: EvSpec): ChoiceEventDef {
+  return {
+    id: spec.id, title: spec.title, polarity: spec.good ? 'good' : 'bad', weight: 0, icon: spec.icon,
+    when: () => false,
+    setup: (s) => {
+      const params: Record<string, number> = {};
+      spec.choices.forEach((c, i) => { params[`c${i}`] = c.k ? sized(s, c.k, 800_00) : c.income ? sized(s, c.income, 800_00) : 0; });
+      return {
+        story: spec.story, params,
+        choices: spec.choices.map((c, i) => ({
+          id: c.id, label: c.k ? `${c.label} (${formatGBP(params[`c${i}`])})` : c.income ? `${c.label} (+${formatGBP(params[`c${i}`])})` : c.label, hint: c.hint, impact: impactOf(c),
+          apply: (st, rng, P, p) => {
+            const amt = p[`c${i}`];
+            if (c.k) P(`${spec.title}: ${c.label}`, [dr(c.acct ?? 'otherCosts', amt), cr('cash', amt)]);
+            if (c.income) P(`${spec.title}: ${c.label}`, [dr('cash', amt), cr('otherIncome', amt)]);
+            applyEvEff(st, `${spec.id}-${c.id}`, spec.title, c.eff);
+            if (c.gamble) {
+              const win = chance(rng, c.gamble.p);
+              applyEvEff(st, `${spec.id}-${c.id}-g`, spec.title, win ? c.gamble.good : c.gamble.bad);
+              if (spec.id === 'e8_grant' && win) { const g = sized(st, 0.5, 1_500_00); P('Grant received', [dr('cash', g), cr('otherIncome', g)]); return `${c.gamble.goodText} It paid ${formatGBP(g)}.`; }
+              return win ? c.gamble.goodText : c.gamble.badText;
+            }
+            return c.text;
+          },
+        })),
+      };
+    },
+  };
+}
+CHOICE_EVENTS.push(...EVENTS8.map(buildEvent));
 
 const CHOICE_BY_ID = Object.fromEntries(CHOICE_EVENTS.map((e) => [e.id, e])) as Record<string, ChoiceEventDef>;
 

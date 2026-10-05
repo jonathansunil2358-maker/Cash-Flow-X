@@ -99,7 +99,7 @@ export function completeAcquisition(s: GameState, target: AcquisitionTarget, opt
     dr('goodwill', goodwill + (target.inventory - inventory)),
     cr('payables', target.payables),
     cr('loans', target.debt),
-    ...(price - sharePart > 0 ? [cr('cash', price - sharePart)] : []),
+    ...(price - sharePart !== 0 ? [cr('cash', price - sharePart)] : []),
     ...(sharePart > 0 ? [cr('shareCapital', sharePart)] : []),
   ], { cf: 'investing', cfLabel: 'Acquisition of subsidiary, net of cash acquired' });
 

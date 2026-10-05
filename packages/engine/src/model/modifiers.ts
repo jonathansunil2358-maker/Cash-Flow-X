@@ -7,6 +7,7 @@ import { projectModifiers } from './rnd';
 import type { GameState } from './state';
 import { designCostMult, designDemandMult } from './design';
 import { exportMult } from './export';
+import { play8Capacity, play8Churn, play8Cost, play8Demand, play8Hire, play8Key, play8Overdraft, play8Quality } from './play8';
 import { play7Capacity, play7Cost, play7Demand, play7Key, play7Quality } from './play7';
 import { play6Capacity, play6Churn, play6Demand, play6Key } from './play6';
 import { play5Key, play5Capacity, play5Churn, play5Cost, play5Demand, play5Overdraft, play5Spread } from './play5';
@@ -43,7 +44,7 @@ function cacheKey(s: GameState): string {
   for (const id in s.perks) k += `|${id}${s.perks[id]}`;
   for (const b of s.boosts) k += `|${b.id}${b.monthsRemaining > 0 ? 1 : 0}`;
   for (const id of s.projectsDone) k += `|r${id}`;
-  k += `|g${s.guildLevel ?? 0}|p${s.prestigeLevel ?? 0}|d${s.design ?? 50}|s${s.stars?.length ?? 0}|a${s.people?.trained ?? 0}|w${s.people?.workstyle ?? ''}|l${s.cust?.loyalty ? 1 : 0}|h${happyRegulars(s)}|b${s.strat?.boons?.join('') ?? ''}|c${s.strat?.stance ?? ''}${Math.round(s.economy.demandMult * 100)}|g${s.strat?.green?.join('') ?? ''}|e${s.strat ? esgOf(s).rating : ''}|x${s.sandbox?.demand ?? 1}|v${play5Key(s)}|u${play6Key(s)}|q${play7Key(s)}`;
+  k += `|g${s.guildLevel ?? 0}|p${s.prestigeLevel ?? 0}|d${s.design ?? 50}|s${s.stars?.length ?? 0}|a${s.people?.trained ?? 0}|w${s.people?.workstyle ?? ''}|l${s.cust?.loyalty ? 1 : 0}|h${happyRegulars(s)}|b${s.strat?.boons?.join('') ?? ''}|c${s.strat?.stance ?? ''}${Math.round(s.economy.demandMult * 100)}|g${s.strat?.green?.join('') ?? ''}|e${s.strat ? esgOf(s).rating : ''}|x${s.sandbox?.demand ?? 1}|v${play5Key(s)}|u${play6Key(s)}|q${play7Key(s)}|z${play8Key(s)}`;
   if (s.markets?.length) k += `|x${s.month}:${s.markets.join()}`;
   return k;
 }
@@ -76,19 +77,19 @@ function computeModifiers(s: GameState): Modifiers {
   const dropout = hasModifier(s, 'origin-dropout');
   const heir = hasModifier(s, 'origin-heir');
   return {
-    capacityMult: u.capacityMult * p.capacityMult * (people ? 1.05 : 1) * star.capacity * academyCapacity(s) * (hasBoon(s, 'capacity') ? 1.02 : 1) * play5Capacity(s) * play6Capacity(s) * play7Capacity(s),
+    capacityMult: u.capacityMult * p.capacityMult * (people ? 1.05 : 1) * star.capacity * academyCapacity(s) * (hasBoon(s, 'capacity') ? 1.02 : 1) * play5Capacity(s) * play6Capacity(s) * play7Capacity(s) * play8Capacity(s),
     marketMult: u.marketMult * p.marketMult * r.marketMult * (bold ? 1.04 : 1),
     reachMult: u.reachMult * (frugal ? 0.9 : 1) * (engineer ? 0.92 : 1) * star.reach,
     brandGainMult: p.brandGainMult * (megaphone ? 2 : 1) * (steady ? 0.95 : 1) * (marketer ? 1.15 : 1),
-    qualityPerMonth: u.qualityPerMonth + (engineer ? 0.03 : 0) + star.quality + workstyleOf(s).quality + (hasBoon(s, 'quality') ? 0.03 : 0) + play7Quality(s),
-    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult * rankCostMult(s) * (frugal ? 0.96 : 1) * (bold || people ? 1.03 : 1) * (marketer ? 1.03 : 1) * (dropout ? 0.97 : 1) * (heir ? 1.02 : 1) * (hasBoon(s, 'costs') ? 0.98 : 1) * (hasGreen(s, 'recycle') ? 0.985 : 1) * designCostMult(s) * play5Cost(s) * play7Cost(s),
-    churnMult: u.churnMult * p.churnMult * (loyaltyOn(s) ? 0.9 : 1) * (hasBoon(s, 'churn') ? 0.94 : 1) * play5Churn(s) * play6Churn(s),
+    qualityPerMonth: u.qualityPerMonth + (engineer ? 0.03 : 0) + star.quality + workstyleOf(s).quality + (hasBoon(s, 'quality') ? 0.03 : 0) + play7Quality(s) + play8Quality(s),
+    unitCostMult: u.unitCostMult * p.unitCostMult * r.unitCostMult * rankCostMult(s) * (frugal ? 0.96 : 1) * (bold || people ? 1.03 : 1) * (marketer ? 1.03 : 1) * (dropout ? 0.97 : 1) * (heir ? 1.02 : 1) * (hasBoon(s, 'costs') ? 0.98 : 1) * (hasGreen(s, 'recycle') ? 0.985 : 1) * designCostMult(s) * play5Cost(s) * play7Cost(s) * play8Cost(s),
+    churnMult: u.churnMult * p.churnMult * (loyaltyOn(s) ? 0.9 : 1) * (hasBoon(s, 'churn') ? 0.94 : 1) * play5Churn(s) * play6Churn(s) * play8Churn(s),
     spoilageMult: u.spoilageMult * p.spoilageMult,
-    demandMult: designDemandMult(s) * exportMult(s) * (loyaltyOn(s) ? 1.03 : 1) * regularsBonus(s) * (hasBoon(s, 'demand') ? 1.02 : 1) * (hasGreen(s, 'certify') ? 1.015 : 1) * stanceFactor(s) * play5Demand(s) * play6Demand(s) * play7Demand(s) * (s.sandbox?.demand ?? 1) * p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1) * (perksOn ? 1 + prestigeBonus(s.prestigeLevel ?? 0) : 1),
-    recruitmentMult: p.recruitmentMult * (hasBoon(s, 'hiring') ? 0.9 : 1),
+    demandMult: designDemandMult(s) * exportMult(s) * (loyaltyOn(s) ? 1.03 : 1) * regularsBonus(s) * (hasBoon(s, 'demand') ? 1.02 : 1) * (hasGreen(s, 'certify') ? 1.015 : 1) * stanceFactor(s) * play5Demand(s) * play6Demand(s) * play7Demand(s) * play8Demand(s) * (s.sandbox?.demand ?? 1) * p.demandMult * (rush ? 1.5 : 1) * (g?.demandMult ?? 1) * (perksOn ? 1 + prestigeBonus(s.prestigeLevel ?? 0) : 1),
+    recruitmentMult: p.recruitmentMult * (hasBoon(s, 'hiring') ? 0.9 : 1) * play8Hire(s),
     upgradeCostMult: p.upgradeCostMult,
     loanSpreadDelta: p.loanSpreadDelta + (g?.loanSpreadDelta ?? 0) + (hasModifier(s, 'tight-credit') ? 0.01 : 0) - (steady ? 0.005 : 0) - (banker ? 0.01 : 0) + (dropout ? 0.01 : 0) - (heir ? 0.005 : 0) - (hasBoon(s, 'credit') ? 0.005 : 0) + esgSpreadDelta(s) + play5Spread(s),
-    overdraftMult: p.overdraftMult * (steady ? 1.25 : 1) * (banker ? 1.15 : 1) * play5Overdraft(s),
+    overdraftMult: p.overdraftMult * (steady ? 1.25 : 1) * (banker ? 1.15 : 1) * play5Overdraft(s) * play8Overdraft(s),
     equityDiscountDelta: p.equityDiscountDelta,
   };
 }

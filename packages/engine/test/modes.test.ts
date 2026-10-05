@@ -67,6 +67,7 @@ describe('boss rounds', () => {
     const rep = s.reputation;
     const before = s.bossesBeaten ?? 0;
     s.boss = { id: 'war', endMonth: s.month };
+    answer(s);
     tickInPlace(s);
     if (s.status === 'playing') { expect(s.bossesBeaten).toBe(before + 1); expect(s.reputation).toBeGreaterThanOrEqual(Math.min(100, rep)); }
   });

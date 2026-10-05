@@ -368,6 +368,8 @@ export interface GameState {
   play6?: import('./play6').Play6;
   /** Council, stock control, training budget, outsourcing, limited range: see play7.ts. */
   play7?: import('./play7').Play7;
+  /** Chosen policy options and when events last came: see play8.ts and data8.ts. */
+  play8?: import('./play8').Play8;
   /** Boss round in progress, and how many have been beaten (see boss.ts). Speedrun: the month £1m of value was first reached. */
   boss?: { id: string; endMonth: number };
   bossesBeaten?: number;

@@ -28,6 +28,8 @@ export * from './model/play5';
 export * from './model/play5Advance';
 export * from './model/play6';
 export * from './model/play7';
+export * from './model/play8';
+export { advancePlay8 } from './model/play8Advance';
 export { advancePlay7 } from './model/play7Advance';
 export { applyTender } from './model/play6Advance';
 export * from './model/people';

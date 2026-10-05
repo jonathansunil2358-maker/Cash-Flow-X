@@ -39,6 +39,7 @@ describe('customers and brand', () => {
     expect(() => applyActionInPlace(s, { type: 'resolveComplaint', id: first[0].id })).toThrow();
     // Two copies of the same company: one answers everything every month, the other ignores it.
     const kind = structuredClone(s); const rude = structuredClone(s);
+    answer(kind); answer(rude);
     for (let i = 0; i < 6; i++) {
       for (const c of complaintsOf(kind)) { try { applyActionInPlace(kind, { type: 'resolveComplaint', id: c.id }); } catch { /* poor */ } }
       tickInPlace(kind); tickInPlace(rude); answer(kind); answer(rude);
