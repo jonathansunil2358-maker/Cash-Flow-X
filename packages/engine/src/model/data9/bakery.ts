@@ -43,10 +43,10 @@ export const policies: PolicyDef[] = [
     opt('Weekly loaf box', 'Fresh bread each Saturday. Regulars stay loyal and you bake to a known number.', { ch: 0.97, d: 1.01, cap: 0.99 }, 0.3, 0.4),
     opt('Bread and pastry plan', 'A bigger box with a choice of bakes. Loyal subscribers and little waste, but packing and delivery eat time.', { ch: 0.95, d: 1.02, cap: 0.97, c: 1.005 }, 0.7, 0.6)] },
 
-  { id: 'bakery_oven_service', group: 'ops', name: 'Oven maintenance contract', blurb: 'Your ovens are the heart of the bakery. A service contract means an engineer inspects them on a schedule and fixes faults fast, instead of you paying emergency rates when one breaks.', options: [
-    opt('Fix when it breaks', 'No fee, but a dead oven at 4am costs a morning of bread.', { risk: [6, 4, 'An oven broke down and a morning of bread was lost.'] }),
-    opt('Annual service visit', 'One check a year. Fewer breakdowns for a modest fee.', { risk: [3, 3, 'An oven broke down and a morning of bread was lost.'] }, 0.2),
-    opt('Full cover contract', 'Regular visits and a guaranteed rapid callout. Expensive, but ovens almost never fail.', { risk: [0.5, 2, 'An oven broke down and a morning of bread was lost.'], cap: 1.01 }, 0.5)] },
+  { id: 'bakery_oven_service', group: 'ops', name: 'Oven maintenance contract', blurb: 'Your ovens are the heart of the bakery. A service contract means an engineer inspects them on a schedule and fixes faults fast. With it off, you only call someone when an oven breaks, at emergency rates.', options: [
+    off,
+    opt('Annual service visit', 'An engineer checks the ovens once a year. Fewer breakdowns than fixing only when they fail, for a modest fee.', { cap: 1.01 }, 0.2),
+    opt('Full cover contract', 'Regular visits and a guaranteed rapid callout. Expensive, but the ovens almost never let you down and run at their best.', { cap: 1.02, q: 0.01 }, 0.5)] },
 
   { id: 'bakery_packaging', group: 'customers', name: 'Branded packaging', blurb: 'Paper bags, boxes and ribbon with your logo. Branding is how people recognise and remember you, and a good box is walking advertising, but packaging adds to the cost of every sale.', options: [
     off,

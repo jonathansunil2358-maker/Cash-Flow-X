@@ -102,7 +102,7 @@ export const events: EvSpec[] = [
 
   { id: 'e9_farm_breeding_cycle', title: 'A bumper lambing season', icon: 'heart', good: true, per: 1.5, cd: 24, story: 'Livestock breeding runs on slow cycles: a ewe is pregnant for five months, and a lamb needs months more before it can be sold. This year has produced twins in many pens, and lambs are going to be ready all at once.', choices: [
     S('market', 'Sell at the spring lamb market', 'Quick income and a flooded market.', 'Prices were fair at the sale, though the market was crowded.', { income: 0.1, eff: { d: E(0.99, 2) } }),
-    S('shop', 'Sell through the farm shop over the summer', 'Better price, slower income, extra work.', 'Shop customers happily paid for local lamb and you hung onto the full price.', { k: 0.015, income: 0.08, eff: { rep: 1, d: E(1.01, 4) } }),
+    S('shop', 'Sell through the farm shop over the summer', 'Better price, slower income, extra work.', 'Shop customers happily paid for local lamb and you hung onto the full price.', { income: 0.08, eff: { rep: 1, d: E(1.01, 4) } }),
     S('breed', 'Keep the best ewe lambs to grow the flock', 'No income now, bigger flock later.', 'You kept the best ewe lambs and promised yourself a bigger flock next year.', { eff: { c: E(1.01, 4), quality: 1 } })] },
 ];
 

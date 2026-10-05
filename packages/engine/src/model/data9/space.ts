@@ -97,7 +97,7 @@ export const events: EvSpec[] = [
     S('decline', 'Decline politely', 'Keep the focus.', 'You kept your team on launches.')] },
   // 399 Research grant
   { id: 'e9_space_grant', title: 'Research grant on offer', icon: 'diamond', good: true, per: 1.1, cd: 14, story: 'A government science fund offers a grant, which is free money for research, if you share results openly and file regular reports. Reporting eats staff time.', choices: [
-    S('apply', 'Apply for the grant', 'Costs paperwork now. Pays well.', 'The grant arrived and the engineers shared a report.', { income: 0.35, eff: { morale: -1 } }),
+    S('apply', 'Apply for the grant', 'Costs paperwork time. Pays well.', 'The grant arrived and the engineers published a report.', { income: 0.35, eff: { morale: -1 } }),
     S('keep', 'Keep your research private', 'No cash and no strings.', 'Your designs stayed secret.')] },
   // 392 Prototype vs production
   { id: 'e9_space_prototype', title: 'Prototype or production?', icon: 'gear', good: false, per: 1.2, cd: 14, story: 'Your team has a working prototype rocket. Do you keep improving it, or lock the design and build many copies? Locking it gets you flying sooner, and you cannot easily change it later.', choices: [
