@@ -54,6 +54,7 @@ export function advancePlay8(s: GameState, rng: Rng, simulation: boolean): void 
   const team = s.staff.ops + s.staff.rnd + s.staff.sales >= 3;
   const eligible = EVENTS8.filter((e) => {
     if (e.min && s.month < e.min) return false;
+    if (e.sector && e.sector !== s.industryId) return false;
     if (e.gate === 'rivals' && !s.competitors.length) return false;
     if (e.gate === 'stock' && industryOf(s).model !== 'unit') return false;
     if (e.gate === 'team' && !team) return false;
