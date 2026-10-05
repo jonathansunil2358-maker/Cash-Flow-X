@@ -1,4 +1,5 @@
 import {
+  AD_CHANNELS, AD_UNITS, adScore, adWeights, covered, demandOf, leaseOf, PAYROLL_SLOTS, payrollScore, SHIFT_LEN, trendScore, trendsOf,
   candidateValue, cheapestNetwork, forecastScore, hiringScore, interviewCandidates, nextMonthRevenue, routeGraphOf, routeScore, WAR_COST, WAR_PRICES, WAR_WEEKS, warProfit, warRival, warScore,
   AUCTION_STEPS, auctionOf, auctionScore, boardroomScore, CALL_BUDGET, callScore, callsOf, directorsOf, formatGBP, fraudScore, invoicesOf, miniOf, type MiniKind, MINI_GEMS, negOffer, negScore, negStart, negotiationOf, PITCH_PICKS, pitchMetrics, pitchPriorities, pitchScore, stockScore, stockTakeOf, stockWrong, tetrisBalances, tetrisOf,
   tetrisScore, utcDay, type GameState,
@@ -134,12 +135,12 @@ export function TetrisCard() {
   );
 }
 
-/** The twelve daily games together. */
+/** The sixteen daily games together. */
 export function GamesCards({ game }: { game: GameState }) {
   return (
     <>
-      <Card fold id="card-games" title="Daily games" subtitle="Twelve small games a day, each paying gems for a good score. They never change your company.">
-        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush, Cash-flow tetris, Boardroom pitch, Crisis call centre, Auction house, Spot the fraud, Forecast challenge, Hiring interviews, Supply route planner and Price-war survival.</p>
+      <Card fold id="card-games" title="Daily games" subtitle="Sixteen small games a day, each paying gems for a good score. They never change your company.">
+        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush, Cash-flow tetris, Boardroom pitch, Crisis call centre, Auction house, Spot the fraud, Forecast challenge, Hiring interviews, Supply route planner, Price-war survival, Lease haggle, Spot the trend, Ad budget and Payroll puzzle.</p>
       </Card>
       <NegotiationCard />
       <PitchCard game={game} />
@@ -153,6 +154,10 @@ export function GamesCards({ game }: { game: GameState }) {
       <HiringCard />
       <RoutesCard />
       <PriceWarCard />
+      <LeaseCard />
+      <TrendCard />
+      <AdBudgetCard />
+      <PayrollCard />
     </>
   );
 }
@@ -391,6 +396,126 @@ export function PriceWarCard() {
         </div>
       )}
       {result && <p role="status" className="mt-3 text-sm font-black">Total profit £{result.profit}: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Haggle with a landlord who has a hidden walk-away rent. */
+export function LeaseCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const n = useMemo(() => leaseOf(day), [day]);
+  const [st, setSt] = useState(() => negStart(n));
+  const done = doneNote('lease', profile, day);
+  const offer = (pct: number) => { const next = negOffer(n, st, pct); setSt(next); if (next.status !== 'open') finishMini('lease', day, negScore(n, next)); };
+  return (
+    <Fold id="card-lease" title="Lease haggle" summary={done ?? 'Haggle with a landlord. Open to play.'}
+      subtitle={`You want ${n.item}. The landlord has a hidden lowest rent and a short temper. Offer too little too often and they walk away. Pay less for a better score.`}>
+      <ul className="space-y-1 text-sm">{st.log.map((l, i) => <li key={i}>{l}</li>)}</ul>
+      {st.status === 'open' && !done ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Your offer for the lease">
+          {[100, 90, 80, 70, 60].map((p) => <Button key={p} onClick={() => offer(p)}>Offer {p}% ({formatGBP(Math.round((st.ask * p) / 100 / 100_00) * 100_00, { compact: true })})</Button>)}
+        </div>
+      ) : <p role="status" className="mt-3 text-sm font-black">{st.status === 'deal' ? `You signed at ${formatGBP(st.price!)}: ${negScore(n, st)} points.` : st.status === 'walked' ? 'The landlord walked away: 0 points.' : done}</p>}
+    </Fold>
+  );
+}
+
+/** Three noisy charts: is each one really going up or down? */
+export function TrendCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const charts = useMemo(() => trendsOf(day), [day]);
+  const [calls, setCalls] = useState<Record<string, boolean>>({});
+  const [result, setResult] = useState<ReturnType<typeof trendScore> | null>(null);
+  const done = doneNote('trend', profile, day);
+  const go = () => { const r = trendScore(charts, calls); setResult(r); finishMini('trend', day, r.points); };
+  return (
+    <Fold id="card-trend" title="Spot the trend" summary={done ?? 'Three noisy charts. Open to play.'}
+      subtitle="Each chart is 12 months of sales with lots of noise. Underneath, every one is drifting up or down. Call each one.">
+      <ul className="space-y-3">
+        {charts.map((c, ci) => {
+          const lo = Math.min(...c.points); const hi = Math.max(...c.points);
+          const path = c.points.map((v, i) => `${i === 0 ? 'M' : 'L'}${10 + i * 26},${70 - ((v - lo) / Math.max(1, hi - lo)) * 60}`).join(' ');
+          return (
+            <li key={c.id}>
+              <svg viewBox="0 0 320 80" className="h-20 w-full" role="img" aria-label={`Chart ${ci + 1}`}><path d={path} fill="none" stroke="currentColor" strokeWidth="2.5" /></svg>
+              <div className="flex gap-2" role="group" aria-label={`Call for chart ${ci + 1}`}>
+                <Button variant={calls[c.id] === true ? 'primary' : 'secondary'} aria-pressed={calls[c.id] === true} disabled={!!result || !!done} onClick={() => setCalls({ ...calls, [c.id]: true })}>Going up</Button>
+                <Button variant={calls[c.id] === false ? 'primary' : 'secondary'} aria-pressed={calls[c.id] === false} disabled={!!result || !!done} onClick={() => setCalls({ ...calls, [c.id]: false })}>Going down</Button>
+                {result && <span className="self-center text-xs text-ink-2">It was going {c.up ? 'up' : 'down'}.</span>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {!result && !done && <Button className="mt-3" variant="primary" disabled={Object.keys(calls).length < 3} onClick={go}>Make the calls</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.right} of 3 right: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Ten units of advertising across four channels with diminishing returns. */
+export function AdBudgetCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const w = useMemo(() => adWeights(day), [day]);
+  const [alloc, setAlloc] = useState<number[]>([3, 3, 2, 2]);
+  const [result, setResult] = useState<ReturnType<typeof adScore> | null>(null);
+  const done = doneNote('adbudget', profile, day);
+  const total = alloc.reduce((a, n) => a + n, 0);
+  const go = () => { const r = adScore(w, alloc); setResult(r); finishMini('adbudget', day, r.points); };
+  return (
+    <Fold id="card-adbudget" title="Ad budget" summary={done ?? 'Ten units, four channels. Open to play.'}
+      subtitle={`Spread ${AD_UNITS} units of budget over four channels. Each channel has a strength today (shown) but gives less for every extra unit, so putting everything in one place is rarely best.`}>
+      <ul className="space-y-2">
+        {AD_CHANNELS.map((c, i) => (
+          <li key={c} className="flex items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1"><b>{c}</b> (strength {w[i]})</span>
+            <Button className="!min-h-8 !px-2" aria-label={`Less on ${c}`} disabled={!!result || !!done || alloc[i] === 0} onClick={() => setAlloc(alloc.map((n, j) => (j === i ? n - 1 : n)))}>−</Button>
+            <span className="tnum w-6 text-center font-black" aria-label={`${c} units`}>{alloc[i]}</span>
+            <Button className="!min-h-8 !px-2" aria-label={`More on ${c}`} disabled={!!result || !!done || total >= AD_UNITS} onClick={() => setAlloc(alloc.map((n, j) => (j === i ? n + 1 : n)))}>+</Button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-sm font-black">{total} of {AD_UNITS} units placed</p>
+      {!result && !done && <Button className="mt-2" variant="primary" disabled={total !== AD_UNITS} onClick={go}>Run the campaign</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Staff a six-slot day with three-slot shifts, as cheaply as you can. */
+export function PayrollCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const demand = useMemo(() => demandOf(day), [day]);
+  const [starts, setStarts] = useState<number[]>([0, 0, 0, 0]);
+  const [result, setResult] = useState<ReturnType<typeof payrollScore> | null>(null);
+  const done = doneNote('payroll', profile, day);
+  const cov = covered(starts);
+  const go = () => { const r = payrollScore(demand, starts); setResult(r); finishMini('payroll', day, r.points); };
+  return (
+    <Fold id="card-payroll" title="Payroll puzzle" summary={done ?? 'Cover the day with the fewest staff. Open to play.'}
+      subtitle={`The day has ${PAYROLL_SLOTS} slots and each worker does ${SHIFT_LEN} in a row. Choose how many start in slots 1 to 4 so that every slot has enough people. Fewer staff scores higher.`}>
+      <div className="flex flex-wrap gap-1 text-xs" aria-label="Demand and cover by slot">
+        {demand.map((d, j) => <span key={j} className={`tnum rounded border px-1.5 py-0.5 ${cov[j] < d ? 'border-[var(--danger)] font-black text-critical-text' : 'border-line'}`}>Slot {j + 1}: need {d}, have {cov[j]}</span>)}
+      </div>
+      <ul className="mt-2 space-y-1">
+        {starts.map((n, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1">Start in slot {i + 1}</span>
+            <Button className="!min-h-8 !px-2" aria-label={`Fewer starting in slot ${i + 1}`} disabled={!!result || !!done || n === 0} onClick={() => setStarts(starts.map((x, j) => (j === i ? x - 1 : x)))}>−</Button>
+            <span className="tnum w-6 text-center font-black">{n}</span>
+            <Button className="!min-h-8 !px-2" aria-label={`More starting in slot ${i + 1}`} disabled={!!result || !!done || n >= 5} onClick={() => setStarts(starts.map((x, j) => (j === i ? x + 1 : x)))}>+</Button>
+          </li>
+        ))}
+      </ul>
+      {!result && !done && <Button className="mt-2" variant="primary" onClick={go}>Publish the rota ({starts.reduce((a, n) => a + n, 0)} staff)</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.ok ? `${result.staff} staff: ${result.points} points.` : 'Some slots were short-staffed: 0 points.'}</p>}
       {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
     </Fold>
   );

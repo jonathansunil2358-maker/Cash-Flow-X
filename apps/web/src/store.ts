@@ -7,7 +7,7 @@ import {
   type BoxOpening, type Profile, type Rng,
   claimInheritance as claimInheritanceOn, newlyMet, CHALLENGE_GEMS,
   claimFestival as claimFestivalOn,
-  type MiniKind,
+  type MiniKind, claimSeason as claimSeasonOn,
 } from '@cfx/engine';
 import { create } from 'zustand';
 import { useAccount } from './lib/account';
@@ -131,6 +131,7 @@ interface Store {
   claimFestival: () => void;
   takeSpareCard: (id: string) => boolean;
   finishMini: (kind: MiniKind, day: string, points: number) => void;
+  claimSeasonAlbum: (day: string) => void;
   finishInterview: (key: string, right: number, gems: number) => void;
   claimPass: () => void;
   openBox: () => BoxOpening<Profile> | null;
@@ -848,6 +849,10 @@ export const useGame = create<Store>((set, get) => {
       if (r.profile === get().profile) return;
       set({ profile: persistProfile(r.profile) });
       if (r.gems) { get().toast('good', `Well played: +${r.gems} gems.`); playSound('success'); }
+    },
+
+    claimSeasonAlbum(day) {
+      try { const r = claimSeasonOn(get().profile, day); set({ profile: persistProfile(r.profile) }); get().toast('good', `Album complete: +${r.gems} gems.`); playSound('success'); } catch (e) { get().toast('error', (e as Error).message); }
     },
 
     finishSprint(day, points, gems) {

@@ -26,10 +26,12 @@ export interface MiniResult { day: string; points: number }
 export const miniOf = (p: Pick<Profile, 'minis'>, kind: MiniKind): MiniResult | null => p.minis?.[kind] ?? null;
 export const miniDone = (p: Pick<Profile, 'minis'>, kind: MiniKind, day: string): boolean => miniOf(p, kind)?.day === day;
 /** Record today's result (once a day) and pay gems by score. */
-export function recordMini<T extends Pick<Profile, 'minis' | 'gems'>>(p: T, kind: MiniKind, day: string, points: number): { profile: T; gems: number } {
+export function recordMini<T extends Pick<Profile, 'minis' | 'gems' | 'badges'>>(p: T, kind: MiniKind, day: string, points: number): { profile: T; gems: number } {
   if (miniDone(p, kind, day)) return { profile: p, gems: 0 };
   const gems = MINI_GEMS(points);
-  return { profile: { ...p, gems: p.gems + gems, minis: { ...(p.minis ?? {}), [kind]: { day, points } } }, gems };
+  const badge = `mini-${kind}`;
+  const badges = points >= 85 && !(p.badges ?? []).includes(badge) ? [...(p.badges ?? []), badge] : p.badges;
+  return { profile: { ...p, gems: p.gems + gems, badges, minis: { ...(p.minis ?? {}), [kind]: { day, points } } }, gems };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -434,4 +436,32 @@ export function payrollScore(demand: readonly number[], starts: readonly number[
   const cov = covered(starts);
   if (starts.length !== 4 || !cov.every((x, j) => x >= demand[j])) return { points: 0, staff, ok: false };
   return { points: Math.round((cheapestRota(demand) / staff) * 100), staff, ok: true };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Business-school badges and the seasonal album
+// ---------------------------------------------------------------------------------------------
+export const MINI_NAMES: Record<MiniKind, string> = {
+  negotiate: 'Negotiation duel', pitch: 'Pitch day', stocktake: 'Stock-take rush', tetris: 'Cash-flow tetris', boardroom: 'Boardroom pitch', callcentre: 'Crisis call centre',
+  auction: 'Auction house', fraud: 'Spot the fraud', forecast: 'Forecast challenge', hiring: 'Hiring interviews', routes: 'Supply route planner', pricewar: 'Price-war survival',
+  lease: 'Lease haggle', trend: 'Spot the trend', adbudget: 'Ad budget', payroll: 'Payroll puzzle',
+};
+export const MINI_KINDS = Object.keys(MINI_NAMES) as MiniKind[];
+export const BADGE_POINTS = 85;
+export const badgesOf = (p: Pick<Profile, 'badges'>): string[] => p.badges ?? [];
+export const SEASON_NEEDED = 6;
+export const SEASON_GEMS = 25;
+/** A season is a calendar quarter, e.g. "2026-Q4". */
+export const seasonIdOf = (day: string): string => `${day.slice(0, 4)}-Q${Math.floor((Number(day.slice(5, 7)) - 1) / 3) + 1}`;
+export const seasonNameOf = (id: string): string => ({ Q1: 'Winter', Q2: 'Spring', Q3: 'Summer', Q4: 'Autumn' } as const)[id.slice(5) as 'Q1'] + ' ' + id.slice(0, 4);
+/** Stamps are the different daily games played this season. */
+export function seasonStamps(p: Pick<Profile, 'minis'>, day: string): MiniKind[] {
+  const id = seasonIdOf(day);
+  return MINI_KINDS.filter((k) => { const r = p.minis?.[k]; return !!r && seasonIdOf(r.day) === id; });
+}
+export function claimSeason<T extends Pick<Profile, 'minis' | 'gems' | 'seasonClaims'>>(p: T, day: string): { profile: T; gems: number } {
+  const id = seasonIdOf(day);
+  if ((p.seasonClaims ?? []).includes(id)) throw new Error('You already claimed this season.');
+  if (seasonStamps(p, day).length < SEASON_NEEDED) throw new Error(`Play ${SEASON_NEEDED} different daily games this season first.`);
+  return { profile: { ...p, gems: p.gems + SEASON_GEMS, seasonClaims: [...(p.seasonClaims ?? []), id] }, gems: SEASON_GEMS };
 }

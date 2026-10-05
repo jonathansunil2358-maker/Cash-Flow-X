@@ -3,7 +3,7 @@ import {
 } from '@cfx/engine';
 import { useEffect, useState } from 'react';
 import { Button, Card, Field, NumberInput, TextInput } from '../components/ui';
-import { api, type IslandView, type BossView, type DealShape, type VentureView, type WarView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
+import { api, type IslandView, type BetShape, type SupplyView, type BossView, type DealShape, type VentureView, type WarView, type LandmarkView, type MarketView, type MentorView, type ScenarioView } from '../lib/api';
 import { useAccount } from '../lib/account';
 import { useGame } from '../store';
 
@@ -283,6 +283,61 @@ export function CoopBossCard() {
       <p className="mt-1 text-sm">{v.damage} of {v.goal} damage · {v.fighters} fighter{v.fighters === 1 ? '' : 's'} · you: {v.mine} ({v.myDays} day{v.myDays === 1 ? '' : 's'})</p>
       <Button className="mt-2" variant="primary" disabled={v.hitToday || v.damage >= v.goal} onClick={async () => { try { setV(await api.bossHit()); } catch (e) { toast('error', (e as Error).message); } }}>{v.hitToday ? 'Struck today' : 'Strike!'}</Button>
       {v.last && <p className="mt-3 text-sm">Last week, {v.last.boss}: {v.last.beaten ? 'beaten!' : 'it got away.'}{v.last.reward && !v.last.reward.claimed && <Button className="ml-2" variant="primary" onClick={async () => { try { const r = await api.bossClaim(); addGems(r.gems, 'co-op boss'); refresh(); } catch (e) { toast('error', (e as Error).message); } }}>Claim {v.last.reward.gems} gems</Button>}{v.last.reward?.claimed && ' Reward claimed.'}</p>}
+    </Card>
+  );
+}
+
+/** A friendly one-week growth race with a friend. The winner collects the stake as a prize; nobody loses gems. */
+export function BetCard() {
+  const { addGems, toast } = useGame();
+  const [list, setList] = useState<BetShape[]>([]);
+  const [opp, setOpp] = useState('');
+  const [stake, setStake] = useState(10);
+  const refresh = () => api.bets().then((r) => setList(r.bets)).catch(() => setList([]));
+  useEffect(() => { refresh(); }, []);
+  const run = async (fn: () => Promise<unknown>, ok?: string) => { try { await fn(); if (ok) toast('success', ok); } catch (e) { toast('error', (e as Error).message); } refresh(); };
+  const pct = (n: number | null) => (n === null ? '?' : `${n >= 0 ? '+' : ''}${n}%`);
+  return (
+    <Card fold id="card-bets" title="Friendly bets" subtitle="Challenge a friend to see whose company grows more over the rest of the week. Both of you keep your gems; the winner collects the stake as a prize.">
+      <div className="flex flex-wrap items-end gap-2">
+        <TextInput value={opp} onChange={(e) => setOpp(e.target.value)} aria-label="Friend's island code for a bet" placeholder="Friend's island code" className="min-w-0 flex-1" />
+        <select aria-label="Stake" value={stake} onChange={(e) => setStake(Number(e.target.value))} className="rounded-lg border border-line bg-page px-2 py-2">{[5, 10, 20].map((n) => <option key={n} value={n}>{n} gems</option>)}</select>
+        <Button disabled={opp.trim().length < 8} onClick={() => run(() => api.betOffer(opp.trim(), stake), 'Challenge sent.')}>Challenge</Button>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {list.length === 0 && <li className="text-ink-2">No bets yet.</li>}
+        {list.map((b) => (
+          <li key={b.id} className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">{b.stake} gems with <b>{b.partner}</b> · {b.status === 'offered' ? 'waiting for an answer' : b.status === 'active' ? `you ${pct(b.myGrowth)}, them ${pct(b.theirGrowth)}` : b.won ? 'you won!' : 'they won'}</span>
+            {b.status === 'offered' && b.role === 'opponent' && <Button variant="primary" onClick={() => run(() => api.betAccept(b.id), 'Bet on!')}>Accept</Button>}
+            {b.status === 'offered' && <Button onClick={() => run(() => api.betDecline(b.id))}>{b.role === 'opponent' ? 'Decline' : 'Withdraw'}</Button>}
+            {b.claimable && <Button variant="primary" onClick={() => run(async () => { const r = await api.betClaim(b.id); addGems(r.gems, 'won a bet'); }, 'Prize claimed.')}>Claim {b.stake} gems</Button>}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** Four supply slots a week; fill them all as a guild and everyone who filled one shares a reward. */
+export function GuildSupplyCard() {
+  const { addGems, toast } = useGame();
+  const [v, setV] = useState<SupplyView | null>(null);
+  const refresh = () => api.supply().then(setV).catch(() => setV(null));
+  useEffect(() => { refresh(); }, []);
+  if (!v?.guild) return null;
+  return (
+    <Card fold id="card-gsupply" title="Guild supply chain" subtitle="Each week your holding company needs four things supplied. Every member can fill one slot (each member one slot). Fill all four and everyone who helped gets a reward next week.">
+      <ul className="space-y-1 text-sm">
+        {v.slots?.map((s) => (
+          <li key={s.slot} className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1"><b>{s.name}</b>: {s.filledBy ? `${s.mine ? 'you' : s.filledBy}` : 'open'}</span>
+            {!s.filledBy && !v.mineFilled && <Button onClick={async () => { try { setV(await api.supplyFill(s.slot)); } catch (e) { toast('error', (e as Error).message); } }}>Supply this</Button>}
+          </li>
+        ))}
+      </ul>
+      {v.full && <p className="mt-2 text-sm font-black">All four filled this week!</p>}
+      {v.last && <p className="mt-2 text-sm">Last week your guild filled the chain.{!v.last.claimed && <Button className="ml-2" variant="primary" onClick={async () => { try { const r = await api.supplyClaim(); addGems(r.gems, 'guild supply chain'); refresh(); } catch (e) { toast('error', (e as Error).message); } }}>Claim {v.last.gems} gems</Button>}{v.last.claimed && ' Reward claimed.'}</p>}
     </Card>
   );
 }

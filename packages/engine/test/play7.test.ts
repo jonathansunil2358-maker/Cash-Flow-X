@@ -145,3 +145,26 @@ describe('four more daily games', () => {
     expect(payrollScore(d, [0, 0, 0, 0]).points).toBe(0);
   });
 });
+
+import { badgesOf, claimSeason, recordMini, seasonIdOf, seasonStamps, MINI_KINDS, SEASON_NEEDED } from '../src/index';
+describe('badges and the seasonal album', () => {
+  const base = { gems: 0, badges: [] as string[], minis: {} as Record<string, { day: string; points: number }> };
+  it('a high score earns a badge once; a low one does not', () => {
+    const a = recordMini({ ...base }, 'trend', '2026-10-05', 100);
+    expect(badgesOf(a.profile)).toEqual(['mini-trend']);
+    const b = recordMini({ ...a.profile }, 'trend', '2026-10-06', 100);
+    expect(badgesOf(b.profile)).toEqual(['mini-trend']);
+    expect(badgesOf(recordMini({ ...base }, 'payroll', '2026-10-05', 40).profile)).toEqual([]);
+  });
+  it('six different games in a quarter fill the album, claimed once', () => {
+    let p: typeof base & { seasonClaims?: string[] } = { ...base };
+    expect(seasonIdOf('2026-10-05')).toBe('2026-Q4');
+    for (const k of MINI_KINDS.slice(0, SEASON_NEEDED - 1)) p = recordMini(p, k, '2026-11-01', 50).profile;
+    expect(() => claimSeason(p, '2026-11-02')).toThrow();
+    p = recordMini(p, MINI_KINDS[SEASON_NEEDED], '2026-11-02', 50).profile;
+    expect(seasonStamps(p, '2026-12-01').length).toBe(SEASON_NEEDED);
+    p = claimSeason(p, '2026-12-01').profile;
+    expect(() => claimSeason(p, '2026-12-02')).toThrow();
+    expect(seasonStamps(p, '2027-01-02').length).toBe(0);
+  });
+});

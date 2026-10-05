@@ -57,9 +57,9 @@ export function councilCheck(s: GameState, id: string): { ok: boolean; reason?: 
 // ---------------------------------------------------------------------------------------------
 export const hasStock = (s: GameState): boolean => industryOf(s).model === 'unit';
 export const STOCK_LEVELS = [
-  { name: 'Trust the team', loss: 0.0025, fee: 0, blurb: 'Free, but some stock walks out of the door.' },
-  { name: 'Cameras and tags', loss: 0.001, fee: 0.0007, blurb: 'Losses fall sharply for a small monthly cost.' },
-  { name: 'Regular audits', loss: 0.0005, fee: 0.0015, blurb: 'Almost nothing goes missing, at a bigger monthly cost.' },
+  { name: 'Trust the team', loss: 0.0015, fee: 0, blurb: 'Free, but some stock walks out of the door.' },
+  { name: 'Cameras and tags', loss: 0.0006, fee: 0.0005, blurb: 'Losses fall sharply for a small monthly cost.' },
+  { name: 'Regular audits', loss: 0.0003, fee: 0.001, blurb: 'Almost nothing goes missing, at a bigger monthly cost.' },
 ];
 export const stockLevel = (s: GameState): 0 | 1 | 2 => s.play7?.stock ?? 0;
 export const shrinkCost = (s: GameState): Pence => (hasStock(s) ? Math.round(lastRev7(s) * (STOCK_LEVELS[stockLevel(s)].loss + STOCK_LEVELS[stockLevel(s)].fee)) : 0);

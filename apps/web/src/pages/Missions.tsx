@@ -12,6 +12,7 @@ import { QuestsCard, TrophyCard } from './Fun';
 import { FestivalCard, RadioCard, TheatreCard, TimelapseCard } from './Feel';
 import { MuseumCard, TrailsCard } from './Collect';
 import { GamesCards } from './Minis';
+import { BadgesCard, MonumentCard, YearbookCard } from './Play7';
 import { BookCard, EventCardsCard, InspectionCard, MascotCard } from './Play6';
 import { AwardsNightCard, TimelineCard } from './Play5';
 import { DiaryCard, DocumentaryCard, EomCard, NemesisCard, NewspaperCard, PetCard, ShareSeedCard } from './Personality';
@@ -152,6 +153,7 @@ export function Missions({ game }: { game: GameState }) {
             <SprintCard />
             <InterviewCard game={game} />
             <GamesCards game={game} />
+            <BadgesCard />
             <AuditCard game={game} />
             <GlossaryCard game={game} />
           </>,
@@ -173,6 +175,8 @@ export function Missions({ game }: { game: GameState }) {
             <InspectionCard game={game} />
             <EventCardsCard game={game} />
             <BookCard game={game} />
+            <MonumentCard game={game} />
+            <YearbookCard game={game} />
           </>,
         },
       ]} />

@@ -1542,6 +1542,40 @@ test('V6: temps, tiers, layout, tenders, mascot, book and four more daily games'
   await expect(m.locator('#card-pricewar').getByRole('status')).toContainText('points');
 });
 
+test('V7: council, outsourcing, training budget, range, monuments, yearbook, badges and four more daily games', async ({ page }) => {
+  test.setTimeout(120_000);
+  const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
+  await openWithOldGame(page, g);
+  await expect(page.locator('.cfx-hud__name')).toHaveText(g.companyName);
+  await clearOverlays(page);
+  await openDock(page, 'Business');
+  const biz = page.getByRole('dialog', { name: 'Business' });
+  for (const id of ['card-council', 'card-outsource', 'card-range', 'card-budget']) await expect(biz.locator(`#${id}`)).toBeVisible();
+  await biz.locator('#card-outsource').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-outsource').getByRole('button', { name: /^Outsource/ }).first().click();
+  await expect(biz.locator('#card-outsource').getByRole('button', { name: 'Bring back' })).toBeVisible();
+  await biz.locator('#card-council').getByRole('button', { name: 'Open' }).click();
+  await biz.locator('#card-council').getByRole('button', { name: 'Choose' }).first().click();
+  await expect(biz.locator('#card-council').getByText(/You picked/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).dispatchEvent('click');
+  await clearOverlays(page);
+  await page.keyboard.press('m');
+  const m = page.getByRole('dialog', { name: 'Missions' });
+  for (const id of ['card-monuments', 'card-yearbook', 'card-badges', 'card-lease', 'card-trend', 'card-adbudget', 'card-payroll']) await expect(m.locator(`#${id}`)).toBeVisible();
+  await m.locator('#card-trend').getByRole('button', { name: 'Open' }).click();
+  for (let i = 1; i <= 3; i++) await m.locator('#card-trend').getByRole('group', { name: `Call for chart ${i}` }).getByRole('button', { name: 'Going up' }).click();
+  await m.locator('#card-trend').getByRole('button', { name: 'Make the calls' }).click();
+  await expect(m.locator('#card-trend').getByRole('status')).toContainText('points');
+  await m.locator('#card-adbudget').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-adbudget').getByRole('button', { name: 'Run the campaign' }).click();
+  await expect(m.locator('#card-adbudget').getByRole('status')).toContainText('points');
+  await m.locator('#card-payroll').getByRole('button', { name: 'Open' }).click();
+  await m.locator('#card-payroll').getByRole('button', { name: /^Publish the rota/ }).click();
+  await expect(m.locator('#card-payroll').getByRole('status')).toContainText('0 points');
+  await m.locator('#card-badges').getByRole('button', { name: 'Open' }).click();
+  await expect(m.locator('#card-badges').getByLabel('Badges')).toBeVisible();
+});
+
 test('V4 Batch B: training academy, where we work, innovation day and poaching a star', async ({ page }) => {
   test.setTimeout(120_000);
   const g = JSON.parse(readFileSync(join(process.cwd(), '../../packages/engine/test/fixtures/state-v4-software.json'), 'utf8'));
@@ -1646,6 +1680,7 @@ test('V4 Batch E: island visits, the cosmetics market and the scenario maker', a
   await expect(vent.getByText('waiting for a partner')).toBeVisible();
   await expect(page.locator('#card-deals')).toBeVisible();
   await expect(page.locator('#card-boss')).toBeVisible();
+  await expect(page.locator('#card-bets')).toBeVisible();
 });
 
 test('V4 Batch F: island radio, timelapse and festivals, then free play', async ({ page }) => {

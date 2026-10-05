@@ -28,7 +28,7 @@ describe('version 5 fun', () => {
           s.pendingEvent = null;
           s.play5 = { shock: kind, attack: kind === 'tech' ? 'heavy' : 'light', rival: s.competitors[0]?.name };
           startNamedEvent(s, id, createRng({ rng: 5 }));
-          expect(s.pendingEvent?.id).toBe(id);
+          expect((s.pendingEvent as { id: string } | null)?.id).toBe(id);
           applyActionInPlace(s, { type: 'resolveEvent', choiceId: c.id });
           expect(checkIntegrity(s)).toEqual([]);
           run(s, 8);

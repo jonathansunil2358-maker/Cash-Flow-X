@@ -148,6 +148,8 @@ export interface HallView { rows: { rank: number; name: string; icon: string; co
 export interface IslandView { id: string; name: string; icon: string; title: string | null; prestige: number; likes: number; liked: boolean; self: boolean; company: { name: string | null; sector: string | null; difficulty: string | null; month: number; status: string | null; equityValue: number | null } | null; greetings: { from: string; text: string }[] }
 export interface LandmarkView { guild: boolean; funded?: number; level?: number; name?: string | null; next?: { name: string; cost: number } | null; personalCash?: number; levels?: { name: string; cost: number }[] }
 export interface MarketView { open: { id: string; kind: string; item: string; price: number; seller: string }[]; mine: { id: string; kind: string; item: string; price: number; status: string; collected: number }[] }
+export interface BetShape { id: string; role: 'challenger' | 'opponent'; partner: string; stake: number; status: string; week: string | null; myGrowth: number | null; theirGrowth: number | null; won: boolean | null; claimable: boolean }
+export interface SupplyView { guild: boolean; week?: string; slots?: { slot: number; name: string; filledBy: string | null; mine: boolean }[]; full?: boolean; mineFilled?: boolean; last?: { week: string; gems: number; claimed: boolean } | null }
 export interface DealShape { id: string; role: 'supplier' | 'buyer'; partner: string; status: string; daysLeft: number | null; claimable: boolean; gems: number }
 export interface BossView { week: string; boss: string; goal: number; damage: number; fighters: number; mine: number; myDays: number; hitToday: boolean; last: { week: string; boss: string; beaten: boolean; myDays: number; reward: { gems: number; claimed: boolean } | null } | null }
 export interface VentureShape { code: string; week: string; partner: string | null; waiting: boolean; points: number; goal: number; mine: number; theirs: number; done: boolean; contributedToday: boolean; reward: { gems: number; claimed: boolean } | null }
@@ -202,6 +204,14 @@ export const api = {
   buyListing: (id: string) => request<{ kind: string; item: string; price: number }>(`/market/${id}/buy`, { body: {} }),
   cancelListing: (id: string) => request<{ ok: boolean }>(`/market/${id}/cancel`, { body: {} }),
   collectSales: () => request<{ gems: number }>('/market/collect', { body: {} }),
+  bets: () => request<{ bets: BetShape[]; stakes: number[] }>('/bets'),
+  betOffer: (opponentId: string, stake: number) => request<{ id: string }>('/bets/offer', { body: { opponentId, stake } }),
+  betAccept: (id: string) => request<{ ok: boolean }>(`/bets/${id}/accept`, { body: {} }),
+  betDecline: (id: string) => request<{ ok: boolean }>(`/bets/${id}/decline`, { body: {} }),
+  betClaim: (id: string) => request<{ gems: number }>(`/bets/${id}/claim`, { body: {} }),
+  supply: () => request<SupplyView>('/guild/supply'),
+  supplyFill: (slot: number) => request<SupplyView>('/guild/supply/fill', { body: { slot } }),
+  supplyClaim: () => request<{ gems: number }>('/guild/supply/claim', { body: {} }),
   deals: () => request<{ deals: DealShape[] }>('/deals'),
   dealOffer: (buyerId: string) => request<{ id: string }>('/deals/offer', { body: { buyerId } }),
   dealAccept: (id: string) => request<{ ok: boolean }>(`/deals/${id}/accept`, { body: {} }),

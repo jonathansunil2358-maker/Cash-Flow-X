@@ -101,6 +101,9 @@ export interface Profile {
   cardsSeen?: string[];
   /** Today's results of the daily mini-games (see minigames.ts). */
   minis?: Partial<Record<'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar' | 'lease' | 'trend' | 'adbudget' | 'payroll', { day: string; points: number }>>;
+  /** Business-school badges earned in the daily games, and seasonal albums already claimed (see minigames.ts). */
+  badges?: string[];
+  seasonClaims?: string[];
   /** The strongest rival of your last company, remembered (see nemesis.ts), and finished campaign chapters. */
   nemesis?: { name: string; boss: string; catchphrase: string; company: string; stake: number };
   campaign?: number[];
