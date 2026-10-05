@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyActionInPlace, checkIntegrity, newGame, replay, stateChecksum, tickInPlace, toSubmission, CHOICE_EVENTS, startNamedEvent, createRng, EVENTS8, POLICIES, optionOf, policiesFor,
-  play8Demand, play8Cost, runningPct, type GameState,
+  play8Demand, play8Cost, runningPct, initiativesFor, type GameState,
 } from '../src/index';
 import { applyPolicy } from '../scripts/policy';
 
@@ -28,18 +28,19 @@ describe('business policies and events', () => {
   });
 
   it('every choice of every event runs under several dice and leaves the books balanced', () => {
+    const base = company('P8-EVENTS', 24);
+    const baseStock = company('P8-EVENTS-STOCK', 24, 'ecommerce');
     for (const e of EVENTS8) {
       for (const c of e.choices) {
         for (const rng of [3, 99]) {
-          const s = company(`P8-${e.id}`, 24);
+          const s = structuredClone(e.gate === 'stock' ? baseStock : base);
           s.pendingEvent = null;
-          startNamedEvent(s, e.id, createRng({ rng: 5 }));
+          startNamedEvent(s, e.id, createRng({ rng }));
           expect((s.pendingEvent as { id: string } | null)?.id, e.id).toBe(e.id);
           const before = s.ledger.balances.cash;
           applyActionInPlace(s, { type: 'resolveEvent', choiceId: c.id });
           expect(checkIntegrity(s), `${e.id}.${c.id}`).toEqual([]);
           if (c.income) expect(s.ledger.balances.cash).toBeGreaterThan(before);
-          void rng;
           run(s, 3);
         }
       }
@@ -62,6 +63,22 @@ describe('business policies and events', () => {
         }
       }
     }
+  });
+
+  it('every initiative can be started, reports after its months, and the books balance', () => {
+    const base = company('P8-INIT', 40, 'ecommerce');
+    let won = 0; let lost = 0;
+    for (const p of initiativesFor(base)) {
+      const s = structuredClone(base);
+      applyActionInPlace(s, { type: 'initiative', id: p.id });
+      expect(() => applyActionInPlace(s, { type: 'initiative', id: p.id })).toThrow();
+      run(s, p.months + 1);
+      const d = s.play8?.proj?.done[p.id];
+      expect(d, p.id).toBeTruthy();
+      if (d!.result === 'won') won++; else lost++;
+      expect(checkIntegrity(s), p.id).toEqual([]);
+    }
+    expect(won + lost).toBe(initiativesFor(base).length);
   });
 
   it('stock-only policies are refused for businesses without stock, and a cooldown applies', () => {

@@ -14,7 +14,7 @@ export interface PolEff {
   risk?: [number, number, string];
 }
 export interface PolOption { name: string; blurb: string; eff: PolEff; /** One-off cost in months of sales. */ setup?: number; /** Running cost as % of monthly sales (negative = savings). */ monthly?: number }
-export interface PolicyDef { id: string; group: PolicyGroup; name: string; blurb: string; stock?: boolean; options: PolOption[] }
+export interface PolicyDef { id: string; group: PolicyGroup; /** Management topic (see data9/index.ts); policies without one belong to the four basic panels. */ topic?: string; name: string; blurb: string; stock?: boolean; options: PolOption[] }
 
 const off: PolOption = { name: 'Off', blurb: 'Do nothing special.', eff: {} };
 const opt = (name: string, blurb: string, eff: PolEff, monthly = 0, setup = 0): PolOption => ({ name, blurb, eff, monthly, setup });
@@ -107,7 +107,7 @@ export interface EvChoice {
   eff?: EvEff; gamble?: EvGamble; text: string;
 }
 export type EvGate = 'rivals' | 'stock' | 'team' | 'listed' | 'cash';
-export interface EvSpec { id: string; title: string; icon: string; good: boolean; story: string; min?: number; per: number; cd: number; gate?: EvGate; choices: EvChoice[] }
+export interface EvSpec { id: string; topic?: string; title: string; icon: string; good: boolean; story: string; min?: number; per: number; cd: number; gate?: EvGate; choices: EvChoice[] }
 
 const S = (id: string, label: string, hint: string, text: string, rest: Partial<EvChoice> = {}): EvChoice => ({ id, label, hint, text, ...rest });
 const E = (d: number, m: number): [number, number] => [d, m];
@@ -238,3 +238,29 @@ export const EVENTS8: EvSpec[] = [
     S('bluff', 'Wing it', 'Free, risky.', '', { gamble: { p: 0.45, good: { d: E(1.02, 6) }, bad: { rep: -3, d: E(0.97, 3) }, goodText: 'You got away with it.', badText: 'They found problems, and told others.' } }),
     S('refuse', 'Refuse the audit', 'You lose the order.', 'The customer went elsewhere.', { eff: { d: E(0.99, 4) } })] },
 ];
+
+// -------------------------------------------------------------------------------------------------
+// Projects: spend money now, wait a few months, and either win a lasting benefit or lose the money
+// -------------------------------------------------------------------------------------------------
+export interface InitiativeDef {
+  id: string; topic?: string; name: string; blurb: string;
+  /** Cost as a share of a month's sales (with a floor of £800). */
+  k: number;
+  /** Months until the result. */
+  months: number;
+  /** Chance of success, 30 to 95. */
+  success: number;
+  /** Only available to stock-holding businesses. */
+  stock?: boolean;
+  /** Benefit if it works: a lasting policy-style effect, and/or a one-off effect. */
+  win: { eff?: PolEff; monthly?: number; now?: EvEff; text: string };
+  /** If it fails: a one-off effect and some text. */
+  lose: { now?: EvEff; text: string };
+}
+export const PROJECTS8: InitiativeDef[] = [];
+export const initiativeById = (id: string): InitiativeDef | undefined => PROJECTS8.find((p) => p.id === id);
+
+import { EVENTS9, POLICIES9, PROJECTS9 } from './data9';
+POLICIES.push(...POLICIES9);
+EVENTS8.push(...EVENTS9);
+PROJECTS8.push(...PROJECTS9);
