@@ -19,17 +19,19 @@ function gen(seed: string): () => number {
   };
 }
 
-export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar';
+export type MiniKind = 'negotiate' | 'pitch' | 'stocktake' | 'tetris' | 'boardroom' | 'callcentre' | 'auction' | 'fraud' | 'forecast' | 'hiring' | 'routes' | 'pricewar' | 'lease' | 'trend' | 'adbudget' | 'payroll';
 export const MINI_GEMS = (points: number): number => (points >= 85 ? 12 : points >= 60 ? 7 : points >= 30 ? 3 : 0);
 
 export interface MiniResult { day: string; points: number }
 export const miniOf = (p: Pick<Profile, 'minis'>, kind: MiniKind): MiniResult | null => p.minis?.[kind] ?? null;
 export const miniDone = (p: Pick<Profile, 'minis'>, kind: MiniKind, day: string): boolean => miniOf(p, kind)?.day === day;
 /** Record today's result (once a day) and pay gems by score. */
-export function recordMini<T extends Pick<Profile, 'minis' | 'gems'>>(p: T, kind: MiniKind, day: string, points: number): { profile: T; gems: number } {
+export function recordMini<T extends Pick<Profile, 'minis' | 'gems' | 'badges'>>(p: T, kind: MiniKind, day: string, points: number): { profile: T; gems: number } {
   if (miniDone(p, kind, day)) return { profile: p, gems: 0 };
   const gems = MINI_GEMS(points);
-  return { profile: { ...p, gems: p.gems + gems, minis: { ...(p.minis ?? {}), [kind]: { day, points } } }, gems };
+  const badge = `mini-${kind}`;
+  const badges = points >= 85 && !(p.badges ?? []).includes(badge) ? [...(p.badges ?? []), badge] : p.badges;
+  return { profile: { ...p, gems: p.gems + gems, badges, minis: { ...(p.minis ?? {}), [kind]: { day, points } } }, gems };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -367,4 +369,99 @@ export function warScore(day: string, prices: readonly number[]): { points: numb
   let profit = 0; let best = 0;
   rival.forEach((rv, i) => { profit += warProfit(prices[i] ?? WAR_PRICES[0], rv); best += Math.max(...WAR_PRICES.map((p) => warProfit(p, rv))); });
   return { points: best > 0 ? Math.max(0, Math.round((profit / best) * 100)) : 0, profit };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lease haggle: a landlord with a hidden walk-away rent (reuses the negotiation rules)
+// ---------------------------------------------------------------------------------------------
+export function leaseOf(day: string): Negotiation {
+  const n = negotiationOf(`${day}|lease`);
+  return { ...n, item: 'a three-year lease on a shop unit' };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Spot the trend: three noisy charts, call each one
+// ---------------------------------------------------------------------------------------------
+export interface TrendChart { id: string; points: number[]; up: boolean }
+export function trendsOf(day: string): TrendChart[] {
+  const r = gen(`trend|${day}`);
+  return Array.from({ length: 3 }, (_, i) => {
+    const up = r() < 0.5;
+    const slope = (up ? 1 : -1) * (1.5 + r() * 2);
+    let v = 100;
+    const points = Array.from({ length: 12 }, () => { v += slope + (r() - 0.5) * 14; return Math.round(v * 10) / 10; });
+    return { id: `t${i}`, points, up };
+  });
+}
+export function trendScore(charts: readonly TrendChart[], calls: Readonly<Record<string, boolean>>): { points: number; right: number } {
+  const right = charts.filter((c) => calls[c.id] === c.up).length;
+  return { right, points: right === 3 ? 100 : right === 2 ? 60 : right === 1 ? 30 : 0 };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ad budget: ten units across four channels with diminishing returns
+// ---------------------------------------------------------------------------------------------
+export const AD_UNITS = 10;
+export const AD_CHANNELS = ['Search', 'Social', 'Radio', 'Posters'];
+export const adWeights = (day: string): number[] => { const r = gen(`ads|${day}`); return AD_CHANNELS.map(() => Math.round((3 + r() * 9) * 10) / 10); };
+export const adReturn = (weights: readonly number[], alloc: readonly number[]): number => alloc.reduce((a, n, i) => a + weights[i] * Math.sqrt(n), 0);
+export function bestAds(weights: readonly number[]): number {
+  let best = 0;
+  for (let a = 0; a <= AD_UNITS; a++) for (let b = 0; a + b <= AD_UNITS; b++) for (let c = 0; a + b + c <= AD_UNITS; c++) best = Math.max(best, adReturn(weights, [a, b, c, AD_UNITS - a - b - c]));
+  return best;
+}
+export function adScore(weights: readonly number[], alloc: readonly number[]): { points: number; total: number } {
+  const total = alloc.reduce((a, n) => a + n, 0);
+  if (alloc.length !== AD_CHANNELS.length || total !== AD_UNITS || alloc.some((n) => !Number.isInteger(n) || n < 0)) return { points: 0, total };
+  return { points: Math.round((adReturn(weights, alloc) / bestAds(weights)) * 100), total };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Payroll puzzle: cover demand in six slots with three-slot shifts
+// ---------------------------------------------------------------------------------------------
+export const PAYROLL_SLOTS = 6;
+export const SHIFT_LEN = 3;
+export const demandOf = (day: string): number[] => { const r = gen(`payroll|${day}`); return Array.from({ length: PAYROLL_SLOTS }, () => 1 + Math.floor(r() * 5)); };
+export const covered = (starts: readonly number[]): number[] => Array.from({ length: PAYROLL_SLOTS }, (_, j) => starts.reduce((a, n, i) => a + (i <= j && j < i + SHIFT_LEN ? n : 0), 0));
+export function cheapestRota(demand: readonly number[]): number {
+  let best = Infinity;
+  for (let a = 0; a <= 5; a++) for (let b = 0; b <= 5; b++) for (let c = 0; c <= 5; c++) for (let d = 0; d <= 5; d++) {
+    const cov = covered([a, b, c, d]);
+    if (cov.every((x, j) => x >= demand[j])) best = Math.min(best, a + b + c + d);
+  }
+  return best;
+}
+export function payrollScore(demand: readonly number[], starts: readonly number[]): { points: number; staff: number; ok: boolean } {
+  const staff = starts.reduce((a, n) => a + n, 0);
+  const cov = covered(starts);
+  if (starts.length !== 4 || !cov.every((x, j) => x >= demand[j])) return { points: 0, staff, ok: false };
+  return { points: Math.round((cheapestRota(demand) / staff) * 100), staff, ok: true };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Business-school badges and the seasonal album
+// ---------------------------------------------------------------------------------------------
+export const MINI_NAMES: Record<MiniKind, string> = {
+  negotiate: 'Negotiation duel', pitch: 'Pitch day', stocktake: 'Stock-take rush', tetris: 'Cash-flow tetris', boardroom: 'Boardroom pitch', callcentre: 'Crisis call centre',
+  auction: 'Auction house', fraud: 'Spot the fraud', forecast: 'Forecast challenge', hiring: 'Hiring interviews', routes: 'Supply route planner', pricewar: 'Price-war survival',
+  lease: 'Lease haggle', trend: 'Spot the trend', adbudget: 'Ad budget', payroll: 'Payroll puzzle',
+};
+export const MINI_KINDS = Object.keys(MINI_NAMES) as MiniKind[];
+export const BADGE_POINTS = 85;
+export const badgesOf = (p: Pick<Profile, 'badges'>): string[] => p.badges ?? [];
+export const SEASON_NEEDED = 6;
+export const SEASON_GEMS = 25;
+/** A season is a calendar quarter, e.g. "2026-Q4". */
+export const seasonIdOf = (day: string): string => `${day.slice(0, 4)}-Q${Math.floor((Number(day.slice(5, 7)) - 1) / 3) + 1}`;
+export const seasonNameOf = (id: string): string => ({ Q1: 'Winter', Q2: 'Spring', Q3: 'Summer', Q4: 'Autumn' } as const)[id.slice(5) as 'Q1'] + ' ' + id.slice(0, 4);
+/** Stamps are the different daily games played this season. */
+export function seasonStamps(p: Pick<Profile, 'minis'>, day: string): MiniKind[] {
+  const id = seasonIdOf(day);
+  return MINI_KINDS.filter((k) => { const r = p.minis?.[k]; return !!r && seasonIdOf(r.day) === id; });
+}
+export function claimSeason<T extends Pick<Profile, 'minis' | 'gems' | 'seasonClaims'>>(p: T, day: string): { profile: T; gems: number } {
+  const id = seasonIdOf(day);
+  if ((p.seasonClaims ?? []).includes(id)) throw new Error('You already claimed this season.');
+  if (seasonStamps(p, day).length < SEASON_NEEDED) throw new Error(`Play ${SEASON_NEEDED} different daily games this season first.`);
+  return { profile: { ...p, gems: p.gems + SEASON_GEMS, seasonClaims: [...(p.seasonClaims ?? []), id] }, gems: SEASON_GEMS };
 }

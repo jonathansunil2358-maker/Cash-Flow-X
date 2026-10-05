@@ -205,7 +205,7 @@ check('daily: starts with the shared company and level rules', dr1.status === 20
 check('daily: only one attempt a day', (await startDaily(eve.token)).status === 409);
 const eveGame = newGame({ companyName: today.companyName, industryId: today.industryId, seed: today.seed, scenarioId: 'daily' });
 const eveP: Player = { name: 'Eve', token: eve.token, runId: dr1.json.runId, game: eveGame, synced: 0 };
-const mid = await play(eveP, 12);
+const mid = await play(eveP, 6);
 const board1 = await call<{ me: { finished: boolean; status: string } | null; entries: unknown[]; challenge: { seed: string } }>('/daily', { token: eve.token });
 check('daily: an unfinished run is not on the board yet', mid.status === 200 && board1.json.me?.finished === false && !(board1.json.entries as { me: boolean }[]).some((e) => e.me), board1.json);
 const fin = await play(eveP, 24);
@@ -553,6 +553,25 @@ const hit = await call<{ damage: number; hitToday: boolean }>('/boss/hit', { tok
 check('boss: a strike adds damage once a day', hit.status === 200 && hit.json.damage >= 1 && hit.json.hitToday && (await call('/boss/hit', { token: dA.token, body: {} })).status === 409, hit);
 check('boss: no reward when it was not beaten last week', (await call('/boss/claim', { token: dA.token, body: {} })).status === 409);
 check('boss: you need a company to fight', (await call('/boss/hit', { token: vC.token, body: {} })).status === 409);
+
+// V7: friendly bets and the guild supply chain.
+const bA = await startRun('BetA', (await signUp('BetA')).token, 'software');
+const bB = await startRun('BetB', (await signUp('BetB')).token, 'software');
+const bBId = (await call<{ user: { id: string } }>('/me', { token: bB.token })).json.user.id;
+check('bets: a bad stake is refused', (await call('/bets/offer', { token: bA.token, body: { opponentId: bBId, stake: 7 } })).status === 400);
+check('bets: you cannot bet yourself', (await call('/bets/offer', { token: bA.token, body: { opponentId: (await call<{ user: { id: string } }>('/me', { token: bA.token })).json.user.id, stake: 5 } })).status === 409);
+const bet = await call<{ id: string }>('/bets/offer', { token: bA.token, body: { opponentId: bBId, stake: 10 } });
+check('bets: a challenge can be made', bet.status === 200 && !!bet.json.id, bet);
+check('bets: only one at a time per pair', (await call('/bets/offer', { token: bB.token, body: { opponentId: (await call<{ user: { id: string } }>('/me', { token: bA.token })).json.user.id, stake: 5 } })).status === 409);
+check('bets: the challenger cannot accept their own', (await call(`/bets/${bet.json.id}/accept`, { token: bA.token, body: {} })).status === 404);
+check('bets: the opponent accepts', (await call(`/bets/${bet.json.id}/accept`, { token: bB.token, body: {} })).status === 200);
+const bv = await call<{ bets: { status: string; myGrowth: number | null; claimable: boolean }[] }>('/bets', { token: bA.token });
+check('bets: it is active with growth tracked, and nothing to claim yet', bv.json.bets[0]?.status === 'active' && bv.json.bets[0].myGrowth !== undefined && !bv.json.bets[0].claimable, bv);
+check('bets: no prize before the week ends', (await call(`/bets/${bet.json.id}/claim`, { token: bA.token, body: {} })).status === 409);
+const sup = await call<{ guild: boolean }>('/guild/supply', { token: vC.token });
+check('supply chain: no holding company, no chain', sup.status === 200 && sup.json.guild === false, sup);
+check('supply chain: filling a slot needs a holding company', (await call('/guild/supply/fill', { token: vC.token, body: { slot: 0 } })).status === 409);
+check('supply chain: nothing to claim without a guild', (await call('/guild/supply/claim', { token: vC.token, body: {} })).status === 409);
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;

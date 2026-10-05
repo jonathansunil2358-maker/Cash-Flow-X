@@ -1,3 +1,4 @@
+import { CouncilCard, OutsourceCard, RangeCard, StockControlCard, TrainingBudgetCard } from './Play7';
 import { LayoutCard, TempsCard, TenderCard, TiersCard } from './Play6';
 import { ManagersCard, FocusCard, FranchiseStandardsCard, LifecycleCard, PopupCard, PriceLabCard, SecurityCard, SupplyChainCard } from './Play5';
 import {
@@ -61,6 +62,7 @@ export function Operations({ game }: { game: GameState }) {
             <WorkstyleCard game={game} />
             <InnovationCard game={game} />
             <ManagersCard game={game} />
+            <TrainingBudgetCard game={game} />
           </>,
         },
         {
@@ -84,6 +86,7 @@ export function Operations({ game }: { game: GameState }) {
             <BlackFridayCard game={game} />
             <ReviewsCard game={game} />
             <TiersCard game={game} />
+            <CouncilCard game={game} />
           </>,
         },
         {
@@ -105,6 +108,9 @@ export function Operations({ game }: { game: GameState }) {
             <TempsCard game={game} />
             <LayoutCard game={game} />
             <TenderCard game={game} />
+            <StockControlCard game={game} />
+            <OutsourceCard game={game} />
+            <RangeCard game={game} />
             {game.franchises ? <FranchiseStandardsCard game={game} /> : null}
           </>,
         },

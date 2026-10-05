@@ -25,9 +25,10 @@ describe('version 5 fun', () => {
       for (const kind of ['regulation', 'supply', 'tech']) {
         for (const c of def.setup(company(`P5-${id}`), createRng({ rng: 1 })).choices) {
           const s = company(`P5-${id}`);
+          s.pendingEvent = null;
           s.play5 = { shock: kind, attack: kind === 'tech' ? 'heavy' : 'light', rival: s.competitors[0]?.name };
           startNamedEvent(s, id, createRng({ rng: 5 }));
-          expect(s.pendingEvent?.id).toBe(id);
+          expect((s.pendingEvent as { id: string } | null)?.id).toBe(id);
           applyActionInPlace(s, { type: 'resolveEvent', choiceId: c.id });
           expect(checkIntegrity(s)).toEqual([]);
           run(s, 8);

@@ -7,6 +7,7 @@ import { answerPuzzle, leagueView } from './league';
 import {
   buyListing, cancelListing, claimMentor, collectSales, createMentorCode, createScenario, fundLandmark, getScenario, greetIsland, joinMentor, landmarkView, likeIsland, listItem, marketView, mentorView, myScenarios, playedScenario, visitIsland,
 } from './social4';
+import { acceptBet, betsView, claimBet, claimSupply, declineBet, fillSlot, offerBet, supplyView } from './social7';
 import { acceptDeal, bossView, claimBoss, claimDeal, dealsView, declineDeal, hitBoss, offerDeal } from './social6';
 import { claimVenture, claimWar, contributeVenture, createVenture, joinVenture, ventureView, warView } from './social5';
 import { claimCard, createLink, giftCard, guildRival, hallOfFame, joinLink, myLinks, resolveSuggestion, revokeLink, suggest, viewLink } from './social3';
@@ -229,6 +230,14 @@ app.post('/market/list', requireUser, async (c) => { await limit(c, 'plans'); re
 app.post('/market/collect', requireUser, async (c) => c.json(await collectSales(c.env, c.get('user'))));
 app.post('/market/:id/buy', requireUser, async (c) => c.json(await buyListing(c.env, c.get('user'), c.req.param('id')!)));
 app.post('/market/:id/cancel', requireUser, async (c) => c.json(await cancelListing(c.env, c.get('user'), c.req.param('id')!)));
+app.get('/bets', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await betsView(c.env, c.get('user'))); });
+app.post('/bets/offer', requireUser, async (c) => { const b = await c.req.json().catch(() => ({})); return c.json(await offerBet(c.env, c.get('user'), b.opponentId, b.stake)); });
+app.post('/bets/:id/accept', requireUser, async (c) => c.json(await acceptBet(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/bets/:id/decline', requireUser, async (c) => c.json(await declineBet(c.env, c.get('user'), c.req.param('id')!)));
+app.post('/bets/:id/claim', requireUser, async (c) => c.json(await claimBet(c.env, c.get('user'), c.req.param('id')!)));
+app.get('/guild/supply', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await supplyView(c.env, c.get('user'))); });
+app.post('/guild/supply/fill', requireUser, async (c) => c.json(await fillSlot(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).slot)));
+app.post('/guild/supply/claim', requireUser, async (c) => c.json(await claimSupply(c.env, c.get('user'))));
 app.get('/deals', requireUser, async (c) => { c.header('cache-control', 'private, no-store'); return c.json(await dealsView(c.env, c.get('user'))); });
 app.post('/deals/offer', requireUser, async (c) => c.json(await offerDeal(c.env, c.get('user'), (await c.req.json().catch(() => ({}))).buyerId)));
 app.post('/deals/:id/accept', requireUser, async (c) => c.json(await acceptDeal(c.env, c.get('user'), c.req.param('id')!)));

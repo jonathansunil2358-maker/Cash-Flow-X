@@ -20,6 +20,7 @@ import { startVenture, ventureCheck, type VentureKind } from './model/venture';
 import { boonCheck, donate, donateCheck, foundSub, goGreen, greenCheck, pickBoon, setStance, stanceCheck, subCheck } from './model/strategy';
 import { blackFriday, blackFridayCheck, complaintCheck, influencerCheck, loyaltyCheck, resolveComplaint, setLoyalty, signInfluencer } from './model/customers';
 import { courseCheck, headhunt, headhuntCheck, innovationCheck, innovationDay, setWorkstyle, takeCourse, workstyleCheck, type Workstyle } from './model/people';
+import { budgetCheck, councilCheck, COUNCIL, outsourceCheck, outsourceFee, rangeCheck, startRange, play7Of } from './model/play7';
 import { hireTemps, layoutCheck, setLayout, setMascot, tempsCheck, tierCheck, tenderCheck, tenderWon, TENDERS, MASCOTS, rivalDiscount, play6Of, TIERS } from './model/play6';
 import { applyTender } from './model/play6Advance';
 import { coachCheck, coachFranchises, labCheck, nodeCheck, playOf, popCheck, promote, promoteCheck, refreshCheck, runLab, securityCheck, setSecurity, setSupply, startPop, supplyCheck, takeNode, type Supply } from './model/play5';
@@ -57,6 +58,11 @@ export type Action =
   | { type: 'startVenture'; kind: VentureKind; amount: Pence }
   | { type: 'acquireRival'; index: number }
   | { type: 'tradeSale'; bid: string; ask?: number }
+  | { type: 'council'; id: string }
+  | { type: 'stockControl'; level: number }
+  | { type: 'trainingBudget'; ops: number; rnd: number; sales: number }
+  | { type: 'outsource'; id: string; on: boolean }
+  | { type: 'rangeBatch'; size: string }
   | { type: 'temps'; trained: boolean }
   | { type: 'tiers'; level: number }
   | { type: 'layout'; order: number[] }
@@ -360,6 +366,46 @@ export function applyActionInPlace(s: GameState, action: Action, record = true):
         mult = action.ask;
       }
       try { tradeSale(s, action.bid, mult); } catch (e) { fail((e as Error).message); }
+      break;
+    }
+    case 'council': {
+      const c = councilCheck(s, action.id);
+      if (!c.ok) fail(c.reason!);
+      const p = play7Of(s); p.councilQ = Math.floor(s.month / 3); p.councilPick = action.id;
+      if (action.id === 'quality') s.quality = Math.min(100, s.quality + 1.5);
+      if (action.id === 'service') s.reputation = Math.min(100, s.reputation + 2);
+      if (action.id === 'brand') s.brand *= 1.06;
+      logItem(s, 'action', `The customer council chose: ${COUNCIL.find((o) => o.id === action.id)!.name}`, COUNCIL.find((o) => o.id === action.id)!.text);
+      break;
+    }
+    case 'stockControl': {
+      if (![0, 1, 2].includes(action.level)) fail('Unknown level.');
+      play7Of(s).stock = action.level as 0 | 1 | 2;
+      logItem(s, 'action', 'Stock control changed', 'Shrinkage and its monthly cost changed with it.');
+      break;
+    }
+    case 'trainingBudget': {
+      const c = budgetCheck(s, action.ops, action.rnd, action.sales);
+      if (!c.ok) fail(c.reason!);
+      post(L, m, 'Training budget', [dr('wages', c.fee), cr('cash', c.fee)], { cf: 'operating' });
+      play7Of(s).budget = { year: Math.floor(s.month / 12), ops: action.ops, rnd: action.rnd, sales: action.sales };
+      s.quality = Math.min(100, s.quality + 0.03 * action.rnd);
+      logItem(s, 'action', 'Training budget set', `Operations ${action.ops}%, R&D ${action.rnd}%, sales ${action.sales}%. A big focus gets a bonus.`);
+      break;
+    }
+    case 'outsource': {
+      const c = outsourceCheck(s, action.id, !!action.on);
+      if (!c.ok) fail(c.reason!);
+      const p = play7Of(s);
+      if (action.on) { post(L, m, `Outsourcing set-up: ${action.id}`, [dr('otherCosts', outsourceFee(s)), cr('cash', outsourceFee(s))], { cf: 'operating' }); p.out = [...(p.out ?? []), action.id]; }
+      else p.out = (p.out ?? []).filter((x) => x !== action.id);
+      logItem(s, 'action', action.on ? `Outsourced: ${action.id}` : `Brought back in-house: ${action.id}`, 'Costs and quality change with it.');
+      break;
+    }
+    case 'rangeBatch': {
+      const c = rangeCheck(s, action.size);
+      if (!c.ok) fail(c.reason!);
+      startRange(s, action.size as 'small' | 'big');
       break;
     }
     case 'temps': {
