@@ -1,5 +1,5 @@
 import { hashSeed } from './rng';
-import { INDUSTRIES, INDUSTRY_IDS, type IndustryId } from './model/industries';
+import { INDUSTRIES, CORE_INDUSTRY_IDS, type IndustryId } from './model/industries';
 import type { EventEffects } from './model/state';
 
 /**
@@ -70,7 +70,7 @@ export interface WeeklyChallenge extends FixedChallenge {
 export function weeklyChallenge(week: string): WeeklyChallenge {
   if (!isValidWeek(week)) throw new Error(`Not a valid week: ${String(week)}`);
   const seed = `WEEKLY-${week}`;
-  const industryId = INDUSTRY_IDS[hashSeed(`${seed}:sector`) % INDUSTRY_IDS.length];
+  const industryId = CORE_INDUSTRY_IDS[hashSeed(`${seed}:sector`) % CORE_INDUSTRY_IDS.length];
   const twist = WEEKLY_TWISTS[hashSeed(`${seed}:twist`) % WEEKLY_TWISTS.length];
   return { key: week, week, seed, industryId, twist, companyName: `Weekly ${INDUSTRIES[industryId].name.split(' ')[0]} Ltd`, scenarioId: 'weekly', months: FIXED_MONTHS };
 }
@@ -92,6 +92,6 @@ export const isValidChallengeCode = (code: unknown): code is string => typeof co
 export function challengeField(code: string): ChallengeField {
   if (!isValidChallengeCode(code)) throw new Error('Not a valid challenge code.');
   const seed = `CH-${code}`;
-  const industryId = INDUSTRY_IDS[hashSeed(`${seed}:sector`) % INDUSTRY_IDS.length];
+  const industryId = CORE_INDUSTRY_IDS[hashSeed(`${seed}:sector`) % CORE_INDUSTRY_IDS.length];
   return { key: code, code, seed, industryId, companyName: `Challenge ${INDUSTRIES[industryId].name.split(' ')[0]} Ltd`, scenarioId: 'challenge', months: FIXED_MONTHS };
 }

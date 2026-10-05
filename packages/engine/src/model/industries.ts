@@ -1,6 +1,9 @@
 import { gbp, type Pence } from '../money';
 
-export type IndustryId = 'software' | 'clothing' | 'restaurant' | 'fitness' | 'ecommerce' | 'automotive';
+import { EXTRA_META, EXTRA_MODULES, type ExtraIndustryId } from './sectors';
+
+export type CoreIndustryId = 'software' | 'clothing' | 'restaurant' | 'fitness' | 'ecommerce' | 'automotive';
+export type IndustryId = CoreIndustryId | ExtraIndustryId;
 export type RoleId = 'ops' | 'rnd' | 'sales';
 export const ROLE_IDS: RoleId[] = ['ops', 'rnd', 'sales'];
 
@@ -17,6 +20,9 @@ export interface RoleDef {
  */
 export interface IndustryConfig {
   id: IndustryId;
+  /** For sectors added later: a core sector whose 3D building and look this one borrows, and its business icon. */
+  look?: CoreIndustryId;
+  icon?: string;
   name: string;
   emoji: string;
   tagline: string;
@@ -68,7 +74,7 @@ export interface IndustryConfig {
   benchmarks: { grossMargin: number; ebitdaMargin: number; currentRatio: number; receivableDays: number; inventoryDays: number };
 }
 
-export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
+const CORE_INDUSTRIES: Record<CoreIndustryId, IndustryConfig> = {
   software: {
     id: 'software',
     name: 'Software (SaaS)',
@@ -395,5 +401,17 @@ export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
   },
 };
 
+/** The sectors the game launched with: daily and weekly challenges and sticker pages stay on these. */
+export const CORE_INDUSTRY_IDS = Object.keys(CORE_INDUSTRIES) as CoreIndustryId[];
+
+/** Every sector. One that has no configuration of its own yet is a renamed copy of the sector it looks like. */
+export const INDUSTRIES: Record<IndustryId, IndustryConfig> = {
+  ...CORE_INDUSTRIES,
+  ...(Object.fromEntries(EXTRA_META.map((m) => {
+    const own = EXTRA_MODULES[m.id].config;
+    const base = CORE_INDUSTRIES[m.look];
+    return [m.id, own ? { ...own, look: m.look, icon: m.icon } : { ...base, id: m.id, name: m.name, emoji: m.emoji, look: m.look, icon: m.icon }];
+  })) as Record<ExtraIndustryId, IndustryConfig>),
+};
 export const INDUSTRY_IDS = Object.keys(INDUSTRIES) as IndustryId[];
 export const industryOf = (s: { industryId: IndustryId }): IndustryConfig => INDUSTRIES[s.industryId];

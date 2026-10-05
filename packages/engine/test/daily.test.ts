@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyActionInPlace, DAILY_MONTHS, dailyChallenge, finalScore, INDUSTRY_IDS, isValidDay, modifiersOf, msUntilNextDaily, newGame, ownerStakeOf,
+  applyActionInPlace, DAILY_MONTHS, dailyChallenge, finalScore, CORE_INDUSTRY_IDS as INDUSTRY_IDS, isValidDay, modifiersOf, msUntilNextDaily, newGame, ownerStakeOf,
   prestigeCheck, replay, tickInPlace, toSubmission, utcDay,
 } from '../src/index';
 

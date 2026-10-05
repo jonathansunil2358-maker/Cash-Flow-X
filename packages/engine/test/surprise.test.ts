@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACHIEVEMENTS, addBoxes, advanceSurprise, applyActionInPlace, AUTO_EVENTS, BOX_GEMS, boxCount, checkIntegrity, CHOICE_EVENTS, claimAlbumPage, completedPages, createRng,
-  grantSticker, luckOf, newGame, newProfile, openBox, replay, rollBox, STICKER_PAGES, STICKERS, stickersOnPage, tickInPlace, toSubmission, INDUSTRY_IDS, type GameState, type IndustryId,
+  grantSticker, luckOf, newGame, newProfile, openBox, replay, rollBox, STICKER_PAGES, STICKERS, stickersOnPage, tickInPlace, toSubmission, CORE_INDUSTRY_IDS as INDUSTRY_IDS, type GameState, type IndustryId,
 } from '../src/index';
 import { applyPolicy } from '../scripts/policy';
 

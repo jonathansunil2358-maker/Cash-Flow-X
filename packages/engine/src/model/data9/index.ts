@@ -1,3 +1,13 @@
+import * as t_bakery from './bakery';
+import * as t_farm from './farm';
+import * as t_hotel from './hotel';
+import * as t_brewery from './brewery';
+import * as t_gamestudio from './gamestudio';
+import * as t_haulage from './haulage';
+import * as t_pharmacy from './pharmacy';
+import * as t_construction from './construction';
+import * as t_toymaker from './toymaker';
+import * as t_space from './space';
 import * as t_automotive from './automotive';
 import * as t_ecommerce from './ecommerce';
 import * as t_fitness from './fitness';
@@ -61,9 +71,19 @@ export const TOPICS: Topic[] = [
   { id: 'fitness', name: 'Fitness club', blurb: 'Mechanics for fitness clubs.', sector: true },
   { id: 'ecommerce', name: 'E-commerce store', blurb: 'Mechanics for online shops.', sector: true },
   { id: 'automotive', name: 'Automotive (EV conversions)', blurb: 'Mechanics for EV conversion firms.', sector: true },
+  { id: 'bakery', name: 'Bakery chain', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'farm', name: 'Farm and farm shop', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'hotel', name: 'Hotel', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'brewery', name: 'Craft brewery', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'gamestudio', name: 'Game studio', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'haulage', name: 'Haulage and logistics', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'pharmacy', name: 'Pharmacy', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'construction', name: 'Construction firm', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'toymaker', name: 'Toy maker', blurb: 'Mechanics for this sector.', sector: true },
+  { id: 'space', name: 'Space launch startup', blurb: 'Mechanics for this sector.', sector: true },
 ];
 
-const MODS = [t_accounting, t_tax, t_lending, t_equity, t_mna, t_property, t_supply, t_pricing, t_marketing, t_rnd, t_hr, t_quality, t_insurance, t_legal, t_rivals, t_macro, t_export, t_expansion, t_sustainability, t_it, t_service, t_governance, t_exit, t_tools, t_software, t_clothing, t_restaurant, t_fitness, t_ecommerce, t_automotive];
+const MODS = [t_accounting, t_tax, t_lending, t_equity, t_mna, t_property, t_supply, t_pricing, t_marketing, t_rnd, t_hr, t_quality, t_insurance, t_legal, t_rivals, t_macro, t_export, t_expansion, t_sustainability, t_it, t_service, t_governance, t_exit, t_tools, t_software, t_clothing, t_restaurant, t_fitness, t_ecommerce, t_automotive, t_bakery, t_farm, t_hotel, t_brewery, t_gamestudio, t_haulage, t_pharmacy, t_construction, t_toymaker, t_space];
 export const POLICIES9 = MODS.flatMap((m, i) => m.policies.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : p.sector })));
 export const EVENTS9 = MODS.flatMap((m, i) => m.events.map((e) => ({ ...e, topic: e.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : e.sector })));
 export const PROJECTS9 = MODS.flatMap((m, i) => m.projects.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : p.sector })));
