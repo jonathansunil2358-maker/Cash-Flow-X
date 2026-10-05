@@ -1,0 +1,72 @@
+import { gbp } from '../../money';
+import type { IndustryConfig } from '../industries';
+import type { UpgradeDef } from '../upgrades';
+
+/** Sector: Hotel. A room-night is the thing you sell; an empty room tonight can never be sold again. */
+export const config: IndustryConfig = {
+  id: 'hotel',
+  look: 'fitness',
+  icon: 'crown',
+  name: 'Hotel',
+  emoji: '🏨',
+  tagline: 'Empty rooms earn nothing, summer fills the beds, and booking sites take a cut.',
+  difficulty: 'Challenging',
+  description:
+    'Run a town-centre hotel. You sell room-nights: a room for one night. A room left empty tonight is income lost forever, so occupancy (the share of rooms filled) matters hugely. The building is expensive, summer and festivals are packed while winter is quiet, and online travel agents take a commission on many bookings. Guests pay on arrival, but corporate and tour accounts pay late.',
+  model: 'unit',
+  unitSingular: 'room-night',
+  unitPlural: 'room-nights',
+  basePrice: gbp(98),
+  priceElasticity: 1.3,
+  unitCost: gbp(26),
+  annualPrepaidShare: 0,
+  baseChurn: 0,
+  stockCoverDefault: 0.15,
+  spoilage: 0.06,
+  receivableDays: 21,
+  payableDays: 30,
+  marketSize: 3600,
+  marketGrowth: 0.004,
+  seasonality: [0.78, 0.82, 0.94, 1.02, 1.08, 1.15, 1.26, 1.28, 1.1, 0.98, 0.84, 0.75],
+  roles: {
+    ops: { title: 'Housekeeping & front desk', salary: gbp(23000), effect: '+330 room-nights/month of capacity each' },
+    rnd: { title: 'Guest experience team', salary: gbp(30000), effect: 'Improve guest satisfaction and reviews' },
+    sales: { title: 'Revenue & groups managers', salary: gbp(33000), effect: 'Multiply the reach of your marketing' },
+  },
+  founderCapacity: 480,
+  capacityPerOps: 330,
+  founderQuality: 1.8,
+  qualityPerRnd: 1.1,
+  qualityDecay: 0.06,
+  startQuality: 38,
+  salesReachBoost: 0.25,
+  marketingPerBrandPoint: gbp(170),
+  rentBase: gbp(9500),
+  rentPerHead: gbp(90),
+  equipmentPerHire: gbp(700),
+  equipmentLifeMonths: 60,
+  recruitmentPct: 0.06,
+  startingCapex: { amount: gbp(90000), label: 'Room refurbishment', lifeMonths: 96 },
+  automationScale: gbp(90000),
+  multiples: { evEbitda: 10, evRevenue: 2 },
+  targetEbitdaMargin: 0.2,
+  capexPctRevenue: 0.07,
+  nwcPctRevenue: 0.0,
+  competitors: [
+    { name: 'Budget Bunk Inns', quality: 40, priceFactor: 0.65, strength: 1.4 },
+    { name: 'The Grand Meridian', quality: 64, priceFactor: 1.6, strength: 0.8 },
+    { name: 'Harbourside Lodge', quality: 52, priceFactor: 1.0, strength: 1.1 },
+  ],
+  benchmarks: { grossMargin: 0.72, ebitdaMargin: 0.22, currentRatio: 0.8, receivableDays: 14, inventoryDays: 5 },
+};
+
+export const upgrades: UpgradeDef[] = [
+  { id: 'rooms', name: 'Extra guest rooms', description: '+20% room-night capacity per level.', icon: 'key', maxLevel: 5, baseCost: gbp(25_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { capacity: 0.2 } },
+  { id: 'booking', name: 'Direct booking engine', description: '+12% reach per level (and no commission).', icon: 'laptop', maxLevel: 4, baseCost: gbp(8_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.12 } },
+  { id: 'suites', name: 'Suite refurbishment', description: '+0.4 guest experience a month per level.', icon: 'star', maxLevel: 5, baseCost: gbp(15_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4 } },
+  { id: 'laundry', name: 'In-house laundry', description: 'Unit costs 3% lower and 15% less supplies wasted per level.', icon: 'gear', maxLevel: 3, baseCost: gbp(14_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03, spoilage: -0.15 }, requires: { id: 'rooms', level: 1 } },
+  { id: 'conference', name: 'Conference suite', description: '+10% market size per level.', icon: 'chart', maxLevel: 3, baseCost: gbp(30_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1 }, requires: { id: 'rooms', level: 2 } },
+  { id: 'spa', name: 'Spa and pool', description: '+10% market size and +0.2 guest experience a month per level.', icon: 'diamond', maxLevel: 3, baseCost: gbp(40_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1, quality: 0.2 }, requires: { id: 'suites', level: 2 } },
+  { id: 'loyalty', name: 'Guest loyalty app', description: '+10% reach per level.', icon: 'heart', maxLevel: 4, baseCost: gbp(9_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.1 }, requires: { id: 'booking', level: 1 } },
+  { id: 'shuttle', name: 'Airport shuttle', description: '+12% market size per level.', icon: 'car', maxLevel: 3, baseCost: gbp(28_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.12 }, requires: { id: 'booking', level: 2 } },
+];

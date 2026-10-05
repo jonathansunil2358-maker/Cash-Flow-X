@@ -1,0 +1,72 @@
+import { gbp } from '../../money';
+import type { IndustryConfig } from '../industries';
+import type { UpgradeDef } from '../upgrades';
+
+/** Sector: Craft brewery. Sells kegs to pubs and bars (paid on credit), with heavy kit, duty and a long fermenting cycle. */
+export const config: IndustryConfig = {
+  id: 'brewery',
+  look: 'restaurant',
+  icon: 'flame',
+  name: 'Craft brewery',
+  difficulty: 'Challenging',
+  emoji: '🍺',
+  tagline: 'Big tanks, slow brews, pubs that pay late.',
+  description:
+    'Brew beer and sell it by the keg to pubs, bars and shops. The brew kit is a big up-front cost, hops and malt swing in price, and about half of every sale goes on ingredients, duty (the tax on alcohol) and packaging. Pubs pay on 45-day credit, so cash lags behind your brewing. Beer keeps for weeks, not days, but a ruined batch hurts, and summer and Christmas do the heavy lifting.',
+  model: 'unit',
+  unitSingular: 'keg',
+  unitPlural: 'kegs',
+  basePrice: gbp(131),
+  priceElasticity: 1.3,
+  unitCost: gbp(52),
+  annualPrepaidShare: 0,
+  baseChurn: 0,
+  stockCoverDefault: 0.35,
+  spoilage: 0.08,
+  receivableDays: 30,
+  payableDays: 30,
+  marketSize: 5200,
+  marketGrowth: 0.006,
+  seasonality: [0.8, 0.82, 0.92, 1.0, 1.06, 1.12, 1.14, 1.08, 0.98, 0.94, 0.98, 1.16],
+  roles: {
+    ops: { title: 'Brewers & cellar hands', salary: gbp(26000), effect: '+110 kegs/month of brewing capacity each' },
+    rnd: { title: 'Head brewer (recipes)', salary: gbp(38000), effect: 'Improve beer quality and award chances' },
+    sales: { title: 'Trade sales reps', salary: gbp(30000), effect: 'Multiply the reach of your marketing to pubs' },
+  },
+  founderCapacity: 95,
+  capacityPerOps: 110,
+  founderQuality: 2,
+  qualityPerRnd: 1.1,
+  qualityDecay: 0.05,
+  startQuality: 35,
+  salesReachBoost: 0.28,
+  marketingPerBrandPoint: gbp(180),
+  rentBase: gbp(3200),
+  rentPerHead: gbp(120),
+  equipmentPerHire: gbp(900),
+  equipmentLifeMonths: 72,
+  recruitmentPct: 0.06,
+  startingCapex: { amount: gbp(45000), label: 'Brew kit and fermenting tanks', lifeMonths: 120 },
+  automationScale: gbp(90000),
+  multiples: { evEbitda: 8, evRevenue: 1.1 },
+  targetEbitdaMargin: 0.15,
+  capexPctRevenue: 0.05,
+  nwcPctRevenue: 0.12,
+  competitors: [
+    { name: 'Big Barrel Lager Co', quality: 40, priceFactor: 0.75, strength: 1.4 },
+    { name: 'Hopworks Collective', quality: 58, priceFactor: 1.15, strength: 1.0 },
+    { name: 'Old Mill Ales', quality: 52, priceFactor: 1.0, strength: 1.1 },
+  ],
+  benchmarks: { grossMargin: 0.5, ebitdaMargin: 0.14, currentRatio: 1.5, receivableDays: 40, inventoryDays: 35 },
+};
+
+export const upgrades: UpgradeDef[] = [
+  { id: 'fermenters', name: 'More fermenting tanks', description: '+20% brewing capacity per level.', icon: 'gear', maxLevel: 5, baseCost: gbp(11_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { capacity: 0.2 } },
+  { id: 'canning', name: 'Canning and bottling line', description: '+10% market size per level.', icon: 'parcel', maxLevel: 4, baseCost: gbp(16_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1 }, requires: { id: 'fermenters', level: 1 } },
+  { id: 'taproom', name: 'Brewery taproom', description: '+12% reach per level.', icon: 'coffee', maxLevel: 4, baseCost: gbp(9_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.12 } },
+  { id: 'lab', name: 'Yeast lab', description: '+0.4 beer quality a month per level.', icon: 'lab', maxLevel: 5, baseCost: gbp(8_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4 } },
+  { id: 'coldstore', name: 'Cold store', description: '25% less beer lost or stale per level.', icon: 'diamond', maxLevel: 3, baseCost: gbp(7_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { spoilage: -0.25 }, requires: { id: 'fermenters', level: 1 } },
+  { id: 'maltdeal', name: 'Direct hops and malt deals', description: 'Unit costs 3% lower per level.', icon: 'leaf', maxLevel: 4, baseCost: gbp(13_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03 }, requires: { id: 'coldstore', level: 1 } },
+  { id: 'barrelhall', name: 'Barrel-ageing hall', description: '+0.5 beer quality a month per level.', icon: 'star', maxLevel: 4, baseCost: gbp(18_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.5 }, requires: { id: 'lab', level: 2 } },
+  { id: 'distribution', name: 'Pub and shop distribution', description: '+12% market size per level.', icon: 'truck', maxLevel: 3, baseCost: gbp(26_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.12 }, requires: { id: 'canning', level: 1 } },
+];

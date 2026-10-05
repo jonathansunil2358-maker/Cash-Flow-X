@@ -1,5 +1,6 @@
 import { gbp, type Pence } from '../money';
-import type { IndustryId } from './industries';
+import type { CoreIndustryId, IndustryId } from './industries';
+import { EXTRA_META, EXTRA_MODULES } from './sectors';
 
 /**
  * Sector upgrades: levelled purchases that are capitalised as PP&E (capex) and depreciated.
@@ -34,7 +35,7 @@ const U = (
   perLevel: UpgradeEffects, requires?: { id: string; level: number },
 ): UpgradeDef => ({ id, name, description, icon, maxLevel, baseCost: gbp(baseCostPounds), costGrowth: 1.6, lifeMonths: 60, perLevel, requires });
 
-export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
+const CORE_UPGRADES: Record<CoreIndustryId, UpgradeDef[]> = {
   software: [
     U('cloud', 'Cloud migration', '+20% customer capacity per level.', 'globe', 5, 12_000, { capacity: 0.2 }),
     U('crm', 'Sales CRM', '+12% reach per level.', 'chart', 5, 9_000, { reach: 0.12 }),
@@ -95,6 +96,12 @@ export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
     U('tooling', 'Precision tooling', '+12% build capacity and parts costs 3% lower per level.', 'gear', 4, 35_000, { capacity: 0.12, unitCost: -0.03 }, { id: 'bay', level: 2 }),
     U('fleet', 'Fleet contracts', '+12% market size per level.', 'parcel', 3, 45_000, { market: 0.12 }, { id: 'dealers', level: 1 }),
   ],
+};
+
+/** Sectors added later use their own upgrades if they have written them, otherwise those of the sector they look like. */
+export const UPGRADES: Record<IndustryId, UpgradeDef[]> = {
+  ...CORE_UPGRADES,
+  ...(Object.fromEntries(EXTRA_META.map((m) => [m.id, EXTRA_MODULES[m.id].upgrades ?? CORE_UPGRADES[m.look]])) as Record<IndustryId, UpgradeDef[]>),
 };
 
 /** Levels never run out, but there is a ceiling so numbers stay sane. */

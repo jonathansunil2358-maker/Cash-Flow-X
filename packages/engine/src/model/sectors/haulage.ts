@@ -1,0 +1,71 @@
+import { gbp } from '../../money';
+import type { IndustryConfig } from '../industries';
+import type { UpgradeDef } from '../upgrades';
+
+/** Sector: Haulage and logistics. Looks like the "ecommerce" sector (see sectors/index.ts) but the economics are its own. */
+export const config: IndustryConfig = {
+  id: 'haulage',
+  look: 'ecommerce',
+  name: 'Haulage and logistics',
+  emoji: '🚚',
+  tagline: 'Heavy lorries, thin margins, slow-paying customers.',
+  difficulty: 'Hard',
+  description:
+    'Run a lorry company moving freight for businesses. Each load earns about £420 and costs about £222 in fuel, tolls, tyres and repairs. Drivers are your biggest wage bill. Customers take 60 days to pay while fuel is paid for almost at once, so growth eats cash. A fleet of lorries is a huge fixed cost that depreciates, and quiet months leave trucks standing still.',
+  model: 'unit',
+  unitSingular: 'load',
+  unitPlural: 'loads',
+  basePrice: gbp(420),
+  priceElasticity: 1.7,
+  unitCost: gbp(222),
+  annualPrepaidShare: 0,
+  baseChurn: 0,
+  stockCoverDefault: 0.5,
+  spoilage: 0.004,
+  receivableDays: 40,
+  payableDays: 21,
+  marketSize: 2200,
+  marketGrowth: 0.005,
+  seasonality: [0.88, 0.9, 0.97, 0.98, 1.0, 1.0, 0.96, 0.92, 1.03, 1.1, 1.13, 1.13],
+  roles: {
+    ops: { title: 'Lorry drivers', salary: gbp(33000), effect: '+55 loads/month of capacity each' },
+    rnd: { title: 'Fleet and transport planners', salary: gbp(36000), effect: 'Improve on-time delivery and route planning' },
+    sales: { title: 'Contract account managers', salary: gbp(38000), effect: 'Multiply the reach of your marketing' },
+  },
+  founderCapacity: 45,
+  capacityPerOps: 55,
+  founderQuality: 1.5,
+  qualityPerRnd: 0.9,
+  qualityDecay: 0.05,
+  startQuality: 30,
+  salesReachBoost: 0.3,
+  marketingPerBrandPoint: gbp(200),
+  rentBase: gbp(2800),
+  rentPerHead: gbp(300),
+  equipmentPerHire: gbp(1500),
+  equipmentLifeMonths: 60,
+  recruitmentPct: 0.08,
+  startingCapex: { amount: gbp(45000), label: 'Starter lorries and trailers', lifeMonths: 84 },
+  automationScale: gbp(200000),
+  multiples: { evEbitda: 5.5, evRevenue: 0.5 },
+  targetEbitdaMargin: 0.1,
+  capexPctRevenue: 0.06,
+  nwcPctRevenue: 0.13,
+  competitors: [
+    { name: 'Stonegate Freight', quality: 55, priceFactor: 1.1, strength: 1.2 },
+    { name: 'QuickHaul', quality: 42, priceFactor: 0.75, strength: 1.4 },
+    { name: 'Meridian Logistics', quality: 62, priceFactor: 1.3, strength: 0.9 },
+  ],
+  benchmarks: { grossMargin: 0.45, ebitdaMargin: 0.07, currentRatio: 1.2, receivableDays: 55, inventoryDays: 10 },
+};
+
+export const upgrades: UpgradeDef[] = [
+  { id: 'lorries', name: 'More lorries', description: '+20% load capacity per level.', icon: 'car', maxLevel: 5, baseCost: gbp(25_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { capacity: 0.2 } },
+  { id: 'telematics', name: 'Telematics boxes', description: '+0.4 on-time delivery quality a month per level.', icon: 'chart', maxLevel: 5, baseCost: gbp(9_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4 } },
+  { id: 'routing', name: 'Route-planning software', description: 'Fewer empty miles: unit costs 3% lower per level.', icon: 'laptop', maxLevel: 4, baseCost: gbp(12_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03 }, requires: { id: 'telematics', level: 1 } },
+  { id: 'depot', name: 'Regional depot', description: '+10% market size per level.', icon: 'parcel', maxLevel: 4, baseCost: gbp(28_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1 }, requires: { id: 'lorries', level: 1 } },
+  { id: 'coldchain', name: 'Refrigerated trailers', description: '+10% market size and +0.2 quality a month per level.', icon: 'diamond', maxLevel: 3, baseCost: gbp(35_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1, quality: 0.2 }, requires: { id: 'depot', level: 1 } },
+  { id: 'academy', name: 'Driver-training academy', description: '+0.5 quality a month and +8% capacity per level.', icon: 'star', maxLevel: 4, baseCost: gbp(14_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.5, capacity: 0.08 }, requires: { id: 'telematics', level: 2 } },
+  { id: 'contracts', name: 'Contract sales team', description: '+12% reach per level.', icon: 'key', maxLevel: 4, baseCost: gbp(10_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.12 }, requires: { id: 'routing', level: 1 } },
+  { id: 'electric', name: 'Electric lorry trial', description: 'Unit costs 3% lower and 25% less stock lost per level.', icon: 'bolt', maxLevel: 3, baseCost: gbp(45_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03, spoilage: -0.25 }, requires: { id: 'routing', level: 2 } },
+];

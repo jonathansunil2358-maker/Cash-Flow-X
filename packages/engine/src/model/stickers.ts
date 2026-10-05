@@ -1,4 +1,4 @@
-import { INDUSTRY_IDS, type IndustryId } from './industries';
+import { CORE_INDUSTRY_IDS as INDUSTRY_IDS, type CoreIndustryId } from './industries';
 
 /**
  * The sticker album: collectables earned from mystery boxes, awards and events. Six sector pages of
@@ -17,7 +17,7 @@ export interface StickerPage {
   gems: number;
 }
 
-const SECTOR_STICKERS: Record<IndustryId, [string, string][]> = {
+const SECTOR_STICKERS: Record<CoreIndustryId, [string, string][]> = {
   software: [['Launch day', '🚀'], ['Zero bugs', '🐞'], ['10k users', '👥'], ['Server room', '🖥️'], ['Hackathon', '⌨️'], ['Unicorn', '🦄']],
   clothing: [['First stitch', '🧵'], ['Runway', '👗'], ['Pop-up shop', '🛍️'], ['Fabric swatch', '🎨'], ['Sold out', '🏷️'], ['Style icon', '🕶️']],
   restaurant: [['Opening night', '🍽️'], ['Five stars', '⭐'], ['Secret recipe', '📜'], ['Chef\'s kiss', '👨‍🍳'], ['Full house', '🪑'], ['Michelin dream', '🏅']],

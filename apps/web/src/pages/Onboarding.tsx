@@ -1,6 +1,7 @@
 import {
   DIFFICULTIES, DIFFICULTY_IDS, formatGBP, CALM_ID, CAMPAIGN, campaignId, IRONMAN_ID, ORIGINS, modifierBonus, CULTURES, MODIFIER_BONUS, OPTIONAL_MODIFIERS, INDUSTRIES, INDUSTRY_IDS, LEASE_MARGIN, leasePayment, prestigeThreshold, randomSeedLabel,
   rebirthsRemaining, SCENARIOS, startingCash, type DifficultyId, type EquipmentFinance, type IndustryId,
+  type CoreIndustryId,
 } from '@cfx/engine';
 import { challengeField, isValidChallengeCode } from '@cfx/engine';
 import { useState } from 'react';
@@ -14,9 +15,13 @@ import { HowItWorks, SeasonPreview } from './MenuExtras';
 
 type Step = 'home' | 'sector' | 'identity' | 'difficulty';
 
-const SECTOR_ICON: Record<IndustryId, string> = {
+const CORE_ICON: Record<CoreIndustryId, string> = {
   software: 'laptop', clothing: 'tshirt', restaurant: 'burger', fitness: 'dumbbell', ecommerce: 'parcel', automotive: 'car',
 };
+
+function sectorIcon(id: IndustryId): string {
+  return INDUSTRIES[id].icon ?? CORE_ICON[id as CoreIndustryId];
+}
 
 /** The case studies on the start screen: a name for the company and an icon for each. */
 const CASE_STUDIES = [
@@ -196,7 +201,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
               return (
                 <button key={id} type="button" role="radio" aria-checked={industry === id} aria-pressed={industry === id} className="cfx-tile !p-2.5" onClick={() => setIndustry(id)}>
                   <span className="flex items-center justify-between">
-                    <img src={iconUrl(SECTOR_ICON[id])} alt="" className="h-12 w-12" />
+                    <img src={iconUrl(sectorIcon(id))} alt="" className="h-12 w-12" />
                     <span className={`cfx-tag ${DIFF_TAG[i.difficulty]} !px-1.5 !py-0.5`} title="How many moving parts the business has">{COMPLEXITY[i.difficulty]}</span>
                   </span>
                   <span className="cfx-tile__name">{i.name.replace(' (SaaS)', '').replace(' (EV conversions)', '')}</span>
@@ -211,7 +216,7 @@ export function Onboarding({ theme, cycleTheme }: { theme: string; cycleTheme: (
           </section>
           <div className="mt-auto flex gap-2">
             {!preset && <button type="button" className="cfx-btn is-soft" onClick={() => setStep('home')}>Back</button>}
-            <button type="button" className="cfx-btn is-lg flex-1" onClick={() => { setIcon(SECTOR_ICON[industry] === 'laptop' ? 'rocket' : SECTOR_ICON[industry]); setStep('identity'); }}>Next: name it</button>
+            <button type="button" className="cfx-btn is-lg flex-1" onClick={() => { setIcon(sectorIcon(industry) === 'laptop' ? 'rocket' : sectorIcon(industry)); setStep('identity'); }}>Next: name it</button>
           </div>
         </>
       )}

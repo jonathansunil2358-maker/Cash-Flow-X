@@ -1,5 +1,5 @@
 import { hashSeed } from './rng';
-import { INDUSTRIES, INDUSTRY_IDS, type IndustryId } from './model/industries';
+import { INDUSTRIES, CORE_INDUSTRY_IDS, type IndustryId } from './model/industries';
 
 /**
  * The daily challenge: one company per UTC day, the same for everybody. It is a pure function of
@@ -28,7 +28,7 @@ export function isValidDay(day: unknown): day is string {
 export function dailyChallenge(day: string): DailyChallenge {
   if (!isValidDay(day)) throw new Error(`Not a valid day: ${String(day)}`);
   const seed = `DAILY-${day}`;
-  const industryId = INDUSTRY_IDS[hashSeed(seed) % INDUSTRY_IDS.length];
+  const industryId = CORE_INDUSTRY_IDS[hashSeed(seed) % CORE_INDUSTRY_IDS.length];
   return { day, seed, industryId, companyName: `Daily ${INDUSTRIES[industryId].name.split(' ')[0]} Ltd`, scenarioId: 'daily', months: DAILY_MONTHS };
 }
 

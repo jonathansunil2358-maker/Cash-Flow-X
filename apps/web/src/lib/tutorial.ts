@@ -1,4 +1,4 @@
-import { DIFFICULTIES, formatGBP, INDUSTRIES, prestigeThreshold, UPGRADES, type GameState, type IndustryId } from '@cfx/engine';
+import { DIFFICULTIES, formatGBP, INDUSTRIES, prestigeThreshold, UPGRADES, type GameState, type CoreIndustryId, type IndustryId } from '@cfx/engine';
 import { startingMarketing } from './coach';
 
 /** Where a tutorial step points: matches a `data-tour` attribute in the game screen. */
@@ -27,7 +27,7 @@ interface SectorGuide {
   paid: string;
 }
 
-const GUIDES: Record<IndustryId, SectorGuide> = {
+const CORE_GUIDES: Record<CoreIndustryId, SectorGuide> = {
   software: {
     welcome: 'You sell a subscription app to small businesses. There is no stock to buy and gross margin is about 88%, but developers are expensive and customers leave if the product falls behind.',
     place: 'glass office tower',
@@ -96,7 +96,7 @@ const money = (p: number) => formatGBP(p, { compact: true }).replace(/\.0(?=[km]
 /** The first-run walkthrough, written for the player's sector and difficulty. */
 export function tourSteps(game: GameState, prestigeCount: number): TourStep[] {
   const ind = INDUSTRIES[game.industryId];
-  const g = GUIDES[game.industryId];
+  const g = CORE_GUIDES[(ind.look ?? game.industryId) as CoreIndustryId];
   const diff = DIFFICULTIES[game.difficulty];
   const upgrade = UPGRADES[game.industryId].find((u) => u.id === g.upgrade.id && !u.requires);
   const sub = ind.model === 'subscription';

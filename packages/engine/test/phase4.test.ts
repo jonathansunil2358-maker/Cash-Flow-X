@@ -20,7 +20,7 @@ describe('chunked verification', () => {
       equipmentFinance: sub.equipmentFinance, perks: sub.perks, boosts: sub.boosts, prestigeLevel: sub.prestigeLevel, icon: sub.icon,
     }));
     let done = 0;
-    for (let to = 17; ; to = Math.min(to + 17, s.month)) {
+    for (let to = Math.min(17, s.month); ; to = Math.min(to + 17, s.month)) {
       const batch = sub.actions.slice(done).filter((a) => a.month <= to);
       const run = structuredClone(checkpoint);
       const r = continueRun(run, batch, to);

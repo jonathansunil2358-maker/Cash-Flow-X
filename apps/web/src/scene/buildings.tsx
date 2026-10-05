@@ -1,4 +1,4 @@
-import type { IndustryId } from '@cfx/engine';
+import { INDUSTRIES, type CoreIndustryId, type IndustryId } from '@cfx/engine';
 import type { ReactNode } from 'react';
 import {
   Awning, Ball, Blink, Blk, Bob, Bush, C, Car, Container, Crate, Cyl, Disc, Flag, Gable, Lamp, Parasol, Person, RollDoor, Smoke, Spin, Windows,
@@ -133,11 +133,14 @@ function AutomotiveHQ({ floors }: { floors: number }) {
 }
 
 /** x offset of each headquarters' customer entrance (the front faces +z), clear of forecourt props. */
-export const HQ_DOOR: Record<IndustryId, number> = {
+const CORE_DOOR: Record<CoreIndustryId, number> = {
   software: 0.95, clothing: 1.3, restaurant: 1.1, fitness: 1.25, ecommerce: 0, automotive: -0.8,
 };
 
-export function Headquarters({ industry, floors }: { industry: IndustryId; floors: number }) {
+export const HQ_DOOR = new Proxy(CORE_DOOR, { get: (o, k: string) => o[(INDUSTRIES[k as IndustryId]?.look ?? k) as CoreIndustryId] }) as Record<IndustryId, number>;
+
+export function Headquarters({ industry: id, floors }: { industry: IndustryId; floors: number }) {
+  const industry = (INDUSTRIES[id]?.look ?? id) as CoreIndustryId;
   switch (industry) {
     case 'software': return <SoftwareHQ floors={floors} />;
     case 'clothing': return <ClothingHQ floors={floors} />;

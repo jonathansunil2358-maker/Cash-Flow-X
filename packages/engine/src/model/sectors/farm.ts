@@ -1,0 +1,72 @@
+import { gbp } from '../../money';
+import type { IndustryConfig } from '../industries';
+import type { UpgradeDef } from '../upgrades';
+
+/** Sector: Farm and farm shop. Mixed arable and market-garden farm that sells boxes of produce through a farm shop, restaurants and a supermarket contract. */
+export const config: IndustryConfig = {
+  id: 'farm',
+  look: 'ecommerce',
+  icon: 'leaf',
+  name: 'Farm and farm shop',
+  emoji: '🌾',
+  tagline: 'Weather-driven harvests, perishable crops, heavy kit and slow cash.',
+  difficulty: 'Hard',
+  description:
+    'Grow produce and sell it as boxes through a farm shop, local restaurants and a supermarket. Crops spoil (about 10% of stock a month), sales swing hard with the seasons, tractors and barns are expensive, and supermarkets pay on 45 days while seed and feed suppliers want paying in 30. Gross margin is around 49% before spoilage and shop costs, so a bad harvest hurts.',
+  model: 'unit',
+  unitSingular: 'box',
+  unitPlural: 'boxes',
+  basePrice: gbp(30),
+  priceElasticity: 1.5,
+  unitCost: gbp(15.3),
+  annualPrepaidShare: 0,
+  baseChurn: 0,
+  stockCoverDefault: 1,
+  spoilage: 0.07,
+  receivableDays: 45,
+  payableDays: 30,
+  marketSize: 14000,
+  marketGrowth: 0.005,
+  seasonality: [0.78, 0.8, 0.88, 0.97, 1.08, 1.15, 1.18, 1.18, 1.12, 1.02, 0.94, 0.9],
+  roles: {
+    ops: { title: 'Farm hands and pickers', salary: gbp(23000), effect: '+700 boxes/month of capacity each' },
+    rnd: { title: 'Agronomists (crop scientists)', salary: gbp(38000), effect: 'Improve yields, crop quality and shop range' },
+    sales: { title: 'Farm-shop and trade sales', salary: gbp(29000), effect: 'Multiply the reach of your marketing' },
+  },
+  founderCapacity: 450,
+  capacityPerOps: 700,
+  founderQuality: 1.6,
+  qualityPerRnd: 1.0,
+  qualityDecay: 0.05,
+  startQuality: 33,
+  salesReachBoost: 0.28,
+  marketingPerBrandPoint: gbp(200),
+  rentBase: gbp(2000),
+  rentPerHead: gbp(90),
+  equipmentPerHire: gbp(1500),
+  equipmentLifeMonths: 72,
+  recruitmentPct: 0.06,
+  startingCapex: { amount: gbp(28000), label: 'Tractor, trailer and polytunnels', lifeMonths: 96 },
+  automationScale: gbp(120000),
+  multiples: { evEbitda: 7, evRevenue: 0.9 },
+  targetEbitdaMargin: 0.12,
+  capexPctRevenue: 0.06,
+  nwcPctRevenue: 0.12,
+  competitors: [
+    { name: 'Greenacre Growers', quality: 50, priceFactor: 0.85, strength: 1.3 },
+    { name: 'Hilltop Organic', quality: 62, priceFactor: 1.3, strength: 0.8 },
+    { name: 'Veg Valley Wholesale', quality: 40, priceFactor: 0.7, strength: 1.4 },
+  ],
+  benchmarks: { grossMargin: 0.46, ebitdaMargin: 0.1, currentRatio: 1.5, receivableDays: 40, inventoryDays: 45 },
+};
+
+export const upgrades: UpgradeDef[] = [
+  { id: 'farm_tractor', name: 'Bigger tractor and kit', description: '+20% harvest capacity per level.', icon: 'gear', maxLevel: 5, baseCost: gbp(14_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { capacity: 0.2 } },
+  { id: 'farm_shop', name: 'Farm shop and cafe', description: '+12% reach per level.', icon: 'star', maxLevel: 4, baseCost: gbp(9_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { reach: 0.12 } },
+  { id: 'farm_coldstore', name: 'Cold store', description: '25% less produce spoiled per level.', icon: 'diamond', maxLevel: 3, baseCost: gbp(10_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { spoilage: -0.25 }, requires: { id: 'farm_tractor', level: 1 } },
+  { id: 'farm_irrigation', name: 'Irrigation and drainage', description: '+0.4 crop quality a month per level.', icon: 'leaf', maxLevel: 5, baseCost: gbp(8_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4 } },
+  { id: 'farm_greenhouse', name: 'Greenhouses', description: '+0.4 crop quality a month and +8% capacity per level.', icon: 'flame', maxLevel: 4, baseCost: gbp(16_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { quality: 0.4, capacity: 0.08 }, requires: { id: 'farm_irrigation', level: 2 } },
+  { id: 'farm_seed', name: 'Seed and feed contracts', description: 'Unit costs 3% lower per level.', icon: 'key', maxLevel: 4, baseCost: gbp(12_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { unitCost: -0.03 }, requires: { id: 'farm_tractor', level: 1 } },
+  { id: 'farm_restaurants', name: 'Restaurant supply deals', description: '+10% market size per level.', icon: 'coffee', maxLevel: 3, baseCost: gbp(20_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.1 }, requires: { id: 'farm_shop', level: 1 } },
+  { id: 'farm_organic', name: 'Organic certification', description: '+12% market size and 5% less spoilage per level.', icon: 'heart', maxLevel: 3, baseCost: gbp(26_000), costGrowth: 1.6, lifeMonths: 60, perLevel: { market: 0.12, spoilage: -0.05 }, requires: { id: 'farm_irrigation', level: 2 } },
+];
