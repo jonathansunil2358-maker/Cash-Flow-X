@@ -7,6 +7,7 @@ import { industryOf } from './industries';
 import { logItem, type GameState } from './state';
 
 export { POLICIES, EVENTS8 };
+export type { PolicyGroup, PolicyDef, PolOption, EvSpec } from './data8';
 export interface Play8 { pol?: Record<string, number>; changed?: Record<string, number>; last?: Record<string, number>; anyEvent?: number }
 export const play8Of = (s: GameState): Play8 => (s.play8 ??= {});
 export const lastRev8 = (s: GameState): Pence => { const r = s.history.at(-1); return r ? plSummary(r.period.pl).revenue : 0; };
