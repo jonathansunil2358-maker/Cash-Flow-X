@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyActionInPlace, checkIntegrity, newGame, replay, stateChecksum, tickInPlace, toSubmission, CHOICE_EVENTS, startNamedEvent, createRng, EVENTS8, POLICIES, optionOf, policiesFor,
-  play8Demand, play8Cost, runningPct, initiativesFor, type GameState,
+  play8Demand, play8Cost, runningPct, initiativesFor, type GameState, type IndustryId,
 } from '../src/index';
 import { applyPolicy } from '../scripts/policy';
 
 const answer = (s: GameState) => { if (s.status === 'playing' && s.pendingEvent) applyActionInPlace(s, { type: 'resolveEvent', choiceId: s.pendingEvent.choices[0].id }); };
 const play = (s: GameState, months: number) => { for (let i = 0; i < months && s.status === 'playing'; i++) { answer(s); applyPolicy(s); answer(s); tickInPlace(s); } return s; };
-const company = (seed: string, months = 40, industryId: 'software' | 'ecommerce' = 'software'): GameState => {
+const company = (seed: string, months = 40, industryId: IndustryId = 'software'): GameState => {
   let s = play(newGame({ companyName: 'P', industryId, seed, difficulty: 'easy' }), months);
   for (let n = 1; s.status !== 'playing' && n < 20; n++) s = play(newGame({ companyName: 'P', industryId, seed: `${seed}-${n}`, difficulty: 'easy' }), months);
   expect(s.status).toBe('playing');
@@ -28,12 +28,12 @@ describe('business policies and events', () => {
   });
 
   it('every choice of every event runs under several dice and leaves the books balanced', { timeout: 300_000 }, () => {
-    const base = company('P8-EVENTS', 24);
-    const baseStock = company('P8-EVENTS-STOCK', 24, 'ecommerce');
+    const bases: Record<string, GameState> = {};
+    const baseFor = (id: IndustryId): GameState => (bases[id] ??= company(`P8-EVENTS-${id}`, 24, id));
     for (const e of EVENTS8) {
       for (const c of e.choices) {
         for (const rng of [3, 99]) {
-          const s = structuredClone(e.gate === 'stock' ? baseStock : base);
+          const s = structuredClone(baseFor((e.sector as IndustryId | undefined) ?? (e.gate === 'stock' ? 'ecommerce' : 'software')));
           s.pendingEvent = null;
           startNamedEvent(s, e.id, createRng({ rng }));
           expect((s.pendingEvent as { id: string } | null)?.id, e.id).toBe(e.id);
@@ -48,7 +48,7 @@ describe('business policies and events', () => {
   });
 
   it('every policy option can be set, costs what it says, and the books balance', { timeout: 120_000 }, () => {
-    for (const ind of ['software', 'ecommerce'] as const) {
+    for (const ind of ['software', 'clothing', 'restaurant', 'fitness', 'ecommerce', 'automotive'] as const) {
       const s = company(`P8-POL-${ind}`, 40, ind);
       for (const p of policiesFor(s)) {
         for (let o = 1; o < p.options.length; o++) {
@@ -66,7 +66,8 @@ describe('business policies and events', () => {
   });
 
   it('every initiative can be started, reports after its months, and the books balance', { timeout: 120_000 }, () => {
-    const base = company('P8-INIT', 40, 'ecommerce');
+    for (const ind of ['software', 'clothing', 'restaurant', 'fitness', 'ecommerce', 'automotive'] as const) {
+    const base = company(`P8-INIT-${ind}`, 40, ind);
     let won = 0; let lost = 0;
     for (const p of initiativesFor(base)) {
       const s = structuredClone(base);
@@ -79,6 +80,7 @@ describe('business policies and events', () => {
       expect(checkIntegrity(s), p.id).toEqual([]);
     }
     expect(won + lost).toBe(initiativesFor(base).length);
+    }
   });
 
   it('stock-only policies are refused for businesses without stock, and a cooldown applies', () => {

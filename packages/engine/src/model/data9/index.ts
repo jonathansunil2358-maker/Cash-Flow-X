@@ -1,3 +1,9 @@
+import * as t_automotive from './automotive';
+import * as t_ecommerce from './ecommerce';
+import * as t_fitness from './fitness';
+import * as t_restaurant from './restaurant';
+import * as t_clothing from './clothing';
+import * as t_software from './software';
 import * as t_tools from './tools';
 import * as t_exit from './exit';
 import * as t_governance from './governance';
@@ -23,7 +29,7 @@ import * as t_lending from './lending';
 import * as t_tax from './tax';
 import * as t_accounting from './accounting';
 /** Every business topic, in the order they appear in the Management section. */
-export interface Topic { id: string; name: string; blurb: string }
+export interface Topic { id: string; name: string; blurb: string; /** A sector topic: its items only exist for that industry. */ sector?: boolean }
 export const TOPICS: Topic[] = [
   { id: 'accounting', name: 'Accounting and statements', blurb: 'Closing the books, reports and audits.' },
   { id: 'tax', name: 'Tax', blurb: 'Returns, reliefs and planning.' },
@@ -49,9 +55,15 @@ export const TOPICS: Topic[] = [
   { id: 'governance', name: 'Governance and board', blurb: 'Boards, committees and codes.' },
   { id: 'exit', name: 'Exit, IPO and succession', blurb: 'Selling up, listing and handing over.' },
   { id: 'tools', name: 'Management tools and reports', blurb: 'Dashboards, forecasts and tracking.' },
+  { id: 'software', name: 'Software (SaaS)', blurb: 'Mechanics for software companies.', sector: true },
+  { id: 'clothing', name: 'Clothing brand', blurb: 'Mechanics for clothing brands.', sector: true },
+  { id: 'restaurant', name: 'Restaurant', blurb: 'Mechanics for restaurants.', sector: true },
+  { id: 'fitness', name: 'Fitness club', blurb: 'Mechanics for fitness clubs.', sector: true },
+  { id: 'ecommerce', name: 'E-commerce store', blurb: 'Mechanics for online shops.', sector: true },
+  { id: 'automotive', name: 'Automotive (EV conversions)', blurb: 'Mechanics for EV conversion firms.', sector: true },
 ];
 
-const MODS = [t_accounting, t_tax, t_lending, t_equity, t_mna, t_property, t_supply, t_pricing, t_marketing, t_rnd, t_hr, t_quality, t_insurance, t_legal, t_rivals, t_macro, t_export, t_expansion, t_sustainability, t_it, t_service, t_governance, t_exit, t_tools];
-export const POLICIES9 = MODS.flatMap((m, i) => m.policies.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id })));
-export const EVENTS9 = MODS.flatMap((m, i) => m.events.map((e) => ({ ...e, topic: e.topic ?? TOPICS[i].id })));
-export const PROJECTS9 = MODS.flatMap((m, i) => m.projects.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id })));
+const MODS = [t_accounting, t_tax, t_lending, t_equity, t_mna, t_property, t_supply, t_pricing, t_marketing, t_rnd, t_hr, t_quality, t_insurance, t_legal, t_rivals, t_macro, t_export, t_expansion, t_sustainability, t_it, t_service, t_governance, t_exit, t_tools, t_software, t_clothing, t_restaurant, t_fitness, t_ecommerce, t_automotive];
+export const POLICIES9 = MODS.flatMap((m, i) => m.policies.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : p.sector })));
+export const EVENTS9 = MODS.flatMap((m, i) => m.events.map((e) => ({ ...e, topic: e.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : e.sector })));
+export const PROJECTS9 = MODS.flatMap((m, i) => m.projects.map((p) => ({ ...p, topic: p.topic ?? TOPICS[i].id, sector: TOPICS[i].sector ? TOPICS[i].id : p.sector })));

@@ -14,7 +14,7 @@ export interface PolEff {
   risk?: [number, number, string];
 }
 export interface PolOption { name: string; blurb: string; eff: PolEff; /** One-off cost in months of sales. */ setup?: number; /** Running cost as % of monthly sales (negative = savings). */ monthly?: number }
-export interface PolicyDef { id: string; group: PolicyGroup; /** Management topic (see data9/index.ts); policies without one belong to the four basic panels. */ topic?: string; name: string; blurb: string; stock?: boolean; options: PolOption[] }
+export interface PolicyDef { id: string; group: PolicyGroup; /** Only for this industry (set automatically for sector topics). */ sector?: string; /** Management topic (see data9/index.ts); policies without one belong to the four basic panels. */ topic?: string; name: string; blurb: string; stock?: boolean; options: PolOption[] }
 
 const off: PolOption = { name: 'Off', blurb: 'Do nothing special.', eff: {} };
 const opt = (name: string, blurb: string, eff: PolEff, monthly = 0, setup = 0): PolOption => ({ name, blurb, eff, monthly, setup });
@@ -107,7 +107,7 @@ export interface EvChoice {
   eff?: EvEff; gamble?: EvGamble; text: string;
 }
 export type EvGate = 'rivals' | 'stock' | 'team' | 'listed' | 'cash';
-export interface EvSpec { id: string; topic?: string; title: string; icon: string; good: boolean; story: string; min?: number; per: number; cd: number; gate?: EvGate; choices: EvChoice[] }
+export interface EvSpec { id: string; topic?: string; sector?: string; title: string; icon: string; good: boolean; story: string; min?: number; per: number; cd: number; gate?: EvGate; choices: EvChoice[] }
 
 const S = (id: string, label: string, hint: string, text: string, rest: Partial<EvChoice> = {}): EvChoice => ({ id, label, hint, text, ...rest });
 const E = (d: number, m: number): [number, number] => [d, m];
@@ -243,7 +243,7 @@ export const EVENTS8: EvSpec[] = [
 // Projects: spend money now, wait a few months, and either win a lasting benefit or lose the money
 // -------------------------------------------------------------------------------------------------
 export interface InitiativeDef {
-  id: string; topic?: string; name: string; blurb: string;
+  id: string; topic?: string; sector?: string; name: string; blurb: string;
   /** Cost as a share of a month's sales (with a floor of £800). */
   k: number;
   /** Months until the result. */

@@ -17,7 +17,7 @@ const round100 = (n: number): Pence => Math.round(n / 100) * 100;
 export const POLICY_COOLDOWN = 3;
 
 export const optionOf = (s: GameState, id: string): number => s.play8?.pol?.[id] ?? 0;
-export const policiesFor = (s: GameState): PolicyDef[] => POLICIES.filter((p) => !p.stock || industryOf(s).model === 'unit');
+export const policiesFor = (s: GameState): PolicyDef[] => POLICIES.filter((p) => (!p.stock || industryOf(s).model === 'unit') && (!p.sector || p.sector === s.industryId));
 export const setupCost = (s: GameState, id: string, option: number): Pence => {
   const o = policyById(id)?.options[option];
   return o?.setup ? Math.max(500_00, round100(lastRev8(s) * o.setup)) : 0;
@@ -28,6 +28,7 @@ export function policyCheck(s: GameState, id: string, option: number): { ok: boo
   const fee = setupCost(s, id, option);
   if (!Number.isInteger(option) || option < 0 || option >= p.options.length) return { ok: false, reason: 'Unknown option.', fee };
   if (p.stock && industryOf(s).model !== 'unit') return { ok: false, reason: 'That only applies to businesses that hold stock.', fee };
+  if (p.sector && p.sector !== s.industryId) return { ok: false, reason: 'That is for a different kind of business.', fee };
   if (option === optionOf(s, id)) return { ok: false, reason: 'That is already your choice.', fee };
   if (s.month < 3) return { ok: false, reason: 'Wait until you have traded for a few months.', fee };
   const ch = s.play8?.changed?.[id];
@@ -72,7 +73,7 @@ export const runningCost = (s: GameState): Pence => Math.round((lastRev8(s) * ru
 // ---------------------------------------------------------------------------------------------
 export const MAX_PROJECTS = 3;
 export const RETRY_MONTHS = 12;
-export const initiativesFor = (s: GameState): InitiativeDef[] => PROJECTS8.filter((p) => !p.stock || industryOf(s).model === 'unit');
+export const initiativesFor = (s: GameState): InitiativeDef[] => PROJECTS8.filter((p) => (!p.stock || industryOf(s).model === 'unit') && (!p.sector || p.sector === s.industryId));
 export const initiativeCost = (s: GameState, p: InitiativeDef): Pence => Math.max(800_00, round100(lastRev8(s) * p.k));
 export const initiativeActive = (s: GameState, id: string): { id: string; end: number } | undefined => s.play8?.proj?.active.find((a) => a.id === id);
 export function initiativeCheck(s: GameState, id: string): { ok: boolean; reason?: string; cost: Pence } {
@@ -80,6 +81,7 @@ export function initiativeCheck(s: GameState, id: string): { ok: boolean; reason
   if (!p) return { ok: false, reason: 'Unknown project.', cost: 0 };
   const cost = initiativeCost(s, p);
   if (p.stock && industryOf(s).model !== 'unit') return { ok: false, reason: 'That only applies to businesses that hold stock.', cost };
+  if (p.sector && p.sector !== s.industryId) return { ok: false, reason: 'That is for a different kind of business.', cost };
   if (s.month < 6) return { ok: false, reason: 'Wait until you have traded for a few months.', cost };
   if (initiativeActive(s, id)) return { ok: false, reason: 'That project is already under way.', cost };
   const d = s.play8?.proj?.done[id];
