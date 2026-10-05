@@ -61,8 +61,8 @@ export function advancePlay8(s: GameState, rng: Rng, simulation: boolean): void 
     return s.month - (q.last![e.id] ?? -999) >= e.cd;
   });
   if (!eligible.length) return;
-  // About one decision every five months, however many events exist: pick one of the eligible, weighted by its own chance.
-  if (roll8(s, `evgate:${s.month}`, 100) >= 20) return;
+  // About one decision every ten months, however many events exist: pick one of the eligible, weighted by its own chance.
+  if (roll8(s, `evgate:${s.month}`, 100) >= 10) return;
   const total = eligible.reduce((a, e) => a + e.per, 0);
   let r = (roll8(s, `evpick:${s.month}`, 100000) / 100000) * total;
   const e = eligible.find((x) => (r -= x.per) < 0) ?? eligible[eligible.length - 1];

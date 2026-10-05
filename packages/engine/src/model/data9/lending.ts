@@ -5,48 +5,48 @@ import { opt, S, E } from '../dataKit';
 export const policies: PolicyDef[] = [
   { id: 'lending_paymenthistory', group: 'finance', name: 'Payment history', blurb: 'Lenders keep a credit score on your firm, based on whether you pay your bills on time. A good score means bigger limits and better deals, and it moves slowly with your habits.', options: [
     opt('Pay when convenient', 'Most things are paid on time, and a few drift late.', {}),
-    opt('Pay every bill on time', 'Cash leaves earlier, but your credit score climbs and suppliers trust you.', { od: 1.06, c: 0.998 }, 0.25),
-    opt('Hold on to cash, pay late', 'You keep your money longer, but late payments dent your credit score and suppliers add fees.', { od: 0.95, risk: [8, 2, 'A supplier charged a late-payment fee and logged it on your credit record.'] }, -0.4)] },
+    opt('Pay every bill on time', 'Cash leaves earlier, but your credit score climbs and suppliers trust you.', { od: 1.06, c: 0.998 }, 0.15),
+    opt('Hold on to cash, pay late', 'You keep your money longer, but late payments dent your credit score and suppliers add fees.', { od: 0.95, risk: [8, 3, 'A supplier charged a late-payment fee and logged it on your credit record.'] }, -0.3)] },
   { id: 'lending_security', group: 'finance', name: 'Secured or unsecured borrowing', blurb: 'Secured borrowing means the bank can take an asset, such as a building or a machine, if you cannot repay. That makes the loan cheaper. Unsecured loans cost more.', options: [
     opt('Unsecured loans', 'Nothing at risk, but a higher interest rate and a lower limit.', {}),
     opt('Secure against equipment', 'The bank holds a claim on your machines, so the rate is lower and the limit is higher.', { od: 1.1, risk: [2, 6, 'You missed a payment and the bank used its claim on your equipment.'] }, -0.2, 0.3),
-    opt('Personal guarantee', 'You promise to repay out of your own pocket. The best terms there are, and the biggest worry.', { od: 1.15, m: -0.2, risk: [1.5, 8, 'A missed payment triggered your personal guarantee and the bank came after your own money.'] }, -0.35)] },
+    opt('Personal guarantee', 'You promise to repay out of your own pocket. The best terms there are, and the biggest worry.', { od: 1.15, m: -0.2, risk: [1.5, 8, 'A missed payment triggered your personal guarantee and the bank came after your own money.'] }, -0.3)] },
   { id: 'lending_invoicefinance', group: 'finance', name: 'Invoice finance', blurb: 'Invoice finance means a finance firm pays you most of an invoice\'s value now, instead of you waiting 30 to 60 days for your customer to pay. You get cash sooner, for a fee.', options: [
     opt('Wait for customers to pay', 'No fees, but the cash arrives late.', {}),
-    opt('Invoice discounting', 'Borrow against your invoices quietly. Your customers still pay you directly.', { od: 1.15 }, 0.5, 0.3),
-    opt('Invoice factoring', 'The finance firm collects the money for you. More cash and less chasing, but customers know, and the fee is higher.', { od: 1.2, rep: -0.02 }, 0.8)] },
+    opt('Invoice discounting', 'Borrow against your invoices quietly. Your customers still pay you directly.', { od: 1.15 }, 0.35, 0.3),
+    opt('Invoice factoring', 'The finance firm collects the money for you. More cash and less chasing, but customers know, and the fee is higher.', { od: 1.2, rep: -0.02 }, 0.6)] },
   { id: 'lending_swap', group: 'finance', name: 'Interest-rate protection', blurb: 'If your loan rate floats with the market, a jump in rates raises your bill. A swap trades your floating rate for a fixed one, and a cap sets a ceiling on the rate you can be charged.', options: [
     opt('Floating rate', 'Your payments move up and down with market rates.', {}),
-    opt('Swap to a fixed rate', 'Predictable payments that lenders like, but if rates fall you are stuck paying more.', { od: 1.06, risk: [5, 3, 'Rates fell and your fixed-rate swap cost more than a floating loan would have.'] }, 0.1, 0.2),
-    opt('Buy an interest-rate cap', 'Pay a premium so that rates cannot pass a ceiling, and still gain if they fall.', { od: 1.03 }, 0.35)] },
+    opt('Swap to a fixed rate', 'Predictable payments that lenders like, but if rates fall you are stuck paying more.', { od: 1.06, risk: [5, 3, 'Rates fell and your fixed-rate swap cost more than a floating loan would have.'] }, 0.05, 0.2),
+    opt('Buy an interest-rate cap', 'Pay a premium so that rates cannot pass a ceiling, and still gain if they fall.', { od: 1.03 }, 0.25)] },
   { id: 'lending_ltv', group: 'finance', name: 'Property loan limit', blurb: 'Banks lend only a share of a building\'s value, called the loan-to-value limit. Borrow close to the limit and a fall in property prices can leave you in trouble.', options: [
     opt('Borrow up to 60% of value', 'A typical limit. You put in 40% yourself.', {}),
-    opt('Borrow up to 75% of value', 'More cash for the building, but a thin cushion if prices fall.', { od: 1.1, risk: [3, 5, 'Property prices dipped and the bank asked for extra cash because your loan was too big for the value.'] }, 0.3),
+    opt('Borrow up to 75% of value', 'More cash for the building, but a thin cushion if prices fall.', { od: 1.1, risk: [3, 5, 'Property prices dipped and the bank asked for extra cash because your loan was too big for the value.'] }, 0.2),
     opt('Borrow only 40% of value', 'Cautious and calm, but you have less cash to use elsewhere.', { m: 0.2, od: 0.95 })] },
   { id: 'lending_overdraft', group: 'finance', name: 'Overdraft or term loan', blurb: 'An overdraft lets you dip below zero in the bank when you need to, at a high rate. A term loan is a fixed sum repaid in steady instalments at a lower rate.', options: [
     opt('Use the overdraft when needed', 'Flexible and quick, with a high interest rate on whatever you use.', {}),
-    opt('Take a term loan', 'A lower rate and steady repayments, but you lose some flexibility and your overdraft gets smaller.', { c: 0.997, od: 0.92 }, 0.1, 0.3),
-    opt('A bit of both', 'A smaller term loan plus a smaller overdraft for the odd spike.', { c: 0.998, od: 0.97 }, 0.15, 0.2)] },
+    opt('Take a term loan', 'A lower rate and steady repayments, but you lose some flexibility and your overdraft gets smaller.', { c: 0.997, od: 0.92 }, 0.05, 0.3),
+    opt('A bit of both', 'A smaller term loan plus a smaller overdraft for the odd spike.', { c: 0.998, od: 0.97 }, 0.08, 0.2)] },
   { id: 'lending_supplierterms', group: 'finance', name: 'Supplier payment terms', blurb: 'Supplier credit means you pay your suppliers after you get the goods, which is free borrowing. Stretch it too far and they get nervous or raise their prices.', options: [
     opt('Pay in 30 days', 'The usual terms, and everyone is happy.', {}),
-    opt('Stretch to 60 days', 'You hold on to your cash for longer, but suppliers price it into what they charge.', { od: 1.05, c: 1.01 }),
-    opt('Stretch to 90 days', 'Even more cash in hand, and even more chance of an angry supplier.', { od: 1.1, c: 1.02, risk: [5, 3, 'A supplier put you on stop until you paid the overdue bill.'] })] },
+    opt('Stretch to 60 days', 'You hold on to your cash for longer, but suppliers price it into what they charge.', { od: 1.05, c: 1.005 }),
+    opt('Stretch to 90 days', 'Even more cash in hand, and even more chance of an angry supplier.', { od: 1.1, c: 1.012, risk: [4, 3, 'A supplier put you on stop until you paid the overdue bill.'] })] },
   { id: 'lending_deposits', group: 'customers', name: 'Customer deposits', blurb: 'A deposit is money a customer pays before you deliver. It is cheap funding because you do not pay interest on it, though you owe the goods or a refund.', options: [
     opt('Bill on delivery', 'Customers pay when they get the goods.', {}),
-    opt('Take a 20% deposit', 'Cash arrives before you spend it, though a few customers hesitate.', { od: 1.1, d: 0.99 }, 0.1),
-    opt('Take a 50% deposit', 'Even cheaper funding, but more refunds and fewer orders.', { od: 1.2, d: 0.98, risk: [3, 4, 'A cancelled order meant a deposit had to be refunded after the money was spent.'] })] },
+    opt('Take a 20% deposit', 'Cash arrives before you spend it, though a few customers hesitate.', { od: 1.08, d: 0.997 }, 0.05),
+    opt('Take a 50% deposit', 'Even cheaper funding, but more refunds and fewer orders.', { od: 1.15, d: 0.99, risk: [3, 4, 'A cancelled order meant a deposit had to be refunded after the money was spent.'] })] },
   { id: 'lending_tradeinsurance', group: 'finance', name: 'Trade-credit insurance', blurb: 'Trade-credit insurance pays most of a bad debt if a customer goes bust owing you money. Banks like it and will lend more against insured invoices.', options: [
     opt('Uninsured', 'You carry the risk yourself if a customer fails.', {}),
-    opt('Insure your biggest customers', 'Cover for the few customers who matter most, for a modest premium.', { od: 1.08, c: 0.998 }, 0.5),
-    opt('Insure every customer', 'Full cover and the best lending terms, with a bigger premium.', { od: 1.12, c: 0.997 }, 0.9)] },
+    opt('Insure your biggest customers', 'Cover for the few customers who matter most, for a modest premium.', { od: 1.08, c: 0.998 }, 0.3),
+    opt('Insure every customer', 'Full cover and the best lending terms, with a bigger premium.', { od: 1.12, c: 0.997 }, 0.45)] },
   { id: 'lending_fxloan', group: 'finance', name: 'Currency of your loans', blurb: 'A loan in dollars or euros often has a lower rate. But if the pound falls against that currency, the loan grows when you count it in pounds. That is exchange risk.', options: [
     opt('Borrow in pounds', 'No exchange risk and no surprises.', {}),
     opt('Borrow in dollars or euros', 'A lower rate and more headroom, but a falling pound makes the loan grow.', { od: 1.05, risk: [8, 4, 'The pound fell and your foreign-currency loan grew in pounds.'] }, -0.3),
     opt('Match the currency you earn abroad', 'Borrow in the same currency as your foreign sales so the swings partly cancel out.', { od: 1.03, risk: [3, 2, 'A currency swing left your loan and your foreign sales slightly out of step.'] }, -0.1)] },
   { id: 'lending_latepayinterest', group: 'customers', name: 'Late-payment interest on customers', blurb: 'The law lets you charge interest to customers who pay late. Whether you use that right says a lot about how you run your business.', options: [
     opt('No charge for late payers', 'Friendly, and slow payers take advantage.', {}),
-    opt('Charge the legal interest rate', 'Late payers owe interest. A few moan, and you earn a bit.', { d: 0.995 }, -0.15),
-    opt('Charge it and chase hard', 'Firm reminders and a charge every time. More money, fewer happy customers.', { d: 0.985, rep: -0.02 }, -0.3)] },
+    opt('Charge the legal interest rate', 'Late payers owe interest. A few moan, and you earn a bit.', { d: 0.997 }, -0.2),
+    opt('Charge it and chase hard', 'Firm reminders and a charge every time. More money, fewer happy customers.', { d: 0.993, rep: -0.02 }, -0.4)] },
 ];
 
 export const events: EvSpec[] = [
@@ -63,8 +63,8 @@ export const events: EvSpec[] = [
     S('stretch', 'Ask suppliers to wait', 'Free, if they agree.', '', { gamble: { p: 0.6, good: {}, bad: { c: E(1.02, 3), rep: -1 }, goodText: 'Your suppliers were relaxed about waiting.', badText: 'A supplier put on a surcharge, and word got around that you were short of cash.' } }),
     S('overdraft', 'Use your overdraft', 'Cheaper to set up, and pricey day by day.', 'The overdraft covered it at a steep daily rate, but only for a few weeks.', { k: 0.012 })] },
   { id: 'e9_lending_earlyrepay', title: 'You could repay a loan early', icon: 'diamond', good: true, per: 1, cd: 24, min: 18, story: 'You have spare cash and could pay off a loan early to save interest. But many loans charge an early-repayment penalty, because the bank loses the interest it was counting on.', choices: [
-    S('repay', 'Repay it all and pay the penalty', 'Costs money now and saves interest for years.', 'You paid the penalty and cleared the debt. Your interest bill shrank.', { k: 0.04, eff: { c: E(0.99, 12) } }),
-    S('haggle', 'Negotiate the penalty down', 'Costs some adviser time, and may or may not work.', '', { k: 0.005, gamble: { p: 0.5, good: { c: E(0.992, 12) }, bad: {}, goodText: 'The bank halved the penalty and you cleared the loan.', badText: 'The bank would not budge, and you kept the loan for now.' } }),
+    S('repay', 'Repay it all and pay the penalty', 'Costs money now and saves interest for a year.', 'You paid the penalty and cleared the debt. Your interest bill shrank.', { k: 0.03, eff: { c: E(0.99, 12) } }),
+    S('haggle', 'Negotiate the penalty down', 'Costs some adviser time, and may or may not work.', '', { k: 0.005, gamble: { p: 0.5, good: { c: E(0.99, 12) }, bad: {}, goodText: 'The bank halved the penalty and you cleared the loan.', badText: 'The bank would not budge, and you kept the loan for now.' } }),
     S('keep', 'Keep the loan and the cash', 'No saving, and a handy cushion.', 'You kept your cash as a safety cushion and went on paying the interest.')] },
   { id: 'e9_lending_bankmanager', title: 'A new bank manager takes over', icon: 'coffee', good: true, per: 1, cd: 24, story: 'Your relationship manager at the bank has moved on and a new one has taken over your account. Their opinion of you shapes your limits and your rates, so first impressions matter.', choices: [
     S('lunch', 'Invite them for a site tour and lunch', 'A small cost, and a chance to win them over.', '', { k: 0.008, gamble: { p: 0.75, good: { c: E(0.995, 12), rep: 1 }, bad: {}, goodText: 'They loved the visit and softened a few terms.', badText: 'They were polite and noncommittal.' } }),
@@ -85,22 +85,22 @@ export const events: EvSpec[] = [
 ];
 
 export const projects: InitiativeDef[] = [
-  { id: 'lending_assetlease', name: 'Lease machines instead of buying', blurb: 'Asset finance lets you get machines now and pay in monthly instalments, instead of paying the full price up front. The finance company owns the machine until the end.', k: 0.8, months: 3, success: 85,
-    win: { eff: { cap: 1.03 }, monthly: 0.5, text: 'The new machines arrived, output rose, and you pay for them in small monthly bites.' },
+  { id: 'lending_assetlease', name: 'Lease machines instead of buying', blurb: 'Asset finance lets you get machines now and pay in monthly instalments, instead of paying the full price up front. The finance company owns the machine until the end.', k: 0.5, months: 3, success: 85,
+    win: { eff: { cap: 1.03 }, monthly: 0.4, text: 'The new machines arrived, output rose, and you pay for them in small monthly bites.' },
     lose: { now: { c: E(1.01, 3) }, text: 'Delivery slipped and the finance deal fell through, leaving you with fees to pay.' } },
-  { id: 'lending_p2p', name: 'Peer-to-peer loan campaign', blurb: 'Peer-to-peer lending lets ordinary people lend you small amounts through a website. It can be quicker than a bank, but you must win them over and pay a higher rate.', k: 0.4, months: 3, success: 65,
-    win: { eff: { od: 1.12, rep: 0.02 }, monthly: 0.5, text: 'Hundreds of small lenders backed you, and your story helped your reputation.' },
+  { id: 'lending_p2p', name: 'Peer-to-peer loan campaign', blurb: 'Peer-to-peer lending lets ordinary people lend you small amounts through a website. It can be quicker than a bank, but you must win them over and pay a higher rate.', k: 0.3, months: 3, success: 65,
+    win: { eff: { od: 1.12, rep: 0.02 }, monthly: 0.4, text: 'Hundreds of small lenders backed you, and your story helped your reputation.' },
     lose: { now: { rep: -1 }, text: 'The campaign missed its target, so no money was raised and the world noticed.' } },
-  { id: 'lending_guarantee', name: 'Government loan-guarantee scheme', blurb: 'In a loan-guarantee scheme the government promises to repay most of a bank loan if you fail, so banks lend to firms they would normally turn down. Applying means plenty of forms.', k: 0.4, months: 4, success: 70,
+  { id: 'lending_guarantee', name: 'Government loan-guarantee scheme', blurb: 'In a loan-guarantee scheme the government promises to repay most of a bank loan if you fail, so banks lend to firms they would normally turn down. Applying means plenty of forms.', k: 0.3, months: 4, success: 70,
     win: { eff: { od: 1.2 }, monthly: 0.25, text: 'Your application was approved and the banks are now much keener to lend to you.' },
     lose: { now: { morale: -1 }, text: 'The application was turned down because the forms were incomplete.' } },
-  { id: 'lending_syndicated', name: 'Syndicated loan for a big purchase', blurb: 'A syndicated loan is one big loan shared by several banks, so no single bank takes the whole risk. It is how big purchases get funded, and it comes with big fees.', k: 1.2, months: 5, success: 60,
-    win: { eff: { cap: 1.04 }, monthly: 0.7, text: 'A group of banks funded your big purchase, and the extra capacity is already paying its way.' },
+  { id: 'lending_syndicated', name: 'Syndicated loan for a big purchase', blurb: 'A syndicated loan is one big loan shared by several banks, so no single bank takes the whole risk. It is how big purchases get funded, and it comes with big fees.', k: 0.6, months: 5, success: 60,
+    win: { eff: { cap: 1.05 }, monthly: 0.6, text: 'A group of banks funded your big purchase, and the extra capacity is already paying its way.' },
     lose: { now: { rep: -1 }, text: 'The banks could not agree on terms, and you were left with the advisers\' bill.' } },
-  { id: 'lending_mezzanine', name: 'Mezzanine finance with a profit share', blurb: 'Mezzanine finance sits between normal loans and shares. It is expensive, and the lender often takes a slice of your profits as well, but it can fund growth when banks say no.', k: 0.8, months: 4, success: 65,
-    win: { eff: { d: 1.02, od: 1.15 }, monthly: 1, text: 'The mezzanine lender backed your growth, and in return takes interest and a share of profits.' },
+  { id: 'lending_mezzanine', name: 'Mezzanine finance with a profit share', blurb: 'Mezzanine finance sits between normal loans and shares. It is expensive, and the lender often takes a slice of your profits as well, but it can fund growth when banks say no.', k: 0.5, months: 4, success: 65,
+    win: { eff: { d: 1.04, od: 1.15 }, monthly: 0.9, text: 'The mezzanine lender backed your growth, and in return takes interest and a share of profits.' },
     lose: { now: { morale: -1 }, text: 'The lender wanted too much of your profit, so you walked away and the fees were wasted.' } },
-  { id: 'lending_bond', name: 'Issue a company bond', blurb: 'A bond is a loan from many investors who receive regular interest and get their money back at the end. Only larger, well-known firms can do it, and the set-up is costly.', k: 2.5, months: 9, success: 55,
-    win: { eff: { od: 1.25 }, monthly: 0.8, text: 'Investors bought your bond, and your name now stands for something in the markets.' },
+  { id: 'lending_bond', name: 'Issue a company bond', blurb: 'A bond is a loan from many investors who receive regular interest and get their money back at the end. Only larger, well-known firms can do it, and the set-up is costly.', k: 1, months: 9, success: 55,
+    win: { eff: { od: 1.25, c: 0.985, rep: 0.02 }, monthly: 0.3, text: 'Investors bought your bond, and the cheaper borrowing and the bigger name help every month.' },
     lose: { now: { rep: -2 }, text: 'Investors did not like the price, and the bond was pulled in public.' } },
 ];

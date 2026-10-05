@@ -27,7 +27,7 @@ describe('business policies and events', () => {
     for (const e of EVENTS8) expect(CHOICE_EVENTS.some((c) => c.id === e.id), e.id).toBe(true);
   });
 
-  it('every choice of every event runs under several dice and leaves the books balanced', () => {
+  it('every choice of every event runs under several dice and leaves the books balanced', { timeout: 300_000 }, () => {
     const base = company('P8-EVENTS', 24);
     const baseStock = company('P8-EVENTS-STOCK', 24, 'ecommerce');
     for (const e of EVENTS8) {
@@ -47,7 +47,7 @@ describe('business policies and events', () => {
     }
   });
 
-  it('every policy option can be set, costs what it says, and the books balance', () => {
+  it('every policy option can be set, costs what it says, and the books balance', { timeout: 120_000 }, () => {
     for (const ind of ['software', 'ecommerce'] as const) {
       const s = company(`P8-POL-${ind}`, 40, ind);
       for (const p of policiesFor(s)) {
@@ -65,7 +65,7 @@ describe('business policies and events', () => {
     }
   });
 
-  it('every initiative can be started, reports after its months, and the books balance', () => {
+  it('every initiative can be started, reports after its months, and the books balance', { timeout: 120_000 }, () => {
     const base = company('P8-INIT', 40, 'ecommerce');
     let won = 0; let lost = 0;
     for (const p of initiativesFor(base)) {

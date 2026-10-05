@@ -144,11 +144,11 @@ export const events: EvSpec[] = [
 
 export const projects: InitiativeDef[] = [
   // 779 Recession indicators and early warnings
-  { id: 'macro_recession', name: 'Recession-proofing review', blurb: 'A recession is a long dip when the whole economy shrinks. Build a dashboard of early-warning signs, such as jobs, confidence and orders, and a plan for each one.', k: 0.8, months: 6, success: 75,
+  { id: 'macro_recession', name: 'Recession-proofing review', blurb: 'A recession is a long dip when the whole economy shrinks. Build a dashboard of early-warning signs, such as jobs, confidence and orders, and a plan for each one.', k: 0.5, months: 6, success: 75,
     win: { eff: { c: 0.995, od: 1.08 }, monthly: 0.1, text: 'The review gave you a dashboard of warning signs and a plan for each. You spot trouble sooner, waste less, and your bank noticed.' },
     lose: { now: { morale: -1 }, text: 'The review was all charts and no action. The team shrugged and the dashboard gathered dust.' } },
   // 797 Demographic shifts over decades
-  { id: 'macro_demographics', name: 'Plan for the changing population', blurb: 'Populations change slowly: more older people, fewer young ones, new neighbourhoods. A year of research and a gradual shift in what you sell could set you up for decades.', k: 1, months: 12, success: 65,
-    win: { eff: { d: 1.02, ch: 0.99 }, now: { brand: 1.01 }, text: 'Your research spotted where your future customers live and what they want. The shift in your range hit the mark.' },
+  { id: 'macro_demographics', name: 'Plan for the changing population', blurb: 'Populations change slowly: more older people, fewer young ones, new neighbourhoods. A year of research and a gradual shift in what you sell could set you up for decades.', k: 0.8, months: 12, success: 65,
+    win: { eff: { d: 1.03, ch: 0.99 }, now: { brand: 1.01 }, text: 'Your research spotted where your future customers live and what they want. The shift in your range hit the mark.' },
     lose: { now: { d: E(0.99, 6) }, text: 'You aimed at a group that never quite turned up, and some of your old customers felt ignored.' } },
 ];

@@ -86,7 +86,7 @@ export function completeAcquisition(s: GameState, target: AcquisitionTarget, opt
   const L = s.ledger;
   const netAssets = targetNetAssets(target);
   const price = opts.price ?? target.askingPrice;
-  const sharePart = Math.min(price, opts.sharePart ?? 0);
+  const sharePart = Math.max(0, Math.min(price, opts.sharePart ?? 0));
   const goodwill = price - netAssets;
   const units = ind.model === 'unit' ? Math.round(target.inventory / ind.unitCost) : 0;
   const inventory = units * ind.unitCost;
