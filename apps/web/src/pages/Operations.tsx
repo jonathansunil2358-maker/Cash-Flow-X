@@ -1,3 +1,4 @@
+import { LayoutCard, TempsCard, TenderCard, TiersCard } from './Play6';
 import { ManagersCard, FocusCard, FranchiseStandardsCard, LifecycleCard, PopupCard, PriceLabCard, SecurityCard, SupplyChainCard } from './Play5';
 import {
   attractiveness, capacityMultiplier, capacityOf, demandFor, formatGBP, formatInt, formatPct, headcount, INDUSTRIES, PREMISES_STEPS, premisesMove,
@@ -82,6 +83,7 @@ export function Operations({ game }: { game: GameState }) {
             <RegularsCard game={game} />
             <BlackFridayCard game={game} />
             <ReviewsCard game={game} />
+            <TiersCard game={game} />
           </>,
         },
         {
@@ -100,6 +102,9 @@ export function Operations({ game }: { game: GameState }) {
             <SupplyChainCard game={game} />
             <LifecycleCard game={game} />
             <PopupCard game={game} />
+            <TempsCard game={game} />
+            <LayoutCard game={game} />
+            <TenderCard game={game} />
             {game.franchises ? <FranchiseStandardsCard game={game} /> : null}
           </>,
         },

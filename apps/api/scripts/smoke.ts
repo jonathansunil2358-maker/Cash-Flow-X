@@ -531,5 +531,28 @@ const war = await call<{ guild: boolean }>('/guild/war', { token: vC.token });
 check('trade war: no holding company, no war', war.status === 200 && war.json.guild === false, war);
 check('trade war: nothing to claim without a win', (await call('/guild/war/claim', { token: vC.token, body: {} })).status === 409);
 
+// V6: supplier deals and the weekly co-op boss.
+const dA = await startRun('DealA', (await signUp('DealA')).token, 'software');
+const dB = await startRun('DealB', (await signUp('DealB')).token, 'software');
+const dBId = (await call<{ user: { id: string } }>('/me', { token: dB.token })).json.user.id;
+check('deals: you cannot offer to yourself', (await call('/deals/offer', { token: dA.token, body: { buyerId: (await call<{ user: { id: string } }>('/me', { token: dA.token })).json.user.id } })).status === 409);
+check('deals: an unknown player is a 404', (await call('/deals/offer', { token: dA.token, body: { buyerId: 'nobody' } })).status === 404);
+const offer = await call<{ id: string }>('/deals/offer', { token: dA.token, body: { buyerId: dBId } });
+check('deals: an offer can be made', offer.status === 200 && !!offer.json.id, offer);
+check('deals: only one deal per pair', (await call('/deals/offer', { token: dA.token, body: { buyerId: dBId } })).status === 409);
+check('deals: the supplier cannot accept their own offer', (await call(`/deals/${offer.json.id}/accept`, { token: dA.token, body: {} })).status === 404);
+check('deals: nothing to collect before it is accepted', (await call(`/deals/${offer.json.id}/claim`, { token: dB.token, body: {} })).status === 404);
+check('deals: the buyer accepts', (await call(`/deals/${offer.json.id}/accept`, { token: dB.token, body: {} })).status === 200);
+const c1 = await call<{ gems: number }>(`/deals/${offer.json.id}/claim`, { token: dA.token, body: {} });
+check('deals: each side collects once a week', c1.status === 200 && c1.json.gems === 5 && (await call(`/deals/${offer.json.id}/claim`, { token: dA.token, body: {} })).status === 409 && (await call(`/deals/${offer.json.id}/claim`, { token: dB.token, body: {} })).status === 200);
+const dv = await call<{ deals: { role: string; status: string; claimable: boolean }[] }>('/deals', { token: dB.token });
+check('deals: the list shows it, with nothing left to collect', dv.json.deals.length === 1 && dv.json.deals[0].role === 'buyer' && dv.json.deals[0].status === 'active' && !dv.json.deals[0].claimable, dv);
+const bossBefore = await call<{ damage: number; hitToday: boolean; goal: number }>('/boss', { token: dA.token });
+check('boss: a fresh week has a goal and no damage', bossBefore.status === 200 && bossBefore.json.goal > 0 && bossBefore.json.hitToday === false, bossBefore);
+const hit = await call<{ damage: number; hitToday: boolean }>('/boss/hit', { token: dA.token, body: {} });
+check('boss: a strike adds damage once a day', hit.status === 200 && hit.json.damage >= 1 && hit.json.hitToday && (await call('/boss/hit', { token: dA.token, body: {} })).status === 409, hit);
+check('boss: no reward when it was not beaten last week', (await call('/boss/claim', { token: dA.token, body: {} })).status === 409);
+check('boss: you need a company to fight', (await call('/boss/hit', { token: vC.token, body: {} })).status === 409);
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exitCode = failures ? 1 : 0;

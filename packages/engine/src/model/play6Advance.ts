@@ -15,8 +15,7 @@ export function advancePlay6(s: GameState, rng: Rng, simulation: boolean): void 
     const score = inspectionScore(s);
     play6Of(s).inspection = { month: s.month, score };
     if (score >= 70) { s.reputation = Math.min(100, s.reputation + 3); s.brand *= 1.02; }
-    else if (score < 45) s.reputation = Math.max(0, s.reputation - 3);
-    if (!simulation) logItem(s, score >= 70 ? 'milestone' : score < 45 ? 'warning' : 'notice', `Quality inspection: ${score} out of 100`, score >= 70 ? 'A glowing report. Reputation and brand rose.' : score < 45 ? 'A poor report. Reputation fell.' : 'A fair report: no change.');
+    if (!simulation) logItem(s, score >= 70 ? 'milestone' : score < 45 ? 'warning' : 'notice', `Quality inspection: ${score} out of 100`, score >= 70 ? 'A glowing report. Reputation and brand rose.' : score < 45 ? 'A poor report. Quality, reputation and morale all need work.' : 'A fair report: no change.');
   }
   // A yearly anniversary.
   if (s.month > 0 && s.month % 12 === 0) {
@@ -26,13 +25,13 @@ export function advancePlay6(s: GameState, rng: Rng, simulation: boolean): void 
   // A tender contract runs its course.
   const t = s.play6?.tender;
   if (t && t.until === s.month && !simulation) logItem(s, 'notice', 'A tender contract ends', 'The extra demand and the squeezed margin both end now.');
-  if (simulation || s.away || s.pendingEvent || s.month < 9) return;
+  if (simulation || s.away || s.pendingEvent || s.month < 9 || lastRev(s) < 5_000_00) return;
   const q = play6Of(s);
   q.last ??= {};
   const since = (k: string): number => s.month - (q.last![k] ?? -999);
   const go = (id: string, key: string): void => { q.last![key] = s.month; startNamedEvent(s, id, createRng({ rng: hashSeed(`${s.seedLabel}:${id}:${s.month}`) })); };
-  if (s.month % 12 === 7 && roll6(s, `dis:${s.month}`, 100) < 40) { q.kind = ['flood', 'heatwave', 'storm'][roll6(s, `dis2:${s.month}`, 3)]; return go('disasterSeason', 'disaster'); }
-  if (s.month >= 24 && s.month % 12 === 10 && roll6(s, `tax:${s.month}`, 100) < 30) return go('taxInspection', 'tax');
+  if (s.month % 12 === 7 && roll6(s, `dis:${s.month}`, 100) < 25) { q.kind = ['flood', 'heatwave', 'storm'][roll6(s, `dis2:${s.month}`, 3)]; return go('disasterSeason', 'disaster'); }
+  if (s.month >= 24 && s.month % 12 === 10 && roll6(s, `tax:${s.month}`, 100) < 20) return go('taxInspection', 'tax');
   if (s.month >= 24 && s.morale < 45 && since('coup') > 36 && roll6(s, `coup:${s.month}`, 100) < 15) return go('boardCoup', 'coup');
   if (s.month >= 12 && lastRev(s) > 0 && since('tip') > 12 && roll6(s, `tip:${s.month}`, 100) < 5) return go('insiderTip', 'tip');
   if (s.month >= 12 && lastRev(s) > 0 && since('celeb') > 18 && roll6(s, `cel:${s.month}`, 100) < 4) return go('celebDeal', 'celeb');

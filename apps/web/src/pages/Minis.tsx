@@ -1,8 +1,10 @@
 import {
+  candidateValue, cheapestNetwork, forecastScore, hiringScore, interviewCandidates, nextMonthRevenue, routeGraphOf, routeScore, WAR_COST, WAR_PRICES, WAR_WEEKS, warProfit, warRival, warScore,
   AUCTION_STEPS, auctionOf, auctionScore, boardroomScore, CALL_BUDGET, callScore, callsOf, directorsOf, formatGBP, fraudScore, invoicesOf, miniOf, type MiniKind, MINI_GEMS, negOffer, negScore, negStart, negotiationOf, PITCH_PICKS, pitchMetrics, pitchPriorities, pitchScore, stockScore, stockTakeOf, stockWrong, tetrisBalances, tetrisOf,
   tetrisScore, utcDay, type GameState,
 } from '@cfx/engine';
 import { useMemo, useState } from 'react';
+import { tickInPlace } from '@cfx/engine';
 import { Button, Card } from '../components/ui';
 import { useGame } from '../store';
 import { Fold } from './Strategy';
@@ -132,12 +134,12 @@ export function TetrisCard() {
   );
 }
 
-/** The eight daily games together. */
+/** The twelve daily games together. */
 export function GamesCards({ game }: { game: GameState }) {
   return (
     <>
-      <Card fold id="card-games" title="Daily games" subtitle="Eight small games a day, each paying gems for a good score. They never change your company.">
-        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush, Cash-flow tetris, Boardroom pitch, Crisis call centre, Auction house and Spot the fraud.</p>
+      <Card fold id="card-games" title="Daily games" subtitle="Twelve small games a day, each paying gems for a good score. They never change your company.">
+        <p className="text-xs text-ink-2">Open any of the cards below: Negotiation duel, Pitch day, Stock-take rush, Cash-flow tetris, Boardroom pitch, Crisis call centre, Auction house, Spot the fraud, Forecast challenge, Hiring interviews, Supply route planner and Price-war survival.</p>
       </Card>
       <NegotiationCard />
       <PitchCard game={game} />
@@ -147,6 +149,10 @@ export function GamesCards({ game }: { game: GameState }) {
       <CallCentreCard />
       <AuctionCard />
       <FraudCard />
+      <ForecastCard game={game} />
+      <HiringCard />
+      <RoutesCard />
+      <PriceWarCard />
     </>
   );
 }
@@ -273,6 +279,118 @@ export function FraudCard() {
       </ul>
       {!result && !done && <Button className="mt-3" variant="primary" onClick={go}>Report them ({flagged.length} flagged)</Button>}
       {result && <p role="status" className="mt-3 text-sm font-black">You found {result.found} of 2 with {result.falseAlarms} false alarm{result.falseAlarms === 1 ? '' : 's'}: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Guess next month's takings; a quiet simulated month is the answer. */
+export function ForecastCard({ game }: { game: GameState }) {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const [guess, setGuess] = useState(0);
+  const [result, setResult] = useState<{ points: number; actual: number } | null>(null);
+  const done = doneNote('forecast', profile, day);
+  const go = () => { const actual = nextMonthRevenue(game, (c) => tickInPlace(c, { simulation: true })); const points = forecastScore(Math.round(guess * 100), actual); setResult({ points, actual }); finishMini('forecast', day, points); };
+  return (
+    <Fold id="card-forecast" title="Forecast challenge" summary={done ?? 'Predict next month\'s revenue. Open to play.'}
+      subtitle="Look at your numbers and guess next month's revenue in pounds. The closer you are to a quiet month with no surprises, the more you score.">
+      <label className="block text-sm">Your guess (£)
+        <input type="number" min={0} value={guess || ''} disabled={!!result || !!done} onChange={(e) => setGuess(Number(e.target.value))} aria-label="Revenue forecast in pounds"
+          className="mt-1 block w-40 rounded-xl border-[3px] border-outline bg-surface-2 px-2 py-1 text-sm font-extrabold text-ink" />
+      </label>
+      {!result && !done && <Button className="mt-3" variant="primary" disabled={guess <= 0} onClick={go}>Lock in the forecast</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">The quiet month came to {formatGBP(result.actual, { compact: true })}: {result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Four candidates, one of whom stretched the truth on their CV. */
+export function HiringCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const cands = useMemo(() => interviewCandidates(day), [day]);
+  const [result, setResult] = useState<{ points: number; best: string } | null>(null);
+  const done = doneNote('hiring', profile, day);
+  const pick = (id: string) => { const r = hiringScore(cands, id); setResult(r); finishMini('hiring', day, r.points); };
+  return (
+    <Fold id="card-hiring" title="Hiring interviews" summary={done ?? 'Pick the best of four. Open to play.'}
+      subtitle="Four people want the job. Skill counts most, attitude matters too, and one of them has exaggerated their CV. The references may help you decide.">
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {cands.map((c) => (
+          <li key={c.id}>
+            <button type="button" disabled={!!result || !!done} className={`cfx-tile w-full !p-2 text-left ${result && result.best === c.id ? 'bg-[var(--go)]/20' : ''}`} onClick={() => pick(c.id)} aria-label={`Hire ${c.name}`}>
+              <span className="cfx-tile__name !text-base">{c.name}</span>
+              <span className="cfx-tile__meta">CV skill {c.claimed}/10 · attitude {c.attitude}/10 · asks {formatGBP(c.ask, { compact: true })}</span>
+              <span className="block text-xs text-ink-2">Reference: {c.reference}</span>
+              {result && <span className="block text-xs font-black">True skill {c.trueSkill}/10, worth {candidateValue(c).toFixed(1)}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.points} points.</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Link every supplier to the warehouse for the lowest total cost. */
+export function RoutesCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const g = useMemo(() => routeGraphOf(day), [day]);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [result, setResult] = useState<ReturnType<typeof routeScore> | null>(null);
+  const done = doneNote('routes', profile, day);
+  const cost = g.routes.filter((r) => chosen.includes(r.id)).reduce((a, r) => a + r.cost, 0);
+  const toggle = (id: string) => setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  const go = () => { const r = routeScore(g, chosen); setResult(r); finishMini('routes', day, r.points); };
+  return (
+    <Fold id="card-routes" title="Supply route planner" summary={done ?? 'Connect every supplier cheaply. Open to play.'}
+      subtitle="Pick roads so that every place is connected to the warehouse, directly or through others, for the lowest total cost. A disconnected network scores nothing.">
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {g.routes.map((r) => (
+          <li key={r.id}>
+            <button type="button" role="checkbox" aria-checked={chosen.includes(r.id)} disabled={!!result || !!done} aria-label={`${g.nodes[r.a]} to ${g.nodes[r.b]}, cost ${r.cost}`}
+              className={`cfx-tile w-full !p-2 text-left ${chosen.includes(r.id) ? 'ring-4 ring-[var(--coin)]' : ''}`} onClick={() => toggle(r.id)}>
+              <span className="cfx-tile__name !text-base">{chosen.includes(r.id) ? '✓ ' : ''}{g.nodes[r.a]} – {g.nodes[r.b]}</span>
+              <span className="cfx-tile__meta">Cost {r.cost}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-sm font-black">Total cost: {cost}</p>
+      {!result && !done && <Button className="mt-2" variant="primary" onClick={go}>Build the network</Button>}
+      {result && <p role="status" className="mt-3 text-sm font-black">{result.valid ? `Connected for ${result.cost}; the cheapest is ${cheapestNetwork(g)}: ${result.points} points.` : 'Some places are not connected: 0 points.'}</p>}
+      {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
+    </Fold>
+  );
+}
+
+/** Six weeks against a rival who changes price in a three-week rhythm. */
+export function PriceWarCard() {
+  const { profile, finishMini } = useGame();
+  const day = utcDay();
+  const rival = useMemo(() => warRival(day), [day]);
+  const [prices, setPrices] = useState<number[]>([]);
+  const [result, setResult] = useState<ReturnType<typeof warScore> | null>(null);
+  const done = doneNote('pricewar', profile, day);
+  const week = prices.length;
+  const choose = (p: number) => { const next = [...prices, p]; setPrices(next); if (next.length === WAR_WEEKS) { const r = warScore(day, next); setResult(r); finishMini('pricewar', day, r.points); } };
+  return (
+    <Fold id="card-pricewar" title="Price-war survival" summary={done ?? 'Six weeks, one rival. Open to play.'}
+      subtitle={`Each week you choose a price (it costs you ${WAR_COST} to make one). The cheaper you are than the rival, the more you sell. The rival's prices follow a short pattern: you only see a week once it is over.`}>
+      <ol className="space-y-1 text-sm" aria-label="Weeks so far">
+        {prices.map((p, i) => <li key={i}>Week {i + 1}: you £{p}, rival £{rival[i]}, profit £{warProfit(p, rival[i])}</li>)}
+      </ol>
+      {!result && !done && (
+        <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Price for this week">
+          <span className="text-xs text-ink-2">Week {week + 1}:</span>
+          {WAR_PRICES.map((p) => <Button key={p} onClick={() => choose(p)}>£{p}</Button>)}
+        </div>
+      )}
+      {result && <p role="status" className="mt-3 text-sm font-black">Total profit £{result.profit}: {result.points} points.</p>}
       {!result && done && <p role="status" className="mt-3 text-sm font-black">{done}</p>}
     </Fold>
   );

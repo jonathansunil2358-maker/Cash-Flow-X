@@ -919,8 +919,8 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     id: 'insiderTip', title: 'An employee raises a worry', polarity: 'bad', weight: 0, icon: 'key',
     when: () => false,
     setup: (s) => {
-      const fix = sized(s, 0.02, 1_500_00);
-      const report = sized(s, 0.01, 1_000_00);
+      const fix = sized(s, 0.02, 800_00);
+      const report = sized(s, 0.01, 800_00);
       return {
         story: 'A junior employee quietly tells you that a manager has been signing off quality checks that were never done. Customers have not noticed yet.',
         params: { fix, report },
@@ -939,16 +939,16 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     id: 'boardCoup', title: 'A challenge from the board', polarity: 'bad', weight: 0, icon: 'crown',
     when: () => false,
     setup: (s) => {
-      const fight = sized(s, 0.03, 2_000_00);
-      const deal = sized(s, 0.02, 1_500_00);
+      const fight = sized(s, 0.03, 800_00);
+      const deal = sized(s, 0.02, 800_00);
       return {
         story: 'With the team unhappy, a senior colleague has been counting votes. They want you to step aside as chief executive.',
         params: { fight, deal },
         choices: [
-          { id: 'fight', label: `Fight it with advisers (${formatGBP(fight)})`, hint: 'Win the vote, but the fight leaves marks.', impact: [{ label: 'Reputation', up: true }, { label: 'Morale', up: false }, { label: 'Cash', up: false }],
-            apply: (st, _rng, P, p) => { P('Advisers for a board vote', [dr('dealCosts', p.fight), cr('cash', p.fight)]); st.reputation = Math.min(100, st.reputation + 1); st.morale = Math.max(0, st.morale - 2); return 'You held the vote, narrowly.'; } },
           { id: 'deal', label: `Do a deal: bigger bonuses (${formatGBP(deal)})`, hint: 'Buy peace with the team.', impact: [{ label: 'Morale', up: true }, { label: 'Cash', up: false }],
             apply: (st, _rng, P, p) => { P('Retention bonuses after a board challenge', [dr('wages', p.deal), cr('cash', p.deal)]); st.morale = Math.min(100, st.morale + 4); return 'Everyone got something. The challenge faded.'; } },
+          { id: 'fight', label: `Fight it with advisers (${formatGBP(fight)})`, hint: 'Win the vote, but the fight leaves marks.', impact: [{ label: 'Reputation', up: true }, { label: 'Morale', up: false }, { label: 'Cash', up: false }],
+            apply: (st, _rng, P, p) => { P('Advisers for a board vote', [dr('dealCosts', p.fight), cr('cash', p.fight)]); st.reputation = Math.min(100, st.reputation + 1); st.morale = Math.max(0, st.morale - 2); return 'You held the vote, narrowly.'; } },
           { id: 'step', label: 'Step back for a while (free)', hint: 'A caretaker runs things for four months.', impact: [{ label: 'Demand', up: false }, { label: 'Morale', up: true }],
             apply: (st) => { addTemporary(st, 'coup-caretaker', 'A caretaker in charge', 4, { demandMult: 0.95 }, true); st.morale = Math.min(100, st.morale + 6); return 'Things calmed down, though without you the pace dropped.'; } },
         ],
@@ -960,8 +960,8 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     when: () => false,
     setup: (s) => {
       const kind = s.play6?.kind ?? 'flood';
-      const prep = sized(s, 0.03, 2_000_00);
-      const repair = sized(s, 0.05, 3_000_00);
+      const prep = sized(s, 0.03, 800_00);
+      const repair = sized(s, 0.05, 800_00);
       const story: Record<string, string> = {
         flood: 'Heavy rain is forecast, and the river is already high near your premises.',
         heatwave: 'A heatwave is coming. Kit overheats and stock spoils in these temperatures.',
@@ -985,10 +985,10 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     id: 'taxInspection', title: 'The taxman is coming', polarity: 'bad', weight: 0, icon: 'key',
     when: () => false,
     setup: (s) => {
-      const help = sized(s, 0.01, 1_000_00);
-      const lawyer = sized(s, 0.03, 2_500_00);
-      const fine = sized(s, 0.02, 1_500_00);
-      const big = sized(s, 0.08, 5_000_00);
+      const help = sized(s, 0.01, 800_00);
+      const lawyer = sized(s, 0.03, 800_00);
+      const fine = sized(s, 0.02, 800_00);
+      const big = sized(s, 0.08, 800_00);
       return {
         story: 'The tax office has picked your company for an inspection of last year\'s accounts.',
         params: { help, lawyer, fine, big },
@@ -1007,16 +1007,16 @@ export const CHOICE_EVENTS: ChoiceEventDef[] = [
     id: 'celebDeal', title: 'A famous face wants in', polarity: 'good', weight: 0, icon: 'star',
     when: () => false,
     setup: (s) => {
-      const big = sized(s, 0.03, 2_500_00);
-      const small = sized(s, 0.01, 1_000_00);
+      const big = sized(s, 0.03, 800_00);
+      const small = sized(s, 0.01, 800_00);
       return {
         story: 'A well-known personality has offered to be the face of your brand. Their fans are many, and their past is colourful.',
         params: { big, small },
         choices: [
-          { id: 'sign', label: `Sign them up (${formatGBP(big)})`, hint: 'Demand +4% for six months, but three times in ten a scandal follows.', impact: [{ label: 'Demand', up: true }, { label: 'Risk', up: false }, { label: 'Cash', up: false }],
-            apply: (st, rng, P, p) => { P('Celebrity endorsement', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'celeb-big', 'A famous face', 6, { demandMult: 1.04 }, true); if (chance(rng, 0.3)) { st.reputation = Math.max(0, st.reputation - 4); st.brand *= 0.97; return 'The campaign took off, then a scandal broke and some of the shine rubbed off.'; } return 'The campaign was a hit.'; } },
           { id: 'small', label: `A quiet one-off post (${formatGBP(small)})`, hint: 'A smaller, safer lift for four months.', impact: [{ label: 'Demand', up: true }, { label: 'Cash', up: false }],
             apply: (st, _rng, P, p) => { P('A one-off endorsement', [dr('marketing', p.small), cr('cash', p.small)]); addTemporary(st, 'celeb-small', 'A friendly post', 4, { demandMult: 1.015 }, true); return 'A nice bump with no drama.'; } },
+          { id: 'sign', label: `Sign them up (${formatGBP(big)})`, hint: 'Demand +4% for six months, but three times in ten a scandal follows.', impact: [{ label: 'Demand', up: true }, { label: 'Risk', up: false }, { label: 'Cash', up: false }],
+            apply: (st, rng, P, p) => { P('Celebrity endorsement', [dr('marketing', p.big), cr('cash', p.big)]); addTemporary(st, 'celeb-big', 'A famous face', 6, { demandMult: 1.04 }, true); if (chance(rng, 0.3)) { st.reputation = Math.max(0, st.reputation - 4); st.brand *= 0.97; return 'The campaign took off, then a scandal broke and some of the shine rubbed off.'; } return 'The campaign was a hit.'; } },
           { id: 'decline', label: 'Decline politely', hint: 'Your integrity earns a little respect.', impact: [{ label: 'Reputation', up: true }],
             apply: (st) => { st.reputation = Math.min(100, st.reputation + 1); return 'You said no, and word got around.'; } },
         ],
